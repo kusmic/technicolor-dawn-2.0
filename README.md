@@ -1,6 +1,8 @@
+TECHNICOLOR DAWN 2.0
+====================
+Technicolor Dawn is a 3-dimensional radiative transfer solve integrated into Gadget-4.
 
-
-GADGET-4
+Gadget-4
 ========
 
 ![](documentation/img/top.jpg)
