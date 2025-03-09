@@ -329,6 +329,11 @@ struct global_data_all_processes : public parameters
   MyIDType MaxID;
 #endif
 
+#ifdef DUST
+  double saucer1;  
+  double saucer2;  
+#endif
+
 #ifdef REDUCE_FLUSH
   double FlushCpuTimeDiff;
   double FlushLast;

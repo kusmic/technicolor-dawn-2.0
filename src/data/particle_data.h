@@ -126,6 +126,11 @@ struct particle_data
   MyFloat Metallicity; /**< metallicity of gas or star particle */
 #endif
 
+#ifdef DUST
+  MyFloat GrainSize;  /**< formation time of dust particle */
+  MyFloat DragCoeff;  /**< metallicity of gas or dust particle */
+#endif
+
   inline unsigned char getType(void)
   {
 #ifdef LEAN

@@ -95,7 +95,9 @@ inline void sph::sph_hydro_check_particle_particle_interaction(pinfo &pdat, int 
       particle_data *P        = get_Pp(p, shmrank);
       sph_particle_data *SphP = get_SphPp(p, shmrank);
 
-      if(P->getType() > 0)
+      /* ez: so any collisionless particle gets returned? okay. */
+      /* ez: we want dust to be treated with SPH, so don't return 6 */
+      if(P->getType() > 0 && P->getType() != 6)
         return;
 
       if(P->get_Ti_Current() != All.Ti_Current)

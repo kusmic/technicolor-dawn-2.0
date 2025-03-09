@@ -321,7 +321,7 @@
 #define MAXITER 10000
 
 #ifndef NTYPES
-#define NTYPES 6
+#define NTYPES 7
 #endif
 
 #ifndef NSOFTCLASSES
@@ -365,6 +365,10 @@ typedef int integertime;
 
 #ifndef STAR_TYPE
 #define STAR_TYPE 4
+#endif
+
+#ifndef DUST_TYPE
+#define DUST_TYPE 6
 #endif
 
 #if defined(STARFORMATION) && (STAR_TYPE >= NTYPES)
