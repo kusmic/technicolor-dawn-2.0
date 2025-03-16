@@ -120,19 +120,24 @@ class coolsfr : public setcomm
   #ifdef DUST
   void make_dust(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars);
   #endif
-  
+
   #ifdef STARFORMATION
   const int WriteMiscFiles = 1;
 
   void make_star(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars);
 
   void spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star);
+  void spawn_dust_from_sph_particle(simparticles *Sp, int igas, double birthtime, int idust, MyDouble mass_of_dust);
   void convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime);
+  void convert_sph_particle_into_dust(simparticles *Sp, int i, double birthtime);
 
   int stars_spawned;           /**< local number of star particles spawned in the time step */
+  int dust_spawned;           /**< local number of dust particles spawned in the time step */
   int tot_stars_spawned;       /**< global number of star paricles spawned in the time step */
-  int stars_converted;         /**< local number of gas cells converted into stars in the time step */
+  int tot_dust_spawned;       /**< global number of dust paricles spawned in the time step */
+  int dust_converted;         /**< local number of gas cells converted into stars in the time step */
   int tot_stars_converted;     /**< global number of gas cells converted into stars in the time step */
+  int tot_dust_converted;     /**< global number of gas cells converted into stars in the time step */
   int altogether_spawned;      /**< local number of star+wind particles spawned in the time step */
   int tot_altogether_spawned;  /**< global number of star+wind particles spawned in the time step */
   double cum_mass_stars = 0.0; /**< cumulative mass of stars created in the time step (global value) */

@@ -99,10 +99,10 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
           /* decide what process to consider (currently available: make a star or kick to wind) */
           p_decide = get_random_number();
 
-          if(p_decide < p / pall) /* ok, a star formation is considered */
+          if(p_decide < p / pall) { /* ok, a star formation is considered */
             make_star(Sp, target, prob, mass_of_star, &sum_mass_stars);
             make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars);
-
+          }
           if(Sp->SphP[target].Sfr > 0)
             {
               if(Sp->P[target].getType() == 0) /* to protect using a particle that has been turned into a star */
@@ -430,7 +430,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
      double Density_min = 1e-24; // Minimum gas density (cgs)
  
      if (Sp->SphP[i].Metallicity < Z_min) return; // Not enough metals
-     if (Sp->SphP[i].Temperature > T_max) return; // Too hot for dust to survive
+     // if (Sp->SphP[i].Temperature > T_max) return; // Too hot for dust to survive
      if (Sp->SphP[i].Density < Density_min) return; // Density too low for dust formation
  
      if (mass_of_dust > Sp->P[i].getMass())
