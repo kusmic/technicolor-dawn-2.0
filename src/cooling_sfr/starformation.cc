@@ -352,7 +352,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  
      // Assign dust properties
      Sp->P[idust].setMass(mass_of_dust);
-     Sp->P[idust].BirthTime = birthtime;
+     Sp->P[idust].StellarAge = birthtime;
  
      // Adjust mass of parent gas particle
      double fac = (Sp->P[igas].getMass() - Sp->P[idust].getMass()) / Sp->P[igas].getMass();
