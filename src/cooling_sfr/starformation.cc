@@ -101,6 +101,7 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
 
           if(p_decide < p / pall) /* ok, a star formation is considered */
             make_star(Sp, target, prob, mass_of_star, &sum_mass_stars);
+            make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars);
 
           if(Sp->SphP[target].Sfr > 0)
             {
@@ -119,7 +120,7 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
 
   if(tot_stars_spawned > 0 || tot_stars_converted > 0)
     {
-      mpi_printf("SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
+      mpi_printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
     }
 
   tot_altogether_spawned = tot_stars_spawned;
@@ -208,7 +209,7 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
 
 /** \brief Convert a SPH particle into a star.
  *
- *  This function convertss an active star-forming gas particle into a star.
+ *  This function converts an active star-forming gas particle into a star.
  *  The particle information of the gas is copied to the
  *  location istar and the fields necessary for the creation of the star
  *  particle are initialized.
@@ -216,23 +217,64 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
  *  \param i index of the gas particle to be converted
  *  \param birthtime time of birth (in code units) of the stellar particle
  */
-void coolsfr::convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime)
-{
-  Sp->P[i].setType(STAR_TYPE);
-#if NSOFTCLASSES > 1
-  Sp->P[i].setSofteningClass(All.SofteningClassOfPartType[Sp->P[i].getType()]);
-#endif
-#ifdef INDIVIDUAL_GRAVITY_SOFTENING
-  if(((1 << Sp->P[i].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
-    Sp->P[i].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[i].getMass()));
-#endif
+ void coolsfr::convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime)
+ {
+   Sp->P[i].setType(STAR_TYPE);
+ #if NSOFTCLASSES > 1
+   Sp->P[i].setSofteningClass(All.SofteningClassOfPartType[Sp->P[i].getType()]);
+ #endif
+ #ifdef INDIVIDUAL_GRAVITY_SOFTENING
+   if(((1 << Sp->P[i].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
+     Sp->P[i].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[i].getMass()));
+ #endif
+ 
+   Sp->TimeBinSfr[Sp->P[i].getTimeBinHydro()] -= Sp->SphP[i].Sfr;
+ 
+   Sp->P[i].StellarAge = birthtime;
+ 
+   return;
+ }
 
-  Sp->TimeBinSfr[Sp->P[i].getTimeBinHydro()] -= Sp->SphP[i].Sfr;
-
-  Sp->P[i].StellarAge = birthtime;
-
-  return;
-}
+/** \brief Convert a SPH particle into a dust particle.
+ *
+ *  This function converts an active gas particle into a dust particle.
+ *  The particle information of the gas is copied to the
+ *  location idust and the fields necessary for the creation of the dust
+ *  particle are initialized.
+ *
+ *  \param i index of the gas particle to be converted
+ *  \param birthtime time of birth (in code units) of the dust particle
+ */
+ void coolsfr::convert_sph_particle_into_dust(simparticles *Sp, int i, double birthtime)
+ {
+     Sp->P[i].setType(DUST_TYPE);  // Change type to PartType6 (Dust)
+     
+ #if NSOFTCLASSES > 1
+     Sp->P[i].setSofteningClass(All.SofteningClassOfPartType[Sp->P[i].getType()]);
+ #endif
+ 
+ #ifdef INDIVIDUAL_GRAVITY_SOFTENING
+     if(((1 << Sp->P[i].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
+         Sp->P[i].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[i].getMass()));
+ #endif
+ 
+     // Update the mass of dust (assume a fraction of gas turns into dust)
+     double dust_fraction = 0.1; // Example: Convert 10% of gas into dust
+     Sp->P[i].Mass *= dust_fraction; // Reduce gas mass accordingly
+     
+     // Dust retains some properties of the parent gas particle
+     Sp->P[i].Density = Sp->SphP[i].Density;  
+     Sp->P[i].Metallicity = Sp->SphP[i].Metallicity;
+     Sp->P[i].Vel[0] = Sp->P[i].Vel[0];
+     Sp->P[i].Vel[1] = Sp->P[i].Vel[1];
+     Sp->P[i].Vel[2] = Sp->P[i].Vel[2];
+ 
+     // Assign birth time for tracking dust evolution
+     Sp->P[i].BirthTime = birthtime;
+ 
+     return;
+ }
+ 
 
 /** \brief Spawn a star particle from a SPH gas particle.
  *
@@ -276,6 +318,50 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   return;
 }
 
+/** \brief Spawn a dust particle from a SPH gas particle.
+ *
+ *  This function spawns a dust particle from an SPH gas particle. The gas
+ *  particle's properties are copied to the new dust particle, and the mass
+ *  of the gas cell is reduced accordingly.
+ *
+ *  \param igas index of the gas cell from which the dust is spawned
+ *  \param birthtime time of birth (in code units) of the dust particle
+ *  \param idust index of the spawned dust particle
+ *  \param mass_of_dust the mass of the spawned dust particle
+ */
+ void coolsfr::spawn_dust_from_sph_particle(simparticles *Sp, int igas, double birthtime, int idust, MyDouble mass_of_dust)
+ {
+     // Copy gas properties to new dust particle
+     Sp->P[idust] = Sp->P[igas];
+     Sp->P[idust].setType(DUST_TYPE);  // Assign to PartType6 (Dust)
+ 
+ #if NSOFTCLASSES > 1
+     Sp->P[idust].setSofteningClass(All.SofteningClassOfPartType[Sp->P[idust].getType()]);
+ #endif
+ 
+ #ifdef INDIVIDUAL_GRAVITY_SOFTENING
+     if(((1 << Sp->P[idust].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
+         Sp->P[idust].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[idust].getMass()));
+ #endif
+ 
+     // Add the dust particle to the active particle list
+     Sp->TimeBinsGravity.ActiveParticleList[Sp->TimeBinsGravity.NActiveParticles++] = idust;
+ 
+     // Synchronize time bins for dust
+     Sp->TimeBinsGravity.timebin_add_particle(idust, igas, Sp->P[idust].TimeBinGrav, Sp->TimeBinSynchronized[Sp->P[idust].TimeBinGrav]);
+ 
+     // Assign dust properties
+     Sp->P[idust].setMass(mass_of_dust);
+     Sp->P[idust].BirthTime = birthtime;
+ 
+     // Adjust mass of parent gas particle
+     double fac = (Sp->P[igas].getMass() - Sp->P[idust].getMass()) / Sp->P[igas].getMass();
+     Sp->P[igas].setMass(fac * Sp->P[igas].getMass());
+ 
+     return;
+ }
+ 
+
 /** \brief Make a star particle from a SPH gas particle.
  *
  *  Given a gas cell where star formation is active and the probability
@@ -288,37 +374,93 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  *  \param mass_of_star desired mass of the star particle
  *  \param sum_mass_stars holds the mass of all the stars created at the current time-step (for the local task)
  */
-void coolsfr::make_star(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars)
-{
-  if(mass_of_star > Sp->P[i].getMass())
-    Terminate("mass_of_star > P[i].Mass");
+ void coolsfr::make_star(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars)
+ {
+   if(mass_of_star > Sp->P[i].getMass())
+     Terminate("mass_of_star > P[i].Mass");
+ 
+   if(get_random_number() < prob)
+     {
+       if(mass_of_star == Sp->P[i].getMass())
+         {
+           /* here we turn the gas particle itself into a star particle */
+           stars_converted++;
+ 
+           *sum_mass_stars += Sp->P[i].getMass();
+ 
+           convert_sph_particle_into_star(Sp, i, All.Time);
+         }
+       else
+         {
+           /* in this case we spawn a new star particle, only reducing the mass in the cell by mass_of_star */
+           altogether_spawned = stars_spawned;
+           if(Sp->NumPart + altogether_spawned >= Sp->MaxPart)
+             Terminate("NumPart=%d spwawn %d particles no space left (Sp.MaxPart=%d)\n", Sp->NumPart, altogether_spawned, Sp->MaxPart);
+ 
+           int j = Sp->NumPart + altogether_spawned; /* index of new star */
+ 
+           spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
+ 
+           *sum_mass_stars += mass_of_star;
+           stars_spawned++;
+         }
+     }
+ }
+ 
+ #endif /* closes SFR */
 
-  if(get_random_number() < prob)
-    {
-      if(mass_of_star == Sp->P[i].getMass())
-        {
-          /* here we turn the gas particle itself into a star particle */
-          stars_converted++;
+ 
 
-          *sum_mass_stars += Sp->P[i].getMass();
-
-          convert_sph_particle_into_star(Sp, i, All.Time);
-        }
-      else
-        {
-          /* in this case we spawn a new star particle, only reducing the mass in the cell by mass_of_star */
-          altogether_spawned = stars_spawned;
-          if(Sp->NumPart + altogether_spawned >= Sp->MaxPart)
-            Terminate("NumPart=%d spwawn %d particles no space left (Sp.MaxPart=%d)\n", Sp->NumPart, altogether_spawned, Sp->MaxPart);
-
-          int j = Sp->NumPart + altogether_spawned; /* index of new star */
-
-          spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
-
-          *sum_mass_stars += mass_of_star;
-          stars_spawned++;
-        }
-    }
-}
-
-#endif /* closes SFR */
+/** \brief Make a dust particle from a SPH gas particle.
+ *
+ *  Given a gas cell where dust formation is active and the probability
+ *  of forming dust, this function selects either to convert the gas
+ *  particle into a dust particle or to spawn a dust particle.
+ *
+ *  \param i index of the gas cell
+ *  \param prob probability of making a dust particle
+ *  \param mass_of_dust desired mass of the dust particle
+ *  \param sum_mass_dust holds the mass of all the dust created at the current time-step (for the local task)
+ */
+ void coolsfr::make_dust(simparticles *Sp, int i, double prob, MyDouble mass_of_dust, double *sum_mass_dust)
+ {
+     // Dust formation conditions
+     double Z_min = 0.01;  // Minimum metallicity for dust formation
+     double T_max = 1000.0; // Maximum temperature for dust survival (Kelvin)
+     double Density_min = 1e-24; // Minimum gas density (cgs)
+ 
+     if (Sp->SphP[i].Metallicity < Z_min) return; // Not enough metals
+     if (Sp->SphP[i].Temperature > T_max) return; // Too hot for dust to survive
+     if (Sp->SphP[i].Density < Density_min) return; // Density too low for dust formation
+ 
+     if (mass_of_dust > Sp->P[i].getMass())
+         Terminate("mass_of_dust > P[i].Mass");
+ 
+     if (get_random_number() < prob)
+     {
+         if (mass_of_dust == Sp->P[i].getMass())
+         {
+             // Convert the entire gas particle into a dust particle
+             dust_converted++;
+ 
+             *sum_mass_dust += Sp->P[i].getMass();
+ 
+             convert_sph_particle_into_dust(Sp, i, All.Time);
+         }
+         else
+         {
+             // Spawn a new dust particle, only reducing the mass in the gas cell by mass_of_dust
+             altogether_spawned = dust_spawned;
+             if (Sp->NumPart + altogether_spawned >= Sp->MaxPart)
+                 Terminate("NumPart=%d spawn %d particles no space left (Sp.MaxPart=%d)\n", Sp->NumPart, altogether_spawned, Sp->MaxPart);
+ 
+             int j = Sp->NumPart + altogether_spawned; /* index of new dust particle */
+ 
+             spawn_dust_from_sph_particle(Sp, i, All.Time, j, mass_of_dust);
+ 
+             *sum_mass_dust += mass_of_dust;
+             dust_spawned++;
+         }
+     }
+ }
+ 

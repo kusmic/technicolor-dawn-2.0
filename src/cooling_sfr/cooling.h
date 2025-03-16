@@ -117,10 +117,15 @@ class coolsfr : public setcomm
 
   void MakeRateTable(void);
 
-#ifdef STARFORMATION
+  #ifdef DUST
+  void make_dust(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars);
+  #endif
+  
+  #ifdef STARFORMATION
   const int WriteMiscFiles = 1;
 
   void make_star(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars);
+
   void spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star);
   void convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime);
 

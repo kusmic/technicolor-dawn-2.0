@@ -127,8 +127,9 @@ struct particle_data
 #endif
 
 #ifdef DUST
-  MyFloat GrainSize;  /**< formation time of dust particle */
-  MyFloat DragCoeff;  /**< metallicity of gas or dust particle */
+  MyFloat DustAge;    /**< formation time of dust particle */
+  MyFloat GrainSize;  /**< size of dust particle */
+  MyFloat DragCoeff;  /**< drag coefficient dust particle */
 #endif
 
   inline unsigned char getType(void)

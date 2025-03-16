@@ -34,6 +34,9 @@
  *  the latter and the star formation rate computed. In the other case, the
  *  standard isochoric cooling is applied to the gas cell by calling the function
  *  cool_sph_particle() and the star formation rate is set to 0.
+ *
+ * This sets Sp->SphP[target].Sfr that sfr_create_star_particles() will use to 
+ * decide whether to make a star.
  */
 void coolsfr::cooling_and_starformation(simparticles *Sp)
 {
@@ -72,6 +75,7 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
            */
           int flag = 1; /* default is normal cooling */
 
+          /* Check if this gas particle's density is greater than the threshold to make stars */
           if(dens * All.cf_a3inv >= All.PhysDensThresh)
             flag = 0;
 

@@ -128,6 +128,23 @@ void snap_io::init_basic(simparticles *Sp_ptr)
              0, 0, 0, 0, 0, 0, 0);
 #endif
 
+
+
+/* Need to look at this and update io_func_sfr and io_func_metallicity */
+#ifdef DUST
+
+  init_field("SIZE ", "GrainSize", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, All.RestartFlag == RST_FOF ? READ_IF_PRESENT : SKIP_ON_READ,
+             1, A_NONE, 0, io_func_sfr, GAS_ONLY, 1, 0., 0., -1., 1., 1., SOLAR_MASS / SEC_PER_YEAR);
+
+  init_field("AGE ", "DustAge", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_P, &Sp->P[0].DustAge, NULL,
+             AGE_BLOCK, /* stellar formation time */
+             0, 0, 0, 0, 0, 0, 0);
+
+  init_field("DRAG   ", "DragCoeff", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_NONE, 0, io_func_metallicity,
+             Z_BLOCK, /* gas and star metallicity */
+             0, 0, 0, 0, 0, 0, 0);
+#endif
+
 #if defined(PRESSURE_ENTROPY_SPH) && defined(OUTPUT_PRESSURE_SPH_DENSITY)
   init_field("PRHO", "PressureSphDensity", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_SPHP, &Sp->SphP[0].PressureSphDensity,
              NULL, GAS_ONLY, /* Pressure density */

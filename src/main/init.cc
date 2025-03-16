@@ -236,6 +236,17 @@ void sim::init(int RestartSnapNum)
     }
 #endif
 
+/* Not sure what this does, but copying star formation */
+#ifdef DUST
+  if(All.RestartFlag == RST_BEGIN)
+    {
+      if(All.MassTable[DUST_TYPE] == 0 && All.MassTable[0] > 0)
+        {
+          All.MassTable[0] = 0;
+        }
+    }
+#endif
+
   double u_init = (1.0 / GAMMA_MINUS1) * (BOLTZMANN / PROTONMASS) * All.InitGasTemp;
   u_init *= All.UnitMass_in_g / All.UnitEnergy_in_cgs; /* unit conversion */
 

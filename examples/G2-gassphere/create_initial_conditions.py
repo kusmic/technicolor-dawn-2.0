@@ -50,8 +50,6 @@ rad = np.sqrt(x**2+y**2+z**2)
 
 j = np.argwhere(rad < 1.0)
 
-
-
 number_particles = j.size
 
 particle_mass = Mtot / number_particles
@@ -63,7 +61,6 @@ x = x[j]
 y = y[j]
 z = z[j]
 
-
 Pos = np.zeros((number_particles,3), dtype=FloatType)
 Vel = np.zeros((number_particles,3), dtype=FloatType)
 Uthermal = np.zeros((number_particles,3), dtype=FloatType)
@@ -74,22 +71,14 @@ Pos[:,0] = x[:,0]
 Pos[:,1] = y[:,0]
 Pos[:,2] = z[:,0]
 
-
-
-
 Mass[:] = particle_mass
 
 Uthermal[:] = 0.05
-
 rad = np.sqrt(x[:]**2+y[:]**2+z[:]**2)
-
 rho = 1.0/(2.* np.pi * rad[:])
-
-
 entr = (gamma - 1) *  Uthermal[:] / (rho[:]**(gamma - 1))
 
 #write intial conditions file
-
 IC = h5py.File('IC.hdf5', 'w')
 
 ## create hdf5 groups
