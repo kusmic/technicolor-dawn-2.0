@@ -260,17 +260,17 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
  
      // Update the mass of dust (assume a fraction of gas turns into dust)
      double dust_fraction = 0.1; // Example: Convert 10% of gas into dust
-     Sp->P[i].Mass *= dust_fraction; // Reduce gas mass accordingly
+     Sp->P[i].setMass(Sp->P[i].getMass() * dust_fraction); // Reduce gas mass accordingly
      
      // Dust retains some properties of the parent gas particle
-     Sp->P[i].Density = Sp->SphP[i].Density;  
+     //Sp->P[i].Density = Sp->SphP[i].Density;  
      Sp->P[i].Metallicity = Sp->SphP[i].Metallicity;
      Sp->P[i].Vel[0] = Sp->P[i].Vel[0];
      Sp->P[i].Vel[1] = Sp->P[i].Vel[1];
      Sp->P[i].Vel[2] = Sp->P[i].Vel[2];
  
      // Assign birth time for tracking dust evolution
-     Sp->P[i].BirthTime = birthtime;
+     Sp->P[i].StellarAge = birthtime;
  
      return;
  }
