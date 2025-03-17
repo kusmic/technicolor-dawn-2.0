@@ -94,7 +94,7 @@ $(info EXEC: $(EXEC))
 $(info )
 
 
-PYTHON   = python
+PYTHON   = python3
 
 RESULT     := $(shell CONFIG=$(CONFIG) PYTHON=$(PYTHON) BUILD_DIR=$(BUILD_DIR) SRC_DIR=$(SRC_DIR) CURDIR=$(CURDIR) make -f buildsystem/Makefile.config)
 $(info $(RESULT))
@@ -427,7 +427,7 @@ VTUNE_LIBS =
 endif
 
 GSL_LIBS   += -lgsl -lgslcblas
-HDF5_LIBS  += -lhdf5 -lz
+HDF5_LIBS  += -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lz
 MATH_LIBS  = -lm
 
 ifneq ($(SYSTYPE),"Darwin")
@@ -442,7 +442,7 @@ MAKEFILES = $(MAKEFILE_LIST) buildsystem/Makefile.config
 #combine compiler options#
 ##########################
 
-CFLAGS = $(OPTIMIZE) $(OPT) $(HDF5_INCL) $(GSL_INCL) $(FFTW_INCL) $(HWLOC_INCL) $(VTUNE_INCL) $(MAPS_INCL) -I$(BUILD_DIR) -I$(SRC_DIR)
+CFLAGS = $(OPTIMIZE) $(OPT) $(HDF5_INCL) $(GSL_INCL) $(FFTW_INCL) $(HWLOC_INCL) $(VTUNE_INCL) $(MAPS_INCL) -I$(BUILD_DIR) -I$(SRC_DIR) -I/usr/include/hdf5/serial
 
 LIBS = $(MATH_LIBS) $(HDF5_LIBS) $(GSL_LIBS) $(FFTW_LIBS) $(HWLOC_LIBS) $(VTUNE_LIBS) $(TEST_LIBS) $(MAPS_LIBS) $(SHMEM_LIBS)
 
