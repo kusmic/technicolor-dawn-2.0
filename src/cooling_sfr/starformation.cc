@@ -57,7 +57,7 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
 
 
   /* Go and check all stars and see if any go supernova; if so, handle the feedback */
-  supernova::handle_supernovae(Sp);
+  handle_supernovae(Sp);
 
 
   for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)

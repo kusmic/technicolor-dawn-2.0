@@ -33,8 +33,6 @@ This module:
 #define SN_ENRICHMENT_FRACTION 0.3 // Fraction of mass converted to metals
 #define SN_DUST_FRACTION 0.2 // Fraction of ejecta forming dust
 
-namespace supernova {
-
 /** \brief Check for star particles that should explode and inject feedback.
  *
  *  This function loops over all star particles, checking if they are old enough
@@ -105,8 +103,6 @@ void spawn_dust_from_SN(simparticles *Sp, int i) {
 
     return;
 }
-
-} // namespace supernova
 
 
 #endif /* closes SFR */
