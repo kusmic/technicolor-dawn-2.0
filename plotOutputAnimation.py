@@ -7,13 +7,13 @@ import matplotlib.animation as animation
 # Define colors (and optional marker sizes) for each PartType.
 # Modify these if your simulation uses different types or you wish different styling.
 part_colors = {
-    'PartType0': {'color': 'blue',   'size': 1},    # Gas
-    'PartType1': {'color': 'black',  'size': 1},    # Dark Matter
-    'PartType2': {'color': 'green',  'size': 1},    # Disk particles (if any)
-    'PartType3': {'color': 'orange', 'size': 1},    # Bulge (if any)
-    'PartType4': {'color': 'red',    'size': 1},    # Stars
-    'PartType5': {'color': 'purple', 'size': 1},    # Black Holes or other
-    'PartType6': {'color': 'brown',  'size': 1}     # Dust
+    'PartType0': {'name': 'Gas', 'color': 'blue', 'size': 2},
+    'PartType1': {'name': 'Dark Matter', 'color': 'black', 'size': 2},
+    'PartType2': {'name': 'Disk', 'color': 'brown', 'size': 3},
+    'PartType3': {'name': 'Bulge', 'color': 'orange', 'size': 3},
+    'PartType4': {'name': 'Stars', 'color': 'red', 'size': 5},
+    'PartType5': {'name': 'Black Holes', 'color': 'purple', 'size': 3},
+    'PartType6': {'name': 'Dust', 'color': 'green', 'size': 5}
 }
 
 # Change the glob pattern to match your snapshot filenames.
@@ -35,8 +35,8 @@ def update(frame):
                 ax.scatter(coords[:, 0], coords[:, 1],
                            s=props['size'],
                            c=props['color'],
-                           label=part,
-                           alpha=0.6)
+                           label=props['name'],
+                           alpha=0.7)
     ax.set_xlabel("X [kpc]")
     ax.set_ylabel("Y [kpc]")
     ax.set_title(f"Snapshot {frame}: {filename}")
@@ -46,10 +46,10 @@ def update(frame):
     ax.legend(loc='upper right')
 
 # Create the animation.
-ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), interval=100)
+ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), interval=500)
 
 # To display the animation interactively:
 plt.show()
 
 # Optionally, to save the animation as a video (requires ffmpeg installed):
-# ani.save("gadget4_animation.mp4", writer="ffmpeg", dpi=300)
+ani.save("gadget4_animation.mp4", writer="ffmpeg", dpi=200)
