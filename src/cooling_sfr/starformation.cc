@@ -55,6 +55,11 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
 
   sum_sm = sum_mass_stars = 0;
 
+
+  /* Go and check all stars and see if any go supernova; if so, handle the feedback */
+  supernova::handle_supernovae(Sp);
+
+
   for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
     {
       int target = Sp->TimeBinsHydro.ActiveParticleList[i];
@@ -270,7 +275,7 @@ void coolsfr::sfr_create_star_particles(simparticles *Sp)
      Sp->P[i].Vel[2] = Sp->P[i].Vel[2];
  
      // Assign birth time for tracking dust evolution
-     Sp->P[i].StellarAge = birthtime;
+     Sp->P[i].DustAge = birthtime;
  
      return;
  }
@@ -352,7 +357,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  
      // Assign dust properties
      Sp->P[idust].setMass(mass_of_dust);
-     Sp->P[idust].StellarAge = birthtime;
+     Sp->P[idust].DustAge = birthtime;
  
      // Adjust mass of parent gas particle
      double fac = (Sp->P[igas].getMass() - Sp->P[idust].getMass()) / Sp->P[igas].getMass();
@@ -407,7 +412,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
      }
  }
  
- #endif /* closes SFR */
+
 
  
 
@@ -464,3 +469,4 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
      }
  }
  
+ #endif /* closes SFR */
