@@ -33,11 +33,8 @@ class coolsfr : public setcomm
 
 #ifdef STARFORMATION
   void sfr_create_star_particles(simparticles *Sp);
-
   void set_units_sfr(void);
-
   void cooling_and_starformation(simparticles *Sp);
-
   void init_clouds(void);
 #endif
 

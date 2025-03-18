@@ -135,3 +135,5 @@ double get_position(int d, struct particle_data *P)
 {
     return ((double) P->IntPos[d]) * (All.BoxSize / (1LL << 30));
 }
+
+#endif // STARFORMATION
