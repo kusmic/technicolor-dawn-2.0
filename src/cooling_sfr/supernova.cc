@@ -123,7 +123,7 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
  *  to undergo supernova explosions. If a supernova event is triggered, it injects
  *  thermal energy into nearby gas, enriches metals, and spawns dust particles.
  */
- void handle_supernovae(simparticles *Sp) {
+ void coolsfr::handle_supernovae(simparticles *Sp) {
     for (int i = 0; i < Sp->NumPart; i++) {
         if (Sp->P[i].getType() == STAR_TYPE) {
             double star_age = Sp->P[i].StellarAge; // Star particle's age
