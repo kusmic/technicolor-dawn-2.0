@@ -121,6 +121,10 @@ struct particle_data
 #endif
 #endif
 
+#ifdef SUPERNOVA
+   inline double get_position(int d, struct particle_data *P);
+#endif
+
 #ifdef STARFORMATION
   MyFloat StellarAge;  /**< formation time of star particle */
   MyFloat Metallicity; /**< metallicity of gas or star particle */
