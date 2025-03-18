@@ -43,7 +43,7 @@ This module:
  *
  *  \param i index of the exploding star particle
  */
-void spawn_dust_from_supernova(simparticles *Sp, int i) {
+void coolsfr::spawn_dust_from_supernova(simparticles *Sp, int i) {
     if (Sp->NumPart + 1 >= Sp->MaxPart)
         Terminate("No space left for dust particles");
 
