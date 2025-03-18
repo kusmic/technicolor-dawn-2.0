@@ -78,11 +78,6 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-double get_position(int d, struct particle_data *P)
-{
-    return ((double) P->IntPos[d]) * (All.BoxSize / (1LL << 30));
-}
-
 /** \brief Inject supernova energy, enrich gas, and spawn dust.
  *
  *  This function distributes energy and mass from a supernova to nearby gas particles.

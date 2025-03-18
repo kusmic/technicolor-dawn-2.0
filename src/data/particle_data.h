@@ -122,7 +122,9 @@ struct particle_data
 #endif
 
 #ifdef SUPERNOVA
-   double get_position(int d);
+  double get_position(int d) const {
+    return ((double) IntPos[d]) * (All.BoxSize / (1LL << 30));
+  }
 #endif
 
 #ifdef STARFORMATION
