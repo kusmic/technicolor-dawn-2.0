@@ -77,7 +77,7 @@ void inject_supernova_feedback(simparticles *Sp, int i) {
 
             if (r < SN_FEEDBACK_RADIUS) {
                 // Inject thermal energy
-                Sp->SphP[j].InternalEnergy += energy_SN / (r + 1e-3);
+                // Sp->SphP[j].InternalEnergy += energy_SN / (r + 1e-3);
 
                 // Inject metals
                 Sp->SphP[j].Metallicity += mass_SN / num_neighbors;
@@ -129,4 +129,9 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
     if (dz < -0.5 * box_size) dz += box_size;
 
     return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+double get_position(int d, struct particle_data *P)
+{
+    return ((double) P->IntPos[d]) * (All.BoxSize / (1LL << 30));
 }
