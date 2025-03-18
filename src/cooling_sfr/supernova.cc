@@ -65,7 +65,15 @@ void inject_supernova_feedback(simparticles *Sp, int i) {
 
     for (int j = 0; j < Sp->NumPart; j++) {
         if (Sp->P[j].getType() == 0) { // Gas particle
-            double r = compute_distance(Sp->P[i].Pos, Sp->P[j].Pos, All.BoxSize);
+            double pos1[3], pos2[3];
+
+            // Convert integer positions to floating-point positions
+            for (int d = 0; d < 3; d++) {
+                pos1[d] = Sp->P[i].get_position(d);
+                pos2[d] = Sp->P[j].get_position(d);
+            }
+
+            double r = compute_distance(pos1, pos2, All.BoxSize);
 
             if (r < SN_FEEDBACK_RADIUS) {
                 // Inject thermal energy
@@ -108,12 +116,11 @@ void spawn_dust_from_supernova(simparticles *Sp, int i) {
 double compute_distance(const double pos1[3], const double pos2[3], double box_size) {
     double dx, dy, dz;
     
-    // Compute differences and apply minimum image convention
     dx = pos1[0] - pos2[0];
     dy = pos1[1] - pos2[1];
     dz = pos1[2] - pos2[2];
 
-    // Apply periodic boundary conditions (wrap around the box)
+    // Apply periodic boundary conditions
     if (dx > 0.5 * box_size) dx -= box_size;
     if (dx < -0.5 * box_size) dx += box_size;
     if (dy > 0.5 * box_size) dy -= box_size;
@@ -123,5 +130,3 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
 
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
-
-#endif /* closes SFR */

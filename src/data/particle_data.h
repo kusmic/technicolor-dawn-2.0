@@ -133,12 +133,6 @@ struct particle_data
 #endif
 
 
-#ifdef SUPERNOVA
-// Function to compute distance for feedback with periodic boundary conditions
-double compute_distance(const double pos1[3], const double pos2[3], double box_size);
-#endif
-
-
   inline unsigned char getType(void)
   {
 #ifdef LEAN
