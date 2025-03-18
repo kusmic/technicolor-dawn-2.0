@@ -45,7 +45,7 @@ void handle_supernovae(simparticles *Sp) {
             double star_age = Sp->P[i].StellarAge; // Star particle's age
 
             if (star_age > 3e7) { // Assume SN occurs after 30 Myr
-                inject_supernova_feedback(Sp, i);
+                inject_supernova_feedback(*Sp, i);
             }
         }
     }
