@@ -85,7 +85,7 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
  *
  *  \param i index of the exploding star particle
  */
- void inject_supernova_feedback(simparticles *Sp, int i) {
+ void coolsfr::inject_supernova_feedback(simparticles *Sp, int i) {
     double mass_SN = SN_ENRICHMENT_FRACTION * Sp->P[i].getMass();
     double energy_SN = SN_ENERGY; // Assume 10^51 erg per SN
     int num_neighbors = 0;
