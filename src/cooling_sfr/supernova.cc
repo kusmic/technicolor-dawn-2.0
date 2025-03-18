@@ -60,7 +60,7 @@ void coolsfr::spawn_dust_from_supernova(simparticles *Sp, int i) {
 }
 
 // Function to compute distance with periodic boundary conditions
-double compute_distance(const double pos1[3], const double pos2[3], double box_size) {
+double coolsfr::compute_distance(const double pos1[3], const double pos2[3], double box_size) {
     double dx, dy, dz;
     
     dx = pos1[0] - pos2[0];
