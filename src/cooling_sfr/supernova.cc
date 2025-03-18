@@ -33,62 +33,9 @@ This module:
 #define SN_ENRICHMENT_FRACTION 0.3 // Fraction of mass converted to metals
 #define SN_DUST_FRACTION 0.2 // Fraction of ejecta forming dust
 
-/** \brief Check for star particles that should explode and inject feedback.
- *
- *  This function loops over all star particles, checking if they are old enough
- *  to undergo supernova explosions. If a supernova event is triggered, it injects
- *  thermal energy into nearby gas, enriches metals, and spawns dust particles.
- */
-void handle_supernovae(simparticles *Sp) {
-    for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() == STAR_TYPE) {
-            double star_age = Sp->P[i].StellarAge; // Star particle's age
 
-            if (star_age > 3e7) { // Assume SN occurs after 30 Myr
-                inject_supernova_feedback(*Sp, i);
-            }
-        }
-    }
-}
 
-/** \brief Inject supernova energy, enrich gas, and spawn dust.
- *
- *  This function distributes energy and mass from a supernova to nearby gas particles.
- *  It enriches gas with metals and spawns a dust particle from the ejecta.
- *
- *  \param i index of the exploding star particle
- */
-void inject_supernova_feedback(simparticles *Sp, int i) {
-    double mass_SN = SN_ENRICHMENT_FRACTION * Sp->P[i].getMass();
-    double energy_SN = SN_ENERGY; // Assume 10^51 erg per SN
-    int num_neighbors = 0;
 
-    for (int j = 0; j < Sp->NumPart; j++) {
-        if (Sp->P[j].getType() == 0) { // Gas particle
-            double pos1[3], pos2[3];
-
-            // Convert integer positions to floating-point positions
-            for (int d = 0; d < 3; d++) {
-                pos1[d] = Sp->P[i].get_position(d);
-                pos2[d] = Sp->P[j].get_position(d);
-            }
-
-            double r = compute_distance(pos1, pos2, All.BoxSize);
-
-            if (r < SN_FEEDBACK_RADIUS) {
-                // Inject thermal energy
-                // Sp->SphP[j].InternalEnergy += energy_SN / (r + 1e-3);
-
-                // Inject metals
-                Sp->SphP[j].Metallicity += mass_SN / num_neighbors;
-                num_neighbors++;
-            }
-        }
-    }
-
-    // Spawn a dust particle from supernova ejecta
-    spawn_dust_from_supernova(Sp, i);
-}
 
 /** \brief Create a dust particle from SN ejecta.
  *
@@ -134,6 +81,63 @@ double compute_distance(const double pos1[3], const double pos2[3], double box_s
 double get_position(int d, struct particle_data *P)
 {
     return ((double) P->IntPos[d]) * (All.BoxSize / (1LL << 30));
+}
+
+/** \brief Inject supernova energy, enrich gas, and spawn dust.
+ *
+ *  This function distributes energy and mass from a supernova to nearby gas particles.
+ *  It enriches gas with metals and spawns a dust particle from the ejecta.
+ *
+ *  \param i index of the exploding star particle
+ */
+ void inject_supernova_feedback(simparticles *Sp, int i) {
+    double mass_SN = SN_ENRICHMENT_FRACTION * Sp->P[i].getMass();
+    double energy_SN = SN_ENERGY; // Assume 10^51 erg per SN
+    int num_neighbors = 0;
+
+    for (int j = 0; j < Sp->NumPart; j++) {
+        if (Sp->P[j].getType() == 0) { // Gas particle
+            double pos1[3], pos2[3];
+
+            // Convert integer positions to floating-point positions
+            for (int d = 0; d < 3; d++) {
+                pos1[d] = Sp->P[i].get_position(d);
+                pos2[d] = Sp->P[j].get_position(d);
+            }
+
+            double r = compute_distance(pos1, pos2, All.BoxSize);
+
+            if (r < SN_FEEDBACK_RADIUS) {
+                // Inject thermal energy
+                // Sp->SphP[j].InternalEnergy += energy_SN / (r + 1e-3);
+
+                // Inject metals
+                Sp->SphP[j].Metallicity += mass_SN / num_neighbors;
+                num_neighbors++;
+            }
+        }
+    }
+
+    // Spawn a dust particle from supernova ejecta
+    spawn_dust_from_supernova(Sp, i);
+}
+
+/** \brief Check for star particles that should explode and inject feedback.
+ *
+ *  This function loops over all star particles, checking if they are old enough
+ *  to undergo supernova explosions. If a supernova event is triggered, it injects
+ *  thermal energy into nearby gas, enriches metals, and spawns dust particles.
+ */
+ void handle_supernovae(simparticles *Sp) {
+    for (int i = 0; i < Sp->NumPart; i++) {
+        if (Sp->P[i].getType() == STAR_TYPE) {
+            double star_age = Sp->P[i].StellarAge; // Star particle's age
+
+            if (star_age > 3e7) { // Assume SN occurs after 30 Myr
+                inject_supernova_feedback(Sp, i);
+            }
+        }
+    }
 }
 
 #endif // STARFORMATION
