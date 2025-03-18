@@ -431,7 +431,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  {
      // Dust formation conditions
      double Z_min = 0.01;  // Minimum metallicity for dust formation
-     double T_max = 1000.0; // Maximum temperature for dust survival (Kelvin)
+     // double T_max = 1000.0; // Maximum temperature for dust survival (Kelvin)
      double Density_min = 1e-24; // Minimum gas density (cgs)
  
      if (Sp->SphP[i].Metallicity < Z_min) return; // Not enough metals

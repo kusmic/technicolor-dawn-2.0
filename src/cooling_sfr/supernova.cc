@@ -65,7 +65,7 @@ void inject_supernova_feedback(simparticles *Sp, int i) {
 
     for (int j = 0; j < Sp->NumPart; j++) {
         if (Sp->P[j].getType() == 0) { // Gas particle
-            double r = compute_distance(Sp->P[i], Sp->P[j]);
+            double r = compute_distance(Sp->P[i].Pos, Sp->P[j].Pos, All.BoxSize);
 
             if (r < SN_FEEDBACK_RADIUS) {
                 // Inject thermal energy
@@ -79,7 +79,7 @@ void inject_supernova_feedback(simparticles *Sp, int i) {
     }
 
     // Spawn a dust particle from supernova ejecta
-    spawn_dust_from_SN(Sp, i);
+    spawn_dust_from_supernova(Sp, i);
 }
 
 /** \brief Create a dust particle from SN ejecta.
@@ -88,7 +88,7 @@ void inject_supernova_feedback(simparticles *Sp, int i) {
  *
  *  \param i index of the exploding star particle
  */
-void spawn_dust_from_SN(simparticles *Sp, int i) {
+void spawn_dust_from_supernova(simparticles *Sp, int i) {
     if (Sp->NumPart + 1 >= Sp->MaxPart)
         Terminate("No space left for dust particles");
 
@@ -104,5 +104,24 @@ void spawn_dust_from_SN(simparticles *Sp, int i) {
     return;
 }
 
+// Function to compute distance with periodic boundary conditions
+double compute_distance(const double pos1[3], const double pos2[3], double box_size) {
+    double dx, dy, dz;
+    
+    // Compute differences and apply minimum image convention
+    dx = pos1[0] - pos2[0];
+    dy = pos1[1] - pos2[1];
+    dz = pos1[2] - pos2[2];
+
+    // Apply periodic boundary conditions (wrap around the box)
+    if (dx > 0.5 * box_size) dx -= box_size;
+    if (dx < -0.5 * box_size) dx += box_size;
+    if (dy > 0.5 * box_size) dy -= box_size;
+    if (dy < -0.5 * box_size) dy += box_size;
+    if (dz > 0.5 * box_size) dz -= box_size;
+    if (dz < -0.5 * box_size) dz += box_size;
+
+    return sqrt(dx * dx + dy * dy + dz * dz);
+}
 
 #endif /* closes SFR */

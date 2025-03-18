@@ -128,8 +128,8 @@ class coolsfr : public setcomm
 #endif
 
 #ifdef SUPERNOVA
-  void inject_feedback(simparticles *Sp, int i);
-  void create_dust_from_sn(simparticles *Sp, int i);
+  void inject_supernova_feedback(simparticles *Sp, int i);
+  void spawn_dust_from_supernovae(simparticles *Sp, int i);
   void handle_supernovae(simparticles *Sp);
 #endif
 
