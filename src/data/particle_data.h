@@ -122,7 +122,7 @@ struct particle_data
 #endif
 
 #ifdef SUPERNOVA
-   double get_position(int d, struct particle_data *P);
+   double get_position(int d);
 #endif
 
 #ifdef STARFORMATION
