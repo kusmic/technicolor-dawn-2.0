@@ -118,6 +118,7 @@ enum e_typelist
   TREETIMES     = -14,
   GALSNAPS      = -16,
   HEALPIXTAB    = -17,
+  DUST_ONLY     =  32,
 };
 
 enum read_flags

@@ -119,8 +119,8 @@ void snap_io::init_basic(simparticles *Sp_ptr)
   init_field("SFR ", "StarFormationRate", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, All.RestartFlag == RST_FOF ? READ_IF_PRESENT : SKIP_ON_READ,
              1, A_NONE, 0, io_func_sfr, GAS_ONLY, 1, 0., 0., -1., 1., 1., SOLAR_MASS / SEC_PER_YEAR);
 
-  init_field("AGE ", "StellarFormationTime", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_P, &Sp->P[0].StellarAge, NULL,
-             AGE_BLOCK, /* stellar formation time */
+  init_field("AGE ", "StellarFormationTime", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_P, &Sp->P[0].Age, NULL,
+              AGE_BLOCK, /* stellar formation time */
              0, 0, 0, 0, 0, 0, 0);
 
   init_field("Z   ", "Metallicity", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_NONE, 0, io_func_metallicity,
@@ -130,18 +130,19 @@ void snap_io::init_basic(simparticles *Sp_ptr)
 
 
 
-/* Need to look at this and update io_func_sfr and io_func_metallicity */
+/* Need to look at this and update io_func_sfr and io_func_metallicity 
+   And what is All.RestartFlag == RST_FOF ? READ_IF_PRESENT : SKIP_ON_READ !!??  */
 #ifdef DUST
 
   init_field("SIZE ", "GrainSize", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, All.RestartFlag == RST_FOF ? READ_IF_PRESENT : SKIP_ON_READ,
-             1, A_NONE, 0, io_func_sfr, GAS_ONLY, 1, 0., 0., -1., 1., 1., SOLAR_MASS / SEC_PER_YEAR);
+             1, A_NONE, 0, io_func_sfr, DUST_ONLY, 1, 0., 0., -1., 1., 1., SOLAR_MASS / SEC_PER_YEAR);
 
-  init_field("AGE ", "DustAge", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_P, &Sp->P[0].DustAge, NULL,
-             AGE_BLOCK, /* stellar formation time */
+  init_field("AGE ", "Age", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_P, &Sp->P[0].Age, NULL,
+            AGE_BLOCK, /* dust age */
              0, 0, 0, 0, 0, 0, 0);
 
   init_field("DRAG   ", "DragCoeff", MEM_MY_FLOAT, FILE_MY_IO_FLOAT, READ_IF_PRESENT, 1, A_NONE, 0, io_func_metallicity,
-             Z_BLOCK, /* gas and star metallicity */
+            DUST_ONLY, /* gas and star metallicity */
              0, 0, 0, 0, 0, 0, 0);
 #endif
 

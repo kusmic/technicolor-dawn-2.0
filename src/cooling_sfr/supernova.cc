@@ -89,7 +89,8 @@ double coolsfr::compute_distance(const double pos1[3], const double pos2[3], dou
     double mass_SN = SN_ENRICHMENT_FRACTION * Sp->P[i].getMass();
     double energy_SN = SN_ENERGY; // Assume 10^51 erg per SN
     int num_neighbors = 0;
-
+    
+    mpi_printf("SUPERNOVA: of mass %d goes off!\n", mass_SN);
     for (int j = 0; j < Sp->NumPart; j++) {
         if (Sp->P[j].getType() == 0) { // Gas particle
             double pos1[3], pos2[3];

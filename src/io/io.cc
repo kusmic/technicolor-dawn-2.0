@@ -1947,12 +1947,14 @@ long long IO_Def::get_particles_in_block(int blocknr, long long *npart_file, int
         return npart;
         break;
 
+      // Want this to be for stars and dust!
       case AGE_BLOCK:
+      
         for(int i = 0; i < NTYPES; i++)
           {
             typelist[i] = (npart_file[i] > 0);
 
-            if((file_format == FILEFORMAT_HDF5 && (i == 0 || i == 1 || i == 5)) || (file_format != FILEFORMAT_HDF5 && i != 4))
+            if((file_format == FILEFORMAT_HDF5 && (i == 0 || i == 1 || i == 5)) || (file_format != FILEFORMAT_HDF5 && (i != 4 && i != 6)))
               typelist[i] = 0;
 
             npart += npart_file[i] * typelist[i];
@@ -1960,7 +1962,21 @@ long long IO_Def::get_particles_in_block(int blocknr, long long *npart_file, int
         return npart;
         break;
 
+      // Want this to be for gas and stars!
       case Z_BLOCK:
+        for(int i = 0; i < NTYPES; i++)
+          {
+            typelist[i] = (npart_file[i] > 0);
+            if((file_format == FILEFORMAT_HDF5 && (i == 1 || i == 5)) || (file_format != FILEFORMAT_HDF5 && (i != 0 && i != 4)))
+              typelist[i] = 0;
+
+            npart += npart_file[i] * typelist[i];
+          }
+        return npart;
+        break;
+
+      // Want this to be for dust and no other particle types!
+      case DUST_ONLY:
         for(int i = 0; i < NTYPES; i++)
           {
             typelist[i] = (npart_file[i] > 0);
