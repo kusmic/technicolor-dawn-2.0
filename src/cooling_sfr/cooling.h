@@ -131,7 +131,7 @@ void inject_supernova_feedback(simparticles *Sp, int i);
   
   void spawn_dust_from_supernova(simparticles *Sp, int i);
   double compute_distance(const double pos1[3], const double pos2[3], double box_size);
-  double get_position(int d, struct particle_data *P);
+
 #endif
 
 #ifdef STARFORMATION

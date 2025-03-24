@@ -38,137 +38,122 @@
  * This sets Sp->SphP[target].Sfr that sfr_create_star_particles() will use to 
  * decide whether to make a star.
  */
-void coolsfr::cooling_and_starformation(simparticles *Sp)
-{
-  TIMER_START(CPU_COOLING_SFR);
-
-  /* clear the SFR stored in the active timebins */
-  for(int bin = 0; bin < TIMEBINS; bin++)
-    if(Sp->TimeBinSynchronized[bin])
-      Sp->TimeBinSfr[bin] = 0;
-
-  All.set_cosmo_factors_for_current_time();
-
-  gas_state gs    = GasState;
-  do_cool_data dc = DoCoolData;
-
-  for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
-    {
-      int target = Sp->TimeBinsHydro.ActiveParticleList[i];
-      if(Sp->P[target].getType() == 0)
-        {
-          if(Sp->P[target].getMass() == 0 && Sp->P[target].ID.get() == 0)
-            continue; /* skip cells that have been swallowed or eliminated */
-
-          double dens = Sp->SphP[target].Density;
-
-          double dt =
-              (Sp->P[target].getTimeBinHydro() ? (((integertime)1) << Sp->P[target].getTimeBinHydro()) : 0) * All.Timebase_interval;
-          /*  the actual time-step */
-
-          double dtime = All.cf_atime * dt / All.cf_atime_hubble_a;
-
-          /* check whether conditions for star formation are fulfilled.
-           *
-           * f=1  normal cooling
-           * f=0  star formation
-           */
-          int flag = 1; /* default is normal cooling */
-
-          /* Check if this gas particle's density is greater than the threshold to make stars */
-          if(dens * All.cf_a3inv >= All.PhysDensThresh)
-            flag = 0;
-
-          if(All.ComovingIntegrationOn)
-            if(dens < All.OverDensThresh)
-              flag = 1;
-
-          if(flag == 1) /* normal implicit isochoric cooling */
-            {
-              Sp->SphP[target].Sfr = 0;
-              cool_sph_particle(Sp, target, &gs, &dc);
-            }
-
-          if(flag == 0) /* active star formation */
-            {
-              double tsfr = sqrt(All.PhysDensThresh / (dens * All.cf_a3inv)) * All.MaxSfrTimescale;
-
-              double factorEVP = pow(dens * All.cf_a3inv / All.PhysDensThresh, -0.8) * All.FactorEVP;
-
-              double egyhot = All.EgySpecSN / (1 + factorEVP) + All.EgySpecCold;
-
-              double ne = Sp->SphP[target].Ne;
-
-              double tcool        = GetCoolingTime(egyhot, dens * All.cf_a3inv, &ne, &gs, &dc);
-              Sp->SphP[target].Ne = ne;
-
-              double y = tsfr / tcool * egyhot / (All.FactorSN * All.EgySpecSN - (1 - All.FactorSN) * All.EgySpecCold);
-
-              double x = 1 + 1 / (2 * y) - sqrt(1 / y + 1 / (4 * y * y));
-
-              double egyeff = egyhot * (1 - x) + All.EgySpecCold * x;
-
-              double cloudmass = x * Sp->P[target].getMass();
-              double utherm    = Sp->get_utherm_from_entropy(target);
-
-              if(tsfr < dtime)
-                tsfr = dtime;
-
-              if(dt > 0)
-                {
-                  if(Sp->P[target].getTimeBinHydro()) /* upon start-up, we need to protect against dt==0 */
-                    {
-                      double trelax     = tsfr * (1 - x) / x / (All.FactorSN * (1 + factorEVP));
-                      double egycurrent = utherm;
-
-                      double unew;
-                      if(egycurrent > egyeff)
-                        {
-                          double dtcool = dtime;
-                          ne            = Sp->SphP[target].Ne;
-
-                          unew = DoCooling(egycurrent, dens * All.cf_a3inv, dtcool, &ne, &gs, &dc);
-
-                          if(unew < egyeff)
-                            {
-                              unew = egyeff;
-                            }
-                        }
-                      else
-                        unew = (egyeff + (egycurrent - egyeff) * exp(-dtime / trelax));
-
-                      double du = unew - utherm;
-                      if(unew < All.MinEgySpec)
-                        du = All.MinEgySpec - utherm;
-
-                      utherm += du;
-                      Sp->set_entropy_from_utherm(utherm, target);
-                      Sp->SphP[target].DtEntropy = 0.0;
-
-#ifdef OUTPUT_COOLHEAT
-                      if(dtime > 0)
-                        Sp->SphP[target].CoolHeat = du * Sp->P[target].getMass() / dtime;
-#endif
-                      Sp->SphP[target].set_thermodynamic_variables();
-                    }
-                }
-
-              if(utherm > 1.01 * egyeff)
-                Sp->SphP[target].Sfr = 0;
-              else
-                {
-                  /* note that we convert the star formation rate to solar masses per year */
-                  Sp->SphP[target].Sfr =
-                      (1 - All.FactorSN) * cloudmass / tsfr * (All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR);
-                }
-
-              Sp->TimeBinSfr[Sp->P[target].getTimeBinHydro()] += Sp->SphP[target].Sfr;
-            }
-        }
-    } /* end of main loop over active particles */
-
-  TIMER_STOP(CPU_COOLING_SFR);
-}
+ void coolsfr::cooling_and_starformation(simparticles *Sp)
+ {
+   TIMER_START(CPU_COOLING_SFR); // Start timing this function for performance monitoring
+ 
+   /* Clear the star formation rate (SFR) stored in the active timebins for synchronization */
+   for(int bin = 0; bin < TIMEBINS; bin++)
+     if(Sp->TimeBinSynchronized[bin])
+       Sp->TimeBinSfr[bin] = 0;
+ 
+   /* Update cosmological factors to current simulation time */
+   All.set_cosmo_factors_for_current_time();
+ 
+   /* Initialize gas state and cooling data structures */
+   gas_state gs    = GasState;
+   do_cool_data dc = DoCoolData;
+ 
+   /* Loop over all active particles in the hydrodynamic timebins */
+   for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
+     {
+       int target = Sp->TimeBinsHydro.ActiveParticleList[i];
+       if(Sp->P[target].getType() == 0) // Process only gas particles (type 0)
+         {
+           if(Sp->P[target].getMass() == 0 && Sp->P[target].ID.get() == 0)
+             continue; // Skip cells that have been swallowed or eliminated
+ 
+           /* Get the density of the gas particle */
+           double dens = Sp->SphP[target].Density;
+ 
+           /* Calculate the actual time-step for the gas particle */
+           double dt = (Sp->P[target].getTimeBinHydro() ? (((integertime)1) << Sp->P[target].getTimeBinHydro()) : 0) * All.Timebase_interval;
+           double dtime = All.cf_atime * dt / All.cf_atime_hubble_a;
+ 
+           /* Determine cooling or star formation based on density */
+           int flag = 1; // Default to normal cooling
+           if(dens * All.cf_a3inv >= All.PhysDensThresh) // Check if density exceeds threshold for star formation
+             flag = 0; // Set flag for star formation
+ 
+           if(All.ComovingIntegrationOn && dens < All.OverDensThresh) // Additional check for overdensity in comoving integration
+             flag = 1; // Revert to normal cooling
+ 
+           if(flag == 1) // Normal cooling
+             {
+               Sp->SphP[target].Sfr = 0;
+               cool_sph_particle(Sp, target, &gs, &dc); // Cool the gas particle without star formation
+             }
+ 
+           if(flag == 0) // Star formation conditions met
+             {
+               /* Calculate the star formation timescale */
+               double tsfr = sqrt(All.PhysDensThresh / (dens * All.cf_a3inv)) * All.MaxSfrTimescale;
+ 
+               /* Calculate factors for the effective multi-phase model */
+               double factorEVP = pow(dens * All.cf_a3inv / All.PhysDensThresh, -0.8) * All.FactorEVP;
+               double egyhot = All.EgySpecSN / (1 + factorEVP) + All.EgySpecCold; // Compute the hot phase energy
+ 
+               /* Estimate cooling time and electron number density */
+               double ne = Sp->SphP[target].Ne;
+               double tcool = GetCoolingTime(egyhot, dens * All.cf_a3inv, &ne, &gs, &dc);
+               Sp->SphP[target].Ne = ne;
+ 
+               /* Calculate the fraction of gas converting into stars */
+               double y = tsfr / tcool * egyhot / (All.FactorSN * All.EgySpecSN - (1 - All.FactorSN) * All.EgySpecCold);
+               double x = 1 + 1 / (2 * y) - sqrt(1 / y + 1 / (4 * y * y));
+               double egyeff = egyhot * (1 - x) + All.EgySpecCold * x;
+ 
+               /* Calculate the mass of gas converting into stars */
+               double cloudmass = x * Sp->P[target].getMass();
+               double utherm = Sp->get_utherm_from_entropy(target);
+ 
+               /* Adjust star formation rate if needed */
+               if(tsfr < dtime) tsfr = dtime;
+               if(dt > 0)
+                 {
+                   double trelax = tsfr * (1 - x) / x / (All.FactorSN * (1 + factorEVP));
+                   double egycurrent = utherm;
+                   double unew;
+                   if(egycurrent > egyeff)
+                     {
+                       double dtcool = dtime;
+                       ne = Sp->SphP[target].Ne;
+                       unew = DoCooling(egycurrent, dens * All.cf_a3inv, dtcool, &ne, &gs, &dc);
+                       if(unew < egyeff) unew = egyeff;
+                     }
+                   else
+                     unew = (egyeff + (egycurrent - egyeff) * exp(-dtime / trelax));
+ 
+                   double du = unew - utherm;
+                   if(unew < All.MinEgySpec) du = All.MinEgySpec - utherm;
+                   utherm += du;
+                   Sp->set_entropy_from_utherm(utherm, target);
+                   Sp->SphP[target].DtEntropy = 0.0;
+ 
+ #ifdef OUTPUT_COOLHEAT
+                   if(dtime > 0)
+                     Sp->SphP[target].CoolHeat = du * Sp->P[target].getMass() / dtime;
+ #endif
+                   Sp->SphP[target].set_thermodynamic_variables();
+                 }
+ 
+               /* Only convert gas to stars if thermal energy criteria are met */
+               if(utherm > 1.01 * egyeff)
+                 Sp->SphP[target].Sfr = 0;
+               else
+                 {
+                   Sp->SphP[target].Sfr = (1 - All.FactorSN) * cloudmass / tsfr * (All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR); // Convert SFR to solar masses per year
+                 }
+ 
+               /* Accumulate SFR in the time bin */
+               Sp->TimeBinSfr[Sp->P[target].getTimeBinHydro()] += Sp->SphP[target].Sfr;
+             }
+         }
+     } /* end of main loop over active particles */
+ 
+   TIMER_STOP(CPU_COOLING_SFR); // Stop timing the function
+ }
+ 
 
 /** \brief Initialize the parameters of effective multi-phase model.
  *

@@ -37,180 +37,180 @@
  *  in Springel & Hernquist (2003, MNRAS). It also saves information about the formed stellar
  *  mass and the star formation rate in the file FdSfr.
  */
-void coolsfr::sfr_create_star_particles(simparticles *Sp)
-{
-  TIMER_START(CPU_COOLING_SFR);
-
-  double dt, dtime;
-  MyDouble mass_of_star;
-  double sum_sm, total_sm, rate, sum_mass_stars, total_sum_mass_stars;
-  double p = 0, pall = 0, prob, p_decide;
-  double rate_in_msunperyear;
-  double totsfrrate;
-  double w = 0;
-
-  All.set_cosmo_factors_for_current_time();
-
-  stars_spawned = stars_converted = 0;
-
-  sum_sm = sum_mass_stars = 0;
-
-
-  /* Go and check all stars and see if any go supernova; if so, handle the feedback */
-  handle_supernovae(Sp);
-
-
-  for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
-    {
-      int target = Sp->TimeBinsHydro.ActiveParticleList[i];
-      if(Sp->P[target].getType() == 0)
-        {
-          if(Sp->P[target].getMass() == 0 && Sp->P[target].ID.get() == 0)
-            continue; /* skip cells that have been swallowed or eliminated */
-
-          dt = (Sp->P[target].getTimeBinHydro() ? (((integertime)1) << Sp->P[target].getTimeBinHydro()) : 0) * All.Timebase_interval;
-          /*  the actual time-step */
-
-          dtime = All.cf_atime * dt / All.cf_atime_hubble_a;
-
-          mass_of_star = 0;
-          prob         = 0;
-          p            = 0;
-
-          if(Sp->SphP[target].Sfr > 0)
-            {
-              p = Sp->SphP[target].Sfr / ((All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR)) * dtime /
-                  Sp->P[target].getMass();
-              pall = p;
-              sum_sm += Sp->P[target].getMass() * (1 - exp(-p));
-
-              w = get_random_number();
-
-              Sp->SphP[target].Metallicity += w * METAL_YIELD * (1 - exp(-p));
-              Sp->SphP[target].MassMetallicity = Sp->SphP[target].Metallicity * Sp->P[target].getMass();
-              Sp->P[target].Metallicity        = Sp->SphP[target].Metallicity;
-
-              mass_of_star = Sp->P[target].getMass();
-
-              prob = Sp->P[target].getMass() / mass_of_star * (1 - exp(-pall));
-            }
-
-          if(prob == 0)
-            continue;
-
-          if(prob < 0)
-            Terminate("prob < 0");
-
-          /* decide what process to consider (currently available: make a star or kick to wind) */
-          p_decide = get_random_number();
-
-          if(p_decide < p / pall) { /* ok, a star formation is considered */
-            make_star(Sp, target, prob, mass_of_star, &sum_mass_stars);
-            make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars);
-          }
-          if(Sp->SphP[target].Sfr > 0)
-            {
-              if(Sp->P[target].getType() == 0) /* to protect using a particle that has been turned into a star */
-                {
-                  Sp->SphP[target].Metallicity += (1 - w) * METAL_YIELD * (1 - exp(-p));
-                  Sp->SphP[target].MassMetallicity = Sp->SphP[target].Metallicity * Sp->P[target].getMass();
-                }
-            }
-          Sp->P[target].Metallicity = Sp->SphP[target].Metallicity;
-        }
-    } /* end of main loop over active gas particles */
-
-  MPI_Allreduce(&stars_spawned, &tot_stars_spawned, 1, MPI_INT, MPI_SUM, Communicator);
-  MPI_Allreduce(&stars_converted, &tot_stars_converted, 1, MPI_INT, MPI_SUM, Communicator);
-
-  if(tot_stars_spawned > 0 || tot_stars_converted > 0)
-    {
-      mpi_printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
-    }
-
-  tot_altogether_spawned = tot_stars_spawned;
-  altogether_spawned     = stars_spawned;
-  if(tot_altogether_spawned)
-    {
-      /* need to assign new unique IDs to the spawned stars */
-
-      if(All.MaxID == 0) /* MaxID not calculated yet */
-        {
-          /* determine maximum ID */
-          MyIDType maxid = 0;
-          for(int i = 0; i < Sp->NumPart; i++)
-            if(Sp->P[i].ID.get() > maxid)
-              {
-                maxid = Sp->P[i].ID.get();
-              }
-
-          MyIDType *tmp = (MyIDType *)Mem.mymalloc("tmp", NTask * sizeof(MyIDType));
-
-          MPI_Allgather(&maxid, sizeof(MyIDType), MPI_BYTE, tmp, sizeof(MyIDType), MPI_BYTE, Communicator);
-
-          for(int i = 0; i < NTask; i++)
-            if(tmp[i] > maxid)
-              maxid = tmp[i];
-
-          All.MaxID = maxid;
-
-          Mem.myfree(tmp);
-        }
-
-      int *list = (int *)Mem.mymalloc("list", NTask * sizeof(int));
-
-      MPI_Allgather(&altogether_spawned, 1, MPI_INT, list, 1, MPI_INT, Communicator);
-
-      MyIDType newid = All.MaxID + 1;
-
-      for(int i = 0; i < ThisTask; i++)
-        newid += list[i];
-
-      Mem.myfree(list);
-
-      for(int i = 0; i < altogether_spawned; i++)
-        Sp->P[Sp->NumPart + i].ID.set(newid++);
-
-      All.MaxID += tot_altogether_spawned;
-    }
-
-  /* Note: New tree construction can be avoided because of  `force_add_star_to_tree()' */
-  if(tot_stars_spawned > 0 || tot_stars_converted > 0)
-    {
-      Sp->TotNumPart += tot_stars_spawned;
-      Sp->TotNumGas -= tot_stars_converted;
-      Sp->NumPart += stars_spawned;
-    }
-
-  double sfrrate = 0;
-  for(int bin = 0; bin < TIMEBINS; bin++)
-    if(Sp->TimeBinsHydro.TimeBinCount[bin])
-      sfrrate += Sp->TimeBinSfr[bin];
-
-  MPI_Allreduce(&sfrrate, &totsfrrate, 1, MPI_DOUBLE, MPI_SUM, Communicator);
-
-  MPI_Reduce(&sum_sm, &total_sm, 1, MPI_DOUBLE, MPI_SUM, 0, Communicator);
-  MPI_Reduce(&sum_mass_stars, &total_sum_mass_stars, 1, MPI_DOUBLE, MPI_SUM, 0, Communicator);
-  if(ThisTask == 0)
-    {
-      if(All.TimeStep > 0)
-        rate = total_sm / (All.TimeStep / All.cf_atime_hubble_a);
-      else
-        rate = 0;
-
-      /* compute the cumulative mass of stars */
-      cum_mass_stars += total_sum_mass_stars;
-
-      /* convert to solar masses per yr */
-      rate_in_msunperyear = rate * (All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR);
-
-      fprintf(Logs.FdSfr, "%14e %14e %14e %14e %14e %14e\n", All.Time, total_sm, totsfrrate, rate_in_msunperyear, total_sum_mass_stars,
-              cum_mass_stars);
-      myflush(Logs.FdSfr);
-    }
-
-  TIMER_STOP(CPU_COOLING_SFR);
-}
+ void coolsfr::sfr_create_star_particles(simparticles *Sp)
+ {
+   TIMER_START(CPU_COOLING_SFR); // Start timing this function for performance monitoring
+ 
+   double dt, dtime; // Time step variables
+   MyDouble mass_of_star; // Mass of a newly formed star
+   double sum_sm, total_sm, rate, sum_mass_stars, total_sum_mass_stars; // Variables for accumulating star mass
+   double p = 0, pall = 0, prob, p_decide; // Probabilities for star formation
+   double rate_in_msunperyear; // Star formation rate in solar masses per year
+   double totsfrrate; // Total star formation rate across the simulation
+   double w = 0; // Random number for metallicity update
+ 
+   All.set_cosmo_factors_for_current_time(); // Update cosmological factors to current time
+ 
+   stars_spawned = stars_converted = 0; // Counters for stars spawned and converted from gas
+ 
+   sum_sm = sum_mass_stars = 0; // Initialize sum variables
+ 
+   /* Handle supernova feedback which affects surrounding gas */
+   handle_supernovae(Sp);
+ 
+   /* Loop over all active particles */
+   for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
+     {
+       int target = Sp->TimeBinsHydro.ActiveParticleList[i];
+       if(Sp->P[target].getType() == 0) // Only process gas particles
+         {
+           if(Sp->P[target].getMass() == 0 && Sp->P[target].ID.get() == 0)
+             continue; // Skip cells that have been swallowed or eliminated
+ 
+           /* Calculate the actual time-step */
+           dt = (Sp->P[target].getTimeBinHydro() ? (((integertime)1) << Sp->P[target].getTimeBinHydro()) : 0) * All.Timebase_interval;
+           dtime = All.cf_atime * dt / All.cf_atime_hubble_a;
+ 
+           mass_of_star = 0;
+           prob         = 0;
+           p            = 0;
+ 
+           /* Calculate the probability of star formation based on the SFR */
+           if(Sp->SphP[target].Sfr > 0)
+             {
+               p = Sp->SphP[target].Sfr / ((All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR)) * dtime /
+                   Sp->P[target].getMass();
+               pall = p;
+               sum_sm += Sp->P[target].getMass() * (1 - exp(-p));
+ 
+               w = get_random_number(); // Get a random number for stochastic processes
+ 
+               /* Update metallicity for star formation */
+               Sp->SphP[target].Metallicity += w * METAL_YIELD * (1 - exp(-p));
+               Sp->SphP[target].MassMetallicity = Sp->SphP[target].Metallicity * Sp->P[target].getMass();
+               Sp->P[target].Metallicity        = Sp->SphP[target].Metallicity;
+ 
+               mass_of_star = Sp->P[target].getMass();
+ 
+               /* Calculate probability adjusted for mass */
+               prob = Sp->P[target].getMass() / mass_of_star * (1 - exp(-pall));
+             }
+ 
+           /* Skip if probability is zero */
+           if(prob == 0)
+             continue;
+ 
+           if(prob < 0)
+             Terminate("prob < 0"); // Error handling for negative probability
+ 
+           /* Decide whether to form a star or kick gas to wind */
+           p_decide = get_random_number();
+           if(p_decide < p / pall) { // A star formation event is considered
+             make_star(Sp, target, prob, mass_of_star, &sum_mass_stars); // Function to form a new star
+             make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars); // Function to simulate dust production
+           }
+           if(Sp->SphP[target].Sfr > 0)
+             {
+               if(Sp->P[target].getType() == 0) // Check again to avoid using a converted particle
+                 {
+                   /* Update metallicity post-star formation */
+                   Sp->SphP[target].Metallicity += (1 - w) * METAL_YIELD * (1 - exp(-p));
+                   Sp->SphP[target].MassMetallicity = Sp->SphP[target].Metallicity * Sp->P[target].getMass();
+                 }
+             }
+           Sp->P[target].Metallicity = Sp->SphP[target].Metallicity;
+         }
+     } /* End of main loop over active gas particles */
+ 
+   /* Collect star formation statistics across all processors */
+   MPI_Allreduce(&stars_spawned, &tot_stars_spawned, 1, MPI_INT, MPI_SUM, Communicator);
+   MPI_Allreduce(&stars_converted, &tot_stars_converted, 1, MPI_INT, MPI_SUM, Communicator);
+ 
+   if(tot_stars_spawned > 0 || tot_stars_converted > 0)
+     {
+       mpi_printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
+     }
+ 
+   tot_altogether_spawned = tot_stars_spawned;
+   altogether_spawned     = stars_spawned;
+   if(tot_altogether_spawned)
+     {
+       /* Assign new unique IDs to newly spawned stars if needed */
+       if(All.MaxID == 0) // Check if MaxID has been calculated yet
+         {
+           MyIDType maxid = 0;
+           for(int i = 0; i < Sp->NumPart; i++)
+             if(Sp->P[i].ID.get() > maxid)
+               maxid = Sp->P[i].ID.get();
+ 
+           MyIDType *tmp = (MyIDType *)Mem.mymalloc("tmp", NTask * sizeof(MyIDType));
+ 
+           MPI_Allgather(&maxid, sizeof(MyIDType), MPI_BYTE, tmp, sizeof(MyIDType), MPI_BYTE, Communicator);
+ 
+           for(int i = 0; i < NTask; i++)
+             if(tmp[i] > maxid)
+               maxid = tmp[i];
+ 
+           All.MaxID = maxid;
+ 
+           Mem.myfree(tmp);
+         }
+ 
+       int *list = (int *)Mem.mymalloc("list", NTask * sizeof(int));
+ 
+       MPI_Allgather(&altogether_spawned, 1, MPI_INT, list, 1, MPI_INT, Communicator);
+ 
+       MyIDType newid = All.MaxID + 1;
+ 
+       for(int i = 0; i < ThisTask; i++)
+         newid += list[i];
+ 
+       Mem.myfree(list);
+ 
+       for(int i = 0; i < altogether_spawned; i++)
+         Sp->P[Sp->NumPart + i].ID.set(newid++);
+ 
+       All.MaxID += tot_altogether_spawned;
+     }
+ 
+   /* Handle updates to the simulation particle data and tree structures */
+   if(tot_stars_spawned > 0 || tot_stars_converted > 0)
+     {
+       Sp->TotNumPart += tot_stars_spawned;
+       Sp->TotNumGas -= tot_stars_converted;
+       Sp->NumPart += stars_spawned;
+     }
+ 
+   double sfrrate = 0;
+   for(int bin = 0; bin < TIMEBINS; bin++)
+     if(Sp->TimeBinsHydro.TimeBinCount[bin])
+       sfrrate += Sp->TimeBinSfr[bin];
+ 
+   MPI_Allreduce(&sfrrate, &totsfrrate, 1, MPI_DOUBLE, MPI_SUM, Communicator);
+ 
+   MPI_Reduce(&sum_sm, &total_sm, 1, MPI_DOUBLE, MPI_SUM, 0, Communicator);
+   MPI_Reduce(&sum_mass_stars, &total_sum_mass_stars, 1, MPI_DOUBLE, MPI_SUM, 0, Communicator);
+   if(ThisTask == 0)
+     {
+       if(All.TimeStep > 0)
+         rate = total_sm / (All.TimeStep / All.cf_atime_hubble_a);
+       else
+         rate = 0;
+ 
+       /* Compute the cumulative mass of stars formed */
+       cum_mass_stars += total_sum_mass_stars;
+ 
+       /* Convert the total mass converted into stars to a rate in solar masses per year */
+       rate_in_msunperyear = rate * (All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR);
+ 
+       /* Log the star formation rate and other statistics */
+       fprintf(Logs.FdSfr, "%14e %14e %14e %14e %14e %14e\n", All.Time, total_sm, totsfrrate, rate_in_msunperyear, total_sum_mass_stars, cum_mass_stars);
+       myflush(Logs.FdSfr);
+     }
+ 
+   TIMER_STOP(CPU_COOLING_SFR); // Stop timing the function
+ }
+ 
 
 /** \brief Convert a SPH particle into a star.
  *
