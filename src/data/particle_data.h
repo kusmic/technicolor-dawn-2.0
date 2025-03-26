@@ -50,6 +50,8 @@ struct particle_data
   float OldAcc;                            /**< magnitude of old gravitational force. Used in relative opening criterion */
   int GravCost;                            /**< weight factors used for balancing the work-load */
 
+int FeedbackFlag; /**< feedback flag for star particles */
+
 #ifndef LEAN
  private:
   MyDouble Mass; /**< particle mass */
@@ -140,8 +142,8 @@ struct particle_data
 
 
 inline int getFeedbackFlag() const { return FeedbackFlag; }
-inline void setFeedbackFlag(int flag) { getFeedbackFlag() = flag; }
-inline void addFeedbackFlag(int flag) { getFeedbackFlag() |= flag; }
+inline void setFeedbackFlag(int flag) { FeedbackFlag = flag; }
+inline void addFeedbackFlag(int flag) { FeedbackFlag |= flag; }
 
 inline unsigned char getType(void)
 {
