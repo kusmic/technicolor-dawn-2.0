@@ -35,9 +35,9 @@ Accumulate diagnostics for later logging.
 
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
-#define NEAREST_X(x) NEAREST(x, BoxSize)
-#define NEAREST_Y(x) NEAREST(x, BoxSize)
-#define NEAREST_Z(x) NEAREST(x, BoxSize)
+#define NEAREST_X(x) NEAREST(x, All.BoxSize)
+#define NEAREST_Y(x) NEAREST(x, All.BoxSize)
+#define NEAREST_Z(x) NEAREST(x, All.BoxSize)
 
 // Local cubic spline kernel approximation
 inline double kernel_weight_cubic(double r, double h) {
@@ -180,7 +180,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     double w = wk;
 
     Sp->SphP[j].Energy += in->Energy * w;
-    Sp->P[j].Mass += in->MassReturn * w;
+    Sp->P[j].getMass() += in->MassReturn * w;
     Sp->P[j].Vel[0] += WIND_VELOCITY * w;
     for (int k = 0; k < 4; k++) Sp->SphP[j].Metals[k] += in->Yield[k] * w;
 }
@@ -193,14 +193,14 @@ void apply_feedback_treewalk(double current_time, int feedback_type) {
     fw.ev_label = "Feedback";
 
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (!feedback_isactive(i, &fw)) continue;
+        if (!feedback_isactive(i, &fw, &Sp)) continue;
 
         FeedbackInput in;
         FeedbackResult out;
-        feedback_copy(i, &in, &fw);
+        feedback_copy(i, &in, &fw, &Sp;
 
         for (int j = 0; j < Sp->NumPart; j++) {
-            feedback_ngb(&in, &out, j, &fw);
+            feedback_ngb(&in, &out, j, &fw, &Sp);
         }
     }
 }
