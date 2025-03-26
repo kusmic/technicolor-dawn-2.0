@@ -70,6 +70,14 @@ const double MASS_RETURN_AGB = 0.30;            // fraction of m_star
 
 const double WIND_VELOCITY = 500.0;             // km/s
 
+struct Yields {
+    double Z, C, O, Fe;
+};
+
+Yields get_SNII_yields(double mass);
+Yields get_AGB_yields(double mass);
+Yields get_SNIa_yields(double n_events);
+
 
 // Per-timestep diagnostics
 double ThisStepEnergy_SNII = 0;
@@ -101,7 +109,7 @@ struct FeedbackWalk {
     const char* ev_label;
 };
 
-static int feedback_isactive(int i, FeedbackWalk *fw) {
+static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[i].getType() != 4)
         return 0;
     double age = fw->current_time - Sp->P[i].StellarAge;
@@ -113,7 +121,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw) {
     return 0;
 }
 
-static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
+static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
     out->Pos[0] = Sp->P[i].IntPos[0];
     out->Pos[1] = Sp->P[i].IntPos[1];
     out->Pos[2] = Sp->P[i].IntPos[2];
@@ -156,7 +164,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
     ThisStepMetalsInjected[3] += y.Fe;
 }
 
-static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw) {
+static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return;
 
     double dx[3] = {
