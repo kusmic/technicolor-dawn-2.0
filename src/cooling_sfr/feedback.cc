@@ -98,84 +98,9 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() != 4) continue;
-
-        double age = current_time - Sp->P[i].BirthTime;
-        double m_star = Sp->P[i].getMass();
-        int flag = Sp->P[i].FeedbackFlag;
-
-        if ((flag & (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa)) == (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa))
-            continue;
-
-        auto feedback = [&](double energy, double mass_returned, Yields y, int feedback_type) {
-            double h = 0.5;
-            MyDouble pos[3] = {Sp->P[i].IntPos[0], Sp->P[i].IntPos[1], Sp->P[i].IntPos[2]};
-            int num_ngb;
-            int *ngblist = ngb_treefind_variable(pos, h, &num_ngb);
-
-            double total_w = 0.0;
-            std::vector<double> weights;
-            std::vector<int> indices;
-
-            for (int n = 0; n < num_ngb; n++) {
-                int j = ngblist[n];
-                if (Sp->P[j].getType() != 0) continue;
-                double dx[3] = {Sp->P[j].IntPos[0] - pos[0], Sp->P[j].IntPos[1] - pos[1], Sp->P[j].IntPos[2] - pos[2]};
-                double r = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
-                double w = kernel_weight(r, h);
-                if (w > 0) {
-                    weights.push_back(w);
-                    indices.push_back(j);
-                    total_w += w;
-                }
-            }
-
-            if (total_w > 0) {
-                for (size_t n = 0; n < weights.size(); n++) {
-                    int j = indices[n];
-                    double w = weights[n] / total_w;
-                    Sp->SphP[j].Energy += energy * w;
-                    Sp->P[j].getMass() += mass_returned * w;
-                    Sp->P[j].Vel[0] += WIND_VELOCITY * w;
-                    Sp->SphP[j].Metals[0] += y.Z * w;
-                    Sp->SphP[j].Metals[1] += y.C * w;
-                    Sp->SphP[j].Metals[2] += y.O * w;
-                    Sp->SphP[j].Metals[3] += y.Fe * w;
-                }
-
-                if (feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
-                if (feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
-                if (feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
-
-                ThisStepMassReturned += mass_returned;
-                ThisStepMetalsInjected[0] += y.Z;
-                ThisStepMetalsInjected[1] += y.C;
-                ThisStepMetalsInjected[2] += y.O;
-                ThisStepMetalsInjected[3] += y.Fe;
-
-                Sp->P[i].FeedbackFlag |= feedback_type;
-            }
-        };
-
-        if (age > SNII_DELAY_TIME && !(flag & FEEDBACK_SNII))
-            feedback(SNII_ENERGY_PER_MASS * m_star, MASS_RETURN_SNII * m_star, get_SNII_yields(MASS_RETURN_SNII * m_star), FEEDBACK_SNII);
-
-        if (age > SNII_DELAY_TIME && age < AGB_END_TIME && !(flag & FEEDBACK_AGB))
-            feedback(AGB_ENERGY_PER_MASS * m_star, MASS_RETURN_AGB * m_star, get_AGB_yields(MASS_RETURN_AGB * m_star), FEEDBACK_AGB);
-
-        if (age > SNIa_DELAY_TIME && !(flag & FEEDBACK_SNIa)) {
-            double n_snia = m_star * SNIa_RATE_PER_MASS;
-            feedback(n_snia * SNIa_ENERGY_PER_EVENT, 0, get_SNIa_yields(n_snia), FEEDBACK_SNIa);
-        }
-    }
-
-    TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
-    TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
-    TotalEnergyInjected_AGB  += ThisStepEnergy_AGB;
-    TotalMassReturned += ThisStepMassReturned;
-    for (int k = 0; k < 4; k++)
-        TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
+    apply_feedback_treewalk(current_time, FEEDBACK_SNII);
+    apply_feedback_treewalk(current_time, FEEDBACK_AGB);
+    apply_feedback_treewalk(current_time, FEEDBACK_SNIa);
 
     if (ThisTask == 0) {
         printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
