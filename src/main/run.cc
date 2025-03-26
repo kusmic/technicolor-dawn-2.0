@@ -256,7 +256,7 @@ void sim::calculate_non_standard_physics_end_of_step(void)
 #endif
 
 #ifdef FEEDBACK
-  apply_stellar_feedback(All.Time, &Sp);   // call Ezra's feedback model after star formation but before hydro
+  apply_stellar_feedback(All.Time, Sp);   // call Ezra's feedback model after star formation but before hydro
 #endif
 
 

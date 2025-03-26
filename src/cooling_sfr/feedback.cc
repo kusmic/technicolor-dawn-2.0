@@ -1,25 +1,11 @@
 // feedback.cc – Stellar feedback module for Gadget-4
 // Includes SNII, SNIa, AGB winds, mass return, metal injection (elemental), logging
 
-#include "gadgetconfig.h"
-
-#ifdef FEEDBACK
-
-#include <assert.h>
-#include <math.h>
-#include <mpi.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "../cooling_sfr/cooling.h"
-#include "../data/allvars.h"
-#include "../data/dtypes.h"
-#include "../data/mymalloc.h"
-#include "../logs/logs.h"
-#include "../logs/timer.h"
-#include "../system/system.h"
-#include "../time_integration/timestep.h"
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include "allvars.h"
+#include "proto.h"
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1  // Supernova Type II
@@ -72,7 +58,7 @@ Yields get_SNIa_yields(double n_snia) {
     return {0.01 * n_snia, 0.0, 0.0, 0.007 * n_snia};
 }
 
-void apply_stellar_feedback(double current_time) {
+void apply_stellar_feedback(double current_time, simparticles *Sp) {
     // Reset per-timestep counters
     ThisStepEnergy_SNII = 0;
     ThisStepEnergy_SNIa = 0;
@@ -80,7 +66,7 @@ void apply_stellar_feedback(double current_time) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    for (int i = 0; i < NumPart; i++) {
+    for (int i = 0; i < Sp->NumPart; i++) {
         if (P[i].Type != 4) continue;  // Only apply feedback to star particles
 
         double age = current_time - P[i].BirthTime;
@@ -196,5 +182,3 @@ void apply_stellar_feedback(double current_time) {
                ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
     }
 }
-
-#endif // FEEDBACK

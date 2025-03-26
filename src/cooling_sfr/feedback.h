@@ -1,6 +1,6 @@
 #ifndef FEEDBACK_H
 #define FEEDBACK_H
 
-void apply_stellar_feedback(double current_time, struct sph_data* Sp);
+void apply_stellar_feedback(double current_time, simparticles *Sp);
 
 #endif
