@@ -140,8 +140,8 @@ struct particle_data
 
 
 inline int getFeedbackFlag() const { return FeedbackFlag; }
-inline void setFeedbackFlag(int flag) { FeedbackFlag = flag; }
-inline void addFeedbackFlag(int flag) { FeedbackFlag |= flag; }
+inline void setFeedbackFlag(int flag) { getFeedbackFlag() = flag; }
+inline void addFeedbackFlag(int flag) { getFeedbackFlag() |= flag; }
 
 inline unsigned char getType(void)
 {
