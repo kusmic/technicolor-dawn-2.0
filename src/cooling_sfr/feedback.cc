@@ -20,11 +20,6 @@
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
-#include <cmath>
-#include <cstdio>
-#include <cstring>
-#include "allvars.h"
-#include "proto.h"
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1  // Supernova Type II
