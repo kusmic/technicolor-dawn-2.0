@@ -13,6 +13,7 @@
 #include <string.h>
 #include <vector>
 
+#include "../cooling_sfr/feedback_treewalk.h"
 #include "../cooling_sfr/cooling.h"
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
