@@ -85,7 +85,7 @@ struct FeedbackWalk {
 };
 
 static int feedback_isactive(int i, FeedbackWalk *fw) {
-    if (P[i].Type != 4)
+    if (P[i].getType() != 4)
         return 0;
     double age = fw->current_time - P[i].BirthTime;
     if ((P[i].FeedbackFlag & fw->feedback_type) != 0)
@@ -97,12 +97,12 @@ static int feedback_isactive(int i, FeedbackWalk *fw) {
 }
 
 static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
-    out->Pos[0] = P[i].Pos[0];
-    out->Pos[1] = P[i].Pos[1];
-    out->Pos[2] = P[i].Pos[2];
+    out->Pos[0] = P[i].IntPos[0];
+    out->Pos[1] = P[i].IntPos[1];
+    out->Pos[2] = P[i].IntPos[2];
 
-    double m_star = P[i].Mass;
-    double age = fw->current_time - P[i].BirthTime;
+    double m_star = P[i].getMass();
+    double age = fw->current_time - P[i].StellarAge;
 
     double energy = 0, m_return = 0;
     Yields y;
@@ -140,12 +140,12 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
 }
 
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw) {
-    if (P[j].Type != 0) return;
+    if (P[j].getType() != 0) return;
 
     double dx[3] = {
-        NEAREST_X(P[j].Pos[0] - in->Pos[0]),
-        NEAREST_Y(P[j].Pos[1] - in->Pos[1]),
-        NEAREST_Z(P[j].Pos[2] - in->Pos[2])
+        NEAREST_X(P[j].IntPos[0] - in->Pos[0]),
+        NEAREST_Y(P[j].IntPos[1] - in->Pos[1]),
+        NEAREST_Z(P[j].IntPos[2] - in->Pos[2])
     };
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2);
