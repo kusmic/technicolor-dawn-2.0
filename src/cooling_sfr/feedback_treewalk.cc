@@ -33,6 +33,12 @@ Accumulate diagnostics for later logging.
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
+// Define NEAREST macros for periodic wrapping (or no-op if not periodic)
+#define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
+#define NEAREST_X(x) NEAREST(x, All.BoxSize[0])
+#define NEAREST_Y(x) NEAREST(x, All.BoxSize[1])
+#define NEAREST_Z(x) NEAREST(x, All.BoxSize[2])
+
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1
 #define FEEDBACK_AGB   2
@@ -85,10 +91,10 @@ struct FeedbackWalk {
 };
 
 static int feedback_isactive(int i, FeedbackWalk *fw) {
-    if (P[i].getType() != 4)
+    if (Sp->P[i].getType() != 4)
         return 0;
     double age = fw->current_time - P[i].BirthTime;
-    if ((P[i].FeedbackFlag & fw->feedback_type) != 0)
+    if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
         return 0;
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
     if (fw->feedback_type == FEEDBACK_AGB && age > SNII_DELAY_TIME && age < AGB_END_TIME) return 1;
@@ -97,12 +103,12 @@ static int feedback_isactive(int i, FeedbackWalk *fw) {
 }
 
 static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
-    out->Pos[0] = P[i].IntPos[0];
-    out->Pos[1] = P[i].IntPos[1];
-    out->Pos[2] = P[i].IntPos[2];
+    out->Pos[0] = Sp->P[i].IntPos[0];
+    out->Pos[1] = Sp->P[i].IntPos[1];
+    out->Pos[2] = Sp->P[i].IntPos[2];
 
-    double m_star = P[i].getMass();
-    double age = fw->current_time - P[i].StellarAge;
+    double m_star = Sp->P[i].getMass();
+    double age = fw->current_time - Sp->P[i].StellarAge;
 
     double energy = 0, m_return = 0;
     Yields y;
@@ -126,7 +132,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
     out->MassReturn = m_return;
     for (int k = 0; k < 4; k++) out->Yield[k] = (&y.Z)[k];
 
-    P[i].FeedbackFlag |= fw->feedback_type;
+    Sp->P[i].FeedbackFlag |= fw->feedback_type;
 
     if (fw->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
     if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
@@ -140,12 +146,12 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
 }
 
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw) {
-    if (P[j].getType() != 0) return;
+    if (Sp->P[j].getType() != 0) return;
 
     double dx[3] = {
-        NEAREST_X(P[j].IntPos[0] - in->Pos[0]),
-        NEAREST_Y(P[j].IntPos[1] - in->Pos[1]),
-        NEAREST_Z(P[j].IntPos[2] - in->Pos[2])
+        NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
+        NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
+        NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
     };
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2);
@@ -154,10 +160,10 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     if (wk <= 0.0) return;
     double w = wk;
 
-    SphP[j].Energy += in->Energy * w;
-    P[j].Mass += in->MassReturn * w;
-    P[j].Vel[0] += WIND_VELOCITY * w;
-    for (int k = 0; k < 4; k++) SphP[j].Metals[k] += in->Yield[k] * w;
+    Sp->SphP[j].Energy += in->Energy * w;
+    Sp->P[j].Mass += in->MassReturn * w;
+    Sp->P[j].Vel[0] += WIND_VELOCITY * w;
+    for (int k = 0; k < 4; k++) Sp->SphP[j].Metals[k] += in->Yield[k] * w;
 }
 
 void apply_feedback_treewalk(double current_time, int feedback_type) {
@@ -167,14 +173,14 @@ void apply_feedback_treewalk(double current_time, int feedback_type) {
     fw.h = 0.5;
     fw.ev_label = "Feedback";
 
-    for (int i = 0; i < NumPart; i++) {
+    for (int i = 0; i < Sp->NumPart; i++) {
         if (!feedback_isactive(i, &fw)) continue;
 
         FeedbackInput in;
         FeedbackResult out;
         feedback_copy(i, &in, &fw);
 
-        for (int j = 0; j < NumPart; j++) {
+        for (int j = 0; j < Sp->NumPart; j++) {
             feedback_ngb(&in, &out, j, &fw);
         }
     }
