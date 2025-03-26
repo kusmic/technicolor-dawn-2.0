@@ -33,6 +33,8 @@ Accumulate diagnostics for later logging.
 
 #ifdef FEEDBACK
 
+extern int ThisTask;
+
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
 #define NEAREST_X(x) NEAREST(x, All.BoxSize)
