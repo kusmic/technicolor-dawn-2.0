@@ -1,3 +1,16 @@
+/*
+GENERAL TREEWALK FEEDBACK ALGORITHM
+Loop over star particles (Type == 4)
+Check eligibility (age, already processed, etc.)
+Export star properties: position, energy, yields, etc.
+Search for nearby gas particles within fixed radius h
+Apply feedback kernel:
+Energy → added to SphP[j].Energy
+Mass → added to P[j].Mass
+Metals → added to SphP[j].Metals[k]
+Accumulate diagnostics for later logging.
+*/
+
 #include "gadgetconfig.h"
 
 #ifdef FEEDBACK
@@ -19,6 +32,7 @@
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
+#include "treewalk.h"
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1
@@ -40,103 +54,129 @@ const double MASS_RETURN_AGB = 0.30;            // fraction of m_star
 
 const double WIND_VELOCITY = 500.0;             // km/s
 
+
+// Per-timestep diagnostics
+double ThisStepEnergy_SNII = 0;
+double ThisStepEnergy_SNIa = 0;
+double ThisStepEnergy_AGB = 0;
+double ThisStepMassReturned = 0;
+double ThisStepMetalsInjected[4] = {0};
+
+// Cumulative totals
+double TotalEnergyInjected_SNII = 0;
+double TotalEnergyInjected_SNIa = 0;
+double TotalEnergyInjected_AGB = 0;
+double TotalMassReturned = 0;
+double TotalMetalsInjected[4] = {0};
+
 struct FeedbackInput {
     MyDouble Pos[3];
     MyFloat Energy;
     MyFloat MassReturn;
     MyFloat Yield[4];
-    int FeedbackType;
 };
 
 struct FeedbackResult {};
 
-struct TreeWalkFeedback : public GenericTreeWalk<FeedbackInput, FeedbackResult> {
-    double h = 0.5;
+struct FeedbackWalk : public TreeWalk {
+    double h;
     double current_time;
     int feedback_type;
 
-    TreeWalkFeedback() {
-        this->usesymmetric = false;
-    }
-
-    bool is_active(int i) override {
-        if (P[i].getType() != 4)
-            return false;
-        double age = current_time - P[i].StellarAge;
-        if ((P[i].FeedbackFlag & feedback_type) != 0)
-            return false;
-        if (feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return true;
-        if (feedback_type == FEEDBACK_AGB && age > SNII_DELAY_TIME && age < AGB_END_TIME) return true;
-        if (feedback_type == FEEDBACK_SNIa && age > SNIa_DELAY_TIME) return true;
-        return false;
-    }
-
-    void particle2in(FeedbackInput& in, int i) override {
-        double age = current_time - P[i].StellarAge;
-        double m_star = P[i].getMass();
-        Yields y;
-        double energy = 0, m_return = 0;
-
-        if (feedback_type == FEEDBACK_SNII) {
-            energy = SNII_ENERGY_PER_MASS * m_star;
-            m_return = MASS_RETURN_SNII * m_star;
-            y = get_SNII_yields(m_return);
-        } else if (feedback_type == FEEDBACK_AGB) {
-            energy = AGB_ENERGY_PER_MASS * m_star;
-            m_return = MASS_RETURN_AGB * m_star;
-            y = get_AGB_yields(m_return);
-        } else if (feedback_type == FEEDBACK_SNIa) {
-            double n_snia = m_star * SNIa_RATE_PER_MASS;
-            energy = n_snia * SNIa_ENERGY_PER_EVENT;
-            m_return = 0;
-            y = get_SNIa_yields(n_snia);
-        }
-
-        in.Pos[0] = P[i].IntPos[0];
-        in.Pos[1] = P[i].IntPos[1];
-        in.Pos[2] = P[i].IntPos[2];
-        in.Energy = energy;
-        in.MassReturn = m_return;
-        for (int k = 0; k < 4; k++) in.Yield[k] = (&y.Z)[k];
-        in.FeedbackType = feedback_type;
-
-        P[i].FeedbackFlag |= feedback_type;
-
-        if (feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
-        if (feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
-        if (feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
-        ThisStepMassReturned += m_return;
-        ThisStepMetalsInjected[0] += y.Z;
-        ThisStepMetalsInjected[1] += y.C;
-        ThisStepMetalsInjected[2] += y.O;
-        ThisStepMetalsInjected[3] += y.Fe;
-    }
-
-    void kernel(const FeedbackInput& in, int j, FeedbackResult& out) override {
-        if (P[j].getType() != 0)
-            return;
-        double dx[3] = {
-            NEAREST_X(P[j].IntPos[0] - in.Pos[0]),
-            NEAREST_Y(P[j].IntPos[1] - in.Pos[1]),
-            NEAREST_Z(P[j].IntPos[2] - in.Pos[2])
-        };
-        double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-        double r = sqrt(r2);
-        double wk = kernel_weight_cubic(r, h);
-        if (wk <= 0.0) return;
-        double w = wk;
-        SphP[j].Energy += in.Energy * w;
-        P[j].Mass += in.MassReturn * w;
-        P[j].Vel[0] += WIND_VELOCITY * w;
-        for (int k = 0; k < 4; k++) SphP[j].Metals[k] += in.Yield[k] * w;
+    FeedbackWalk() {
+        this->h = 0.5;
+        this->ev_label = "Feedback";
     }
 };
 
+static int feedback_isactive(int i, TreeWalk *tw) {
+    auto *fw = static_cast<FeedbackWalk *>(tw);
+    if (P[i].Type != 4)
+        return 0;
+    double age = fw->current_time - P[i].BirthTime;
+    if ((P[i].FeedbackFlag & fw->feedback_type) != 0)
+        return 0;
+    if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
+    if (fw->feedback_type == FEEDBACK_AGB && age > SNII_DELAY_TIME && age < AGB_END_TIME) return 1;
+    if (fw->feedback_type == FEEDBACK_SNIa && age > SNIa_DELAY_TIME) return 1;
+    return 0;
+}
+
+static void feedback_copy(int i, TreeWalkQueryBase *query, TreeWalk *tw) {
+    FeedbackInput *out = (FeedbackInput *) query;
+    out->Pos[0] = P[i].Pos[0];
+    out->Pos[1] = P[i].Pos[1];
+    out->Pos[2] = P[i].Pos[2];
+
+    double m_star = P[i].Mass;
+    double age = ((FeedbackWalk *) tw)->current_time - P[i].BirthTime;
+
+    double energy = 0, m_return = 0;
+    Yields y;
+
+    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNII) {
+        energy = SNII_ENERGY_PER_MASS * m_star;
+        m_return = MASS_RETURN_SNII * m_star;
+        y = get_SNII_yields(m_return);
+    } else if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_AGB) {
+        energy = AGB_ENERGY_PER_MASS * m_star;
+        m_return = MASS_RETURN_AGB * m_star;
+        y = get_AGB_yields(m_return);
+    } else if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNIa) {
+        double n_snia = m_star * SNIa_RATE_PER_MASS;
+        energy = n_snia * SNIa_ENERGY_PER_EVENT;
+        m_return = 0;
+        y = get_SNIa_yields(n_snia);
+    }
+
+    out->Energy = energy;
+    out->MassReturn = m_return;
+    for (int k = 0; k < 4; k++) out->Yield[k] = (&y.Z)[k];
+
+    P[i].FeedbackFlag |= ((FeedbackWalk *) tw)->feedback_type;
+
+    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
+    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
+    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
+
+    ThisStepMassReturned += m_return;
+    ThisStepMetalsInjected[0] += y.Z;
+    ThisStepMetalsInjected[1] += y.C;
+    ThisStepMetalsInjected[2] += y.O;
+    ThisStepMetalsInjected[3] += y.Fe;
+}
+
+static void feedback_ngb(TreeWalkQueryBase *query, TreeWalkResultBase *result, int j, TreeWalk *tw) {
+    FeedbackInput *in = (FeedbackInput *) query;
+    if (P[j].Type != 0) return;
+
+    double dx[3] = {
+        NEAREST_X(P[j].Pos[0] - in->Pos[0]),
+        NEAREST_Y(P[j].Pos[1] - in->Pos[1]),
+        NEAREST_Z(P[j].Pos[2] - in->Pos[2])
+    };
+    double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+    double r = sqrt(r2);
+
+    double wk = kernel_weight_cubic(r, ((FeedbackWalk *) tw)->h);
+    if (wk <= 0.0) return;
+    double w = wk;
+
+    SphP[j].Energy += in->Energy * w;
+    P[j].Mass += in->MassReturn * w;
+    P[j].Vel[0] += WIND_VELOCITY * w;
+    for (int k = 0; k < 4; k++) SphP[j].Metals[k] += in->Yield[k] * w;
+}
+
 void apply_feedback_treewalk(double current_time, int feedback_type) {
-    TreeWalkFeedback F;
-    F.current_time = current_time;
-    F.feedback_type = feedback_type;
-    F.run();
+    FeedbackWalk fw;
+    fw.current_time = current_time;
+    fw.feedback_type = feedback_type;
+
+    treewalk_init(&fw, feedback_isactive, feedback_copy, NULL, feedback_ngb,
+                  sizeof(FeedbackInput), sizeof(FeedbackResult));
+
+    treewalk_run(&fw);
 }
 
 void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
@@ -165,6 +205,5 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
                ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
     }
 }
-
 
 #endif
