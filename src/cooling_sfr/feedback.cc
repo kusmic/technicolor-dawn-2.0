@@ -1,11 +1,25 @@
 // feedback.cc – Stellar feedback module for Gadget-4
 // Includes SNII, SNIa, AGB winds, mass return, metal injection (elemental), logging
 
-#include <cmath>
-#include <cstdio>
-#include <cstring>
-#include "allvars.h"
-#include "proto.h"
+#include "gadgetconfig.h"
+
+#ifdef FEEDBACK
+
+#include <assert.h>
+#include <math.h>
+#include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../cooling_sfr/cooling.h"
+#include "../data/allvars.h"
+#include "../data/dtypes.h"
+#include "../data/mymalloc.h"
+#include "../logs/logs.h"
+#include "../logs/timer.h"
+#include "../system/system.h"
+#include "../time_integration/timestep.h"
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1  // Supernova Type II
@@ -182,3 +196,5 @@ void apply_stellar_feedback(double current_time, simparticles *Sp) {
                ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
     }
 }
+
+#endif // FEEDBACK
