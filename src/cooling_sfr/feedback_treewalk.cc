@@ -13,8 +13,6 @@ Accumulate diagnostics for later logging.
 
 #include "gadgetconfig.h"
 
-#ifdef FEEDBACK
-
 #include <assert.h>
 #include <math.h>
 #include <mpi.h>
@@ -32,6 +30,8 @@ Accumulate diagnostics for later logging.
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
+
+#ifdef FEEDBACK
 
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
@@ -74,9 +74,17 @@ struct Yields {
     double Z, C, O, Fe;
 };
 
-Yields get_SNII_yields(double mass);
-Yields get_AGB_yields(double mass);
-Yields get_SNIa_yields(double n_events);
+Yields get_SNII_yields(double m) {
+    return {0.01 * m, 0.005 * m, 0.003 * m, 0.002 * m};
+}
+
+Yields get_AGB_yields(double m) {
+    return {0.005 * m, 0.002 * m, 0.001 * m, 0.001 * m};
+}
+
+Yields get_SNIa_yields(double n_events) {
+    return {0.002 * n_events, 0.001 * n_events, 0.0005 * n_events, 0.001 * n_events};
+}
 
 
 // Per-timestep diagnostics
