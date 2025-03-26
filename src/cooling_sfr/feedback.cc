@@ -21,7 +21,6 @@
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
-
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1  // Supernova Type II
 #define FEEDBACK_AGB   2  // AGB wind feedback
@@ -73,7 +72,7 @@ Yields get_SNIa_yields(double n_snia) {
     return {0.01 * n_snia, 0.0, 0.0, 0.007 * n_snia};
 }
 
-void apply_stellar_feedback(double current_time, struct sph_data* Sp) {
+void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     // Reset per-timestep counters
     ThisStepEnergy_SNII = 0;
     ThisStepEnergy_SNIa = 0;
