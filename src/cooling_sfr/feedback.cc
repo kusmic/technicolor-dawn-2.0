@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "../cooling_sfr/cooling.h"
 #include "../data/allvars.h"
@@ -98,10 +99,10 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].get_type() != 4) continue;
+        if (Sp->P[i].getType() != 4) continue;
 
         double age = current_time - Sp->P[i].BirthTime;
-        double m_star = Sp->P[i].Mass;
+        double m_star = Sp->P[i].getMass();
         int flag = Sp->P[i].FeedbackFlag;
 
         if ((flag & (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa)) == (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa))
@@ -109,7 +110,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
 
         auto feedback = [&](double energy, double mass_returned, Yields y, int feedback_type) {
             double h = 0.5;
-            MyDouble pos[3] = {Sp->P[i].Pos[0], Sp->P[i].Pos[1], Sp->P[i].Pos[2]};
+            MyDouble pos[3] = {Sp->P[i].IntPos[0], Sp->P[i].IntPos[1], Sp->P[i].IntPos[2]};
             int num_ngb;
             int *ngblist = ngb_treefind_variable(pos, h, &num_ngb);
 
@@ -119,8 +120,8 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
 
             for (int n = 0; n < num_ngb; n++) {
                 int j = ngblist[n];
-                if (Sp->P[j].get_type() != 0) continue;
-                double dx[3] = {Sp->P[j].Pos[0] - pos[0], Sp->P[j].Pos[1] - pos[1], Sp->P[j].Pos[2] - pos[2]};
+                if (Sp->P[j].getType() != 0) continue;
+                double dx[3] = {Sp->P[j].IntPos[0] - pos[0], Sp->P[j].IntPos[1] - pos[1], Sp->P[j].IntPos[2] - pos[2]};
                 double r = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
                 double w = kernel_weight(r, h);
                 if (w > 0) {
@@ -135,7 +136,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
                     int j = indices[n];
                     double w = weights[n] / total_w;
                     Sp->SphP[j].Energy += energy * w;
-                    Sp->P[j].Mass += mass_returned * w;
+                    Sp->P[j].getMass() += mass_returned * w;
                     Sp->P[j].Vel[0] += WIND_VELOCITY * w;
                     Sp->SphP[j].Metals[0] += y.Z * w;
                     Sp->SphP[j].Metals[1] += y.C * w;
