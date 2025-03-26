@@ -31,9 +31,9 @@ Accumulate diagnostics for later logging.
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
-#ifdef FEEDBACK
-
 extern int ThisTask;
+
+#ifdef FEEDBACK
 
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
