@@ -200,7 +200,7 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
 
         FeedbackInput in;
         FeedbackResult out;
-        feedback_copy(i, &in, &fw, Sp;
+        feedback_copy(i, &in, &fw, Sp);
 
         for (int j = 0; j < Sp->NumPart; j++) {
             feedback_ngb(&in, &out, j, &fw, Sp);
@@ -215,9 +215,9 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    apply_feedback_treewalk(current_time, FEEDBACK_SNII, &Sp);
-    apply_feedback_treewalk(current_time, FEEDBACK_AGB, &Sp);
-    apply_feedback_treewalk(current_time, FEEDBACK_SNIa, &Sp);
+    apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
+    apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
+    apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
 
     TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
     TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
