@@ -100,6 +100,7 @@ struct sph_particle_data : public sph_particle_data_hydrocore
 
 #ifdef STARFORMATION
   MyFloat Metallicity;
+  MyFloat Metals[4];  // to specifically track Z, C, O, Fe
   MyFloat MassMetallicity;
 #endif
 

@@ -99,7 +99,12 @@ void sim::init(int RestartSnapNum)
   /* this makes sure that masses are initialized in the case that the mass-block
      is empty for this particle type */
 
-  for(int i = 0; i < Sp.NumPart; i++)
+  for(int i = 0; i < Sp.NumPart; i++) {
+
+    for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
+      Sp.SphP[i].Metals[k] = 0.0;
+
+
     if(All.MassTable[Sp.P[i].getType()] != 0)
       {
 #ifndef LEAN
@@ -108,6 +113,7 @@ void sim::init(int RestartSnapNum)
         All.PartMass = All.MassTable[Sp.P[i].getType()];
 #endif
       }
+    }
 
 #if NSOFTCLASSES > 1
   for(int i = 0; i < Sp.NumPart; i++)

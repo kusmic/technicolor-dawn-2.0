@@ -179,7 +179,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     if (wk <= 0.0) return;
     double w = wk;
 
-    Sp->SphP[j].Energy += in->Energy * w;
+    Sp->SphP[j].Entropy += in->Energy * w;  // Approximating as entropy input
 
     double old_mass = Sp->P[j].getMass();
     Sp->P[j].setMass(old_mass + in->MassReturn * w);
@@ -196,14 +196,14 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
     fw.ev_label = "Feedback";
 
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (!feedback_isactive(i, &fw, &Sp)) continue;
+        if (!feedback_isactive(i, &fw, Sp)) continue;
 
         FeedbackInput in;
         FeedbackResult out;
-        feedback_copy(i, &in, &fw, &Sp;
+        feedback_copy(i, &in, &fw, Sp;
 
         for (int j = 0; j < Sp->NumPart; j++) {
-            feedback_ngb(&in, &out, j, &fw, &Sp);
+            feedback_ngb(&in, &out, j, &fw, Sp);
         }
     }
 }
