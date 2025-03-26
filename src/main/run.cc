@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "../cooling_sfr/cooling.h"
+#include "../cooling_sfr/feedback.h"
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
 #include "../data/mymalloc.h"
@@ -244,13 +245,21 @@ void sim::set_non_standard_physics_for_current_time(void)
 void sim::calculate_non_standard_physics_end_of_step(void)
 {
 #ifdef COOLING
+
 #ifdef STARFORMATION
   CoolSfr.sfr_create_star_particles(&Sp);
   CoolSfr.cooling_and_starformation(&Sp);
 #else
   CoolSfr.cooling_only(&Sp);
 #endif
+
 #endif
+
+#ifdef FEEDBACK
+  apply_stellar_feedback(All.Time);   // call Ezra's feedback model after star formation but before hydro
+#endif
+
+
 
 #ifdef MEASURE_TOTAL_MOMENTUM
   Logs.compute_total_momentum();
