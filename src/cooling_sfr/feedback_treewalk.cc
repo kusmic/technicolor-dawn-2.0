@@ -180,12 +180,15 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     double w = wk;
 
     Sp->SphP[j].Energy += in->Energy * w;
-    Sp->P[j].getMass() += in->MassReturn * w;
+
+    double old_mass = Sp->P[j].getMass();
+    Sp->P[j].setMass(old_mass + in->MassReturn * w);
+
     Sp->P[j].Vel[0] += WIND_VELOCITY * w;
     for (int k = 0; k < 4; k++) Sp->SphP[j].Metals[k] += in->Yield[k] * w;
 }
 
-void apply_feedback_treewalk(double current_time, int feedback_type) {
+void apply_feedback_treewalk(double current_time, int feedback_type, simparticles *Sp) {
     FeedbackWalk fw;
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
@@ -212,9 +215,9 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    apply_feedback_treewalk(current_time, FEEDBACK_SNII);
-    apply_feedback_treewalk(current_time, FEEDBACK_AGB);
-    apply_feedback_treewalk(current_time, FEEDBACK_SNIa);
+    apply_feedback_treewalk(current_time, FEEDBACK_SNII, &Sp);
+    apply_feedback_treewalk(current_time, FEEDBACK_AGB, &Sp);
+    apply_feedback_treewalk(current_time, FEEDBACK_SNIa, &Sp);
 
     TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
     TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
