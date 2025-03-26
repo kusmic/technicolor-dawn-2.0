@@ -35,9 +35,20 @@ Accumulate diagnostics for later logging.
 
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
-#define NEAREST_X(x) NEAREST(x, All.BoxSize[0])
-#define NEAREST_Y(x) NEAREST(x, All.BoxSize[1])
-#define NEAREST_Z(x) NEAREST(x, All.BoxSize[2])
+#define NEAREST_X(x) NEAREST(x, BoxSize)
+#define NEAREST_Y(x) NEAREST(x, BoxSize)
+#define NEAREST_Z(x) NEAREST(x, BoxSize)
+
+// Local cubic spline kernel approximation
+inline double kernel_weight_cubic(double r, double h) {
+    double u = r / h;
+    if (u < 0.5)
+        return (8.0 / (M_PI * h * h * h)) * (1 - 6 * u * u + 6 * u * u * u);
+    else if (u < 1.0)
+        return (8.0 / (M_PI * h * h * h)) * (2.0 * pow(1.0 - u, 3));
+    else
+        return 0.0;
+}
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1
@@ -93,7 +104,7 @@ struct FeedbackWalk {
 static int feedback_isactive(int i, FeedbackWalk *fw) {
     if (Sp->P[i].getType() != 4)
         return 0;
-    double age = fw->current_time - P[i].BirthTime;
+    double age = fw->current_time - Sp->P[i].StellarAge;
     if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
         return 0;
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
