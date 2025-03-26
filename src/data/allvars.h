@@ -373,4 +373,6 @@ struct global_data_all_processes : public parameters
 
 extern global_data_all_processes All;
 
+extern int ThisTask;
+
 #endif
