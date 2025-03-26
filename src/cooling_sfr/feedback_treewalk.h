@@ -1,8 +1,7 @@
 #ifndef FEEDBACK_TREEWALK_H
 #define FEEDBACK_TREEWALK_H
 
-#include "forcetree.h"
-#include "types.h"
+#include "../data/dtypes.h"
 
 struct feedback_data_in {
     MyDouble Pos[3];
