@@ -32,7 +32,6 @@ Accumulate diagnostics for later logging.
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
-#include "treewalk.h"
 
 // Feedback type bitmask flags
 #define FEEDBACK_SNII  1
@@ -78,19 +77,14 @@ struct FeedbackInput {
 
 struct FeedbackResult {};
 
-struct FeedbackWalk : public TreeWalk {
+struct FeedbackWalk {
     double h;
     double current_time;
     int feedback_type;
-
-    FeedbackWalk() {
-        this->h = 0.5;
-        this->ev_label = "Feedback";
-    }
+    const char* ev_label;
 };
 
-static int feedback_isactive(int i, TreeWalk *tw) {
-    auto *fw = static_cast<FeedbackWalk *>(tw);
+static int feedback_isactive(int i, FeedbackWalk *fw) {
     if (P[i].Type != 4)
         return 0;
     double age = fw->current_time - P[i].BirthTime;
@@ -102,27 +96,26 @@ static int feedback_isactive(int i, TreeWalk *tw) {
     return 0;
 }
 
-static void feedback_copy(int i, TreeWalkQueryBase *query, TreeWalk *tw) {
-    FeedbackInput *out = (FeedbackInput *) query;
+static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw) {
     out->Pos[0] = P[i].Pos[0];
     out->Pos[1] = P[i].Pos[1];
     out->Pos[2] = P[i].Pos[2];
 
     double m_star = P[i].Mass;
-    double age = ((FeedbackWalk *) tw)->current_time - P[i].BirthTime;
+    double age = fw->current_time - P[i].BirthTime;
 
     double energy = 0, m_return = 0;
     Yields y;
 
-    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNII) {
+    if (fw->feedback_type == FEEDBACK_SNII) {
         energy = SNII_ENERGY_PER_MASS * m_star;
         m_return = MASS_RETURN_SNII * m_star;
         y = get_SNII_yields(m_return);
-    } else if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_AGB) {
+    } else if (fw->feedback_type == FEEDBACK_AGB) {
         energy = AGB_ENERGY_PER_MASS * m_star;
         m_return = MASS_RETURN_AGB * m_star;
         y = get_AGB_yields(m_return);
-    } else if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNIa) {
+    } else if (fw->feedback_type == FEEDBACK_SNIa) {
         double n_snia = m_star * SNIa_RATE_PER_MASS;
         energy = n_snia * SNIa_ENERGY_PER_EVENT;
         m_return = 0;
@@ -133,11 +126,11 @@ static void feedback_copy(int i, TreeWalkQueryBase *query, TreeWalk *tw) {
     out->MassReturn = m_return;
     for (int k = 0; k < 4; k++) out->Yield[k] = (&y.Z)[k];
 
-    P[i].FeedbackFlag |= ((FeedbackWalk *) tw)->feedback_type;
+    P[i].FeedbackFlag |= fw->feedback_type;
 
-    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
-    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
-    if (((FeedbackWalk *) tw)->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
+    if (fw->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
+    if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
+    if (fw->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
 
     ThisStepMassReturned += m_return;
     ThisStepMetalsInjected[0] += y.Z;
@@ -146,8 +139,7 @@ static void feedback_copy(int i, TreeWalkQueryBase *query, TreeWalk *tw) {
     ThisStepMetalsInjected[3] += y.Fe;
 }
 
-static void feedback_ngb(TreeWalkQueryBase *query, TreeWalkResultBase *result, int j, TreeWalk *tw) {
-    FeedbackInput *in = (FeedbackInput *) query;
+static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw) {
     if (P[j].Type != 0) return;
 
     double dx[3] = {
@@ -158,7 +150,7 @@ static void feedback_ngb(TreeWalkQueryBase *query, TreeWalkResultBase *result, i
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2);
 
-    double wk = kernel_weight_cubic(r, ((FeedbackWalk *) tw)->h);
+    double wk = kernel_weight_cubic(r, fw->h);
     if (wk <= 0.0) return;
     double w = wk;
 
@@ -172,11 +164,20 @@ void apply_feedback_treewalk(double current_time, int feedback_type) {
     FeedbackWalk fw;
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
+    fw.h = 0.5;
+    fw.ev_label = "Feedback";
 
-    treewalk_init(&fw, feedback_isactive, feedback_copy, NULL, feedback_ngb,
-                  sizeof(FeedbackInput), sizeof(FeedbackResult));
+    for (int i = 0; i < NumPart; i++) {
+        if (!feedback_isactive(i, &fw)) continue;
 
-    treewalk_run(&fw);
+        FeedbackInput in;
+        FeedbackResult out;
+        feedback_copy(i, &in, &fw);
+
+        for (int j = 0; j < NumPart; j++) {
+            feedback_ngb(&in, &out, j, &fw);
+        }
+    }
 }
 
 void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
@@ -205,5 +206,6 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
                ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
     }
 }
+
 
 #endif
