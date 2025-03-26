@@ -139,14 +139,18 @@ struct particle_data
 #endif
 
 
-  inline unsigned char getType(void)
-  {
+inline int getFeedbackFlag() const { return FeedbackFlag; }
+inline void setFeedbackFlag(int flag) { FeedbackFlag = flag; }
+inline void addFeedbackFlag(int flag) { FeedbackFlag |= flag; }
+
+inline unsigned char getType(void)
+{
 #ifdef LEAN
-    return 1;
+  return 1;
 #else
-    return Type;
+  return Type;
 #endif
-  }
+}
 
   inline unsigned char getTimeBinHydro(void)
   {

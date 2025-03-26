@@ -81,12 +81,12 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].Type != 4) continue;  // Only apply feedback to star particles
+        if (Sp->P[i].getType() != 4) continue;  // Only apply feedback to star particles
 
         double age = current_time - Sp->P[i].BirthTime;
-        double m_star = Sp->P[i].Mass;
+        double m_star = Sp->P[i].getMass();
 
-        if (Sp->P[i].FeedbackFlag == (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa))
+        if (Sp->P[i].getFeedbackFlag() == (FEEDBACK_SNII | FEEDBACK_AGB | FEEDBACK_SNIa))
             continue;
 
         int *ngblist = Sp->P[i].NeighborList;
@@ -94,22 +94,22 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
         double total_w = 0.0;
         for (int n = 0; n < num_ngb; n++) {
             int j = ngblist[n];
-            if (Sp->P[j].Type != 0) continue;
+            if (Sp->P[j].getType() != 0) continue;
             total_w += Sp->P[i].Kernel[n];
         }
         if (total_w <= 0.0) continue;
 
         // SNII feedback
-        if (age > SNII_DELAY_TIME && !(Sp->P[i].FeedbackFlag & FEEDBACK_SNII)) {
+        if (age > SNII_DELAY_TIME && !(Sp->P[i].getFeedbackFlag() & FEEDBACK_SNII)) {
             double e_sn = SNII_ENERGY_PER_MASS * m_star;
             double m_return = MASS_RETURN_SNII * m_star;
             Yields y = get_SNII_yields(m_return);
             for (int n = 0; n < num_ngb; n++) {
                 int j = ngblist[n];
-                if (Sp->P[j].Type != 0) continue;
+                if (Sp->P[j].getType() != 0) continue;
                 double w = Sp->P[i].Kernel[n] / total_w;
                 Sp->SphP[j].Energy += e_sn * w;
-                Sp->P[j].Mass += m_return * w;
+                Sp->P[j].getMass() += m_return * w;
                 Sp->P[j].Vel[0] += WIND_VELOCITY * w;
                 Sp->SphP[j].Metals[0] += y.Z * w;
                 Sp->SphP[j].Metals[1] += y.C * w;
@@ -122,7 +122,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
             ThisStepMetalsInjected[1] += y.C;
             ThisStepMetalsInjected[2] += y.O;
             ThisStepMetalsInjected[3] += y.Fe;
-            Sp->P[i].FeedbackFlag |= FEEDBACK_SNII;
+            Sp->P[i].addFeedbackFlag(FEEDBACK_SNII);
         }
 
         // AGB feedback
@@ -132,10 +132,10 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
             Yields y = get_AGB_yields(m_return);
             for (int n = 0; n < num_ngb; n++) {
                 int j = ngblist[n];
-                if (Sp->P[j].Type != 0) continue;
+                if (Sp->P[j].getType() != 0) continue;
                 double w = Sp->P[i].Kernel[n] / total_w;
                 Sp->SphP[j].Energy += e_agb * w;
-                Sp->P[j].Mass += m_return * w;
+                Sp->P[j].getMass() += m_return * w;
                 Sp->SphP[j].Metals[0] += y.Z * w;
                 Sp->SphP[j].Metals[1] += y.C * w;
                 Sp->SphP[j].Metals[2] += y.O * w;
@@ -147,7 +147,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
             ThisStepMetalsInjected[1] += y.C;
             ThisStepMetalsInjected[2] += y.O;
             ThisStepMetalsInjected[3] += y.Fe;
-            Sp->P[i].FeedbackFlag |= FEEDBACK_AGB;
+            Sp->P[i].addFeedbackFlag(FEEDBACK_AGB);
         }
 
         // SNIa feedback
@@ -157,7 +157,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
             Yields y = get_SNIa_yields(n_snia);
             for (int n = 0; n < num_ngb; n++) {
                 int j = ngblist[n];
-                if (Sp->P[j].Type != 0) continue;
+                if (Sp->P[j].getType() != 0) continue;
                 double w = Sp->P[i].Kernel[n] / total_w;
                 Sp->SphP[j].Energy += e_snia * w;
                 Sp->SphP[j].Metals[0] += y.Z * w;
