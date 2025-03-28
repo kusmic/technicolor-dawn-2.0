@@ -1,4 +1,44 @@
 /*
+==========================================================================================
+FEEDBACK_TREEWALK.CC — Stellar Feedback Injection in Gadget-4
+==========================================================================================
+
+❖ Purpose:
+This file implements a tree-based algorithm for injecting stellar feedback (energy, mass,
+and metals) from stars into the surrounding interstellar medium (ISM) in cosmological
+simulations using Gadget-4.
+
+❖ What is "feedback"?
+In astrophysical simulations, feedback refers to the physical processes by which stars 
+influence their environment after they form — primarily through:
+   • Supernova explosions (Type II and Type Ia)
+   • Winds from dying stars (AGB stars)
+These processes return energy and enriched material to the surrounding gas, regulating
+galaxy formation and evolution.
+
+❖ What this file does:
+   • Loops over all active star particles (Type == 4)
+   • Checks if a star is ready to release feedback based on its age and other criteria
+   • Uses a spatial treewalk to find neighboring gas particles
+   • Injects feedback energy, mass, and metal yields using a smoothing kernel
+   • Tracks energy and mass diagnostics for logging and analysis
+
+❖ Key components:
+   - Constants defining feedback strength and timing (e.g. SNII delay, AGB end time)
+   - Kernel weight function for distributing feedback to nearby gas
+   - Metal yield functions for each type of feedback
+   - Diagnostic accumulators to track what's been injected per timestep and in total
+
+❖ Usage:
+This file is compiled and executed as part of the Gadget-4 simulation if the FEEDBACK
+flag is enabled in the build configuration. The actual injection is triggered during the
+star formation and feedback loop in the main simulation timestep.
+
+==========================================================================================
+*/
+
+
+/*
 GENERAL TREEWALK FEEDBACK ALGORITHM
 Loop over star particles (Type == 4)
 Check eligibility (age, already processed, etc.)
@@ -12,6 +52,8 @@ Accumulate diagnostics for later logging.
 */
 
 #include "gadgetconfig.h"
+
+#ifdef FEEDBACK
 
 #include <assert.h>
 #include <math.h>
@@ -31,7 +73,7 @@ Accumulate diagnostics for later logging.
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
-#ifdef FEEDBACK
+
 
 // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
 #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
@@ -40,6 +82,20 @@ Accumulate diagnostics for later logging.
 #define NEAREST_Z(x) NEAREST(x, All.BoxSize)
 
 // Local cubic spline kernel approximation
+/*
+This is the smoothing kernel used to distribute feedback (energy, mass, metals) from a star to nearby gas particles. 
+It's based on the standard cubic spline used in SPH (Smoothed Particle Hydrodynamics).
+
+📌 How it works:
+r: distance between the star and a neighbor gas particle
+h: smoothing length (maximum influence radius)
+
+The function returns a normalized weight that gets smaller with distance
+This ensures that:
+Nearby particles get more feedback
+Distant particles get little or none
+Total feedback is conserved
+*/
 inline double kernel_weight_cubic(double r, double h) {
     double u = r / h;
     if (u < 0.5)
@@ -234,7 +290,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     for (int k = 0; k < 4; k++)
         TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
 
-    /*
+    
     int task = ThisTask;
     if (task == 0) {
         printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
@@ -243,8 +299,8 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
         printf("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
                ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
     }
-               */
+               
 }
 
 
-#endif
+#endif // FEEDBACK
