@@ -17,6 +17,8 @@
 #include <gsl/gsl_rng.h>
 #include <stdio.h>
 
+extern int ThisTask;  /* ez added */
+
 extern gsl_rng *random_generator; /**< the random number generator used */
 
 void myflush(FILE *fstream);
