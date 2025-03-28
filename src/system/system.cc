@@ -37,6 +37,9 @@
 #include "../mpi_utils/mpi_utils.h"
 #include "../system/system.h"
 
+int ThisTask;
+int NTask;
+
 gsl_rng *random_generator; /*!< the random number generator used */
 
 void init_rng(int thistask)
