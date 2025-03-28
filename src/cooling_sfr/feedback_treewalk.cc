@@ -290,9 +290,8 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     for (int k = 0; k < 4; k++)
         TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
 
-    
-    int task = ThisTask;
-    if (task == 0) {
+
+    if (ThisTask == 0) {
         printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
         printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
