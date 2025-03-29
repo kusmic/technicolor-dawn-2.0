@@ -198,15 +198,18 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
 
     if (fw->feedback_type == FEEDBACK_SNII) {
         energy = SNII_ENERGY_PER_MASS * m_star;
+    printf("[Feedback Debug] SNII -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = MASS_RETURN_SNII * m_star;
         y = get_SNII_yields(m_return);
     } else if (fw->feedback_type == FEEDBACK_AGB) {
         energy = AGB_ENERGY_PER_MASS * m_star;
+    printf("[Feedback Debug] AGB -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = MASS_RETURN_AGB * m_star;
         y = get_AGB_yields(m_return);
     } else if (fw->feedback_type == FEEDBACK_SNIa) {
         double n_snia = m_star * SNIa_RATE_PER_MASS;
         energy = n_snia * SNIa_ENERGY_PER_EVENT;
+    printf("[Feedback Debug] SNIa -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = 0;
         y = get_SNIa_yields(n_snia);
     }
@@ -216,12 +219,14 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     for (int k = 0; k < 4; k++) out->Yield[k] = (&y.Z)[k];
 
     Sp->P[i].FeedbackFlag |= fw->feedback_type;
+    printf("[Feedback Debug] Flagging star %d with feedback type %d\n", i, fw->feedback_type);
 
     if (fw->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
     if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
     if (fw->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
 
     ThisStepMassReturned += m_return;
+    printf("[Feedback Debug] Added to totals: E=%.3e, M=%.3e\n", energy, m_return);
     ThisStepMetalsInjected[0] += y.Z;
     ThisStepMetalsInjected[1] += y.C;
     ThisStepMetalsInjected[2] += y.O;
