@@ -120,9 +120,9 @@ const double SNIa_RATE_PER_MASS = 5e-4;         // events per Msun formed
 
 // Delay times for different feedback types
 // These must be in terms of scaling factor a!
-const double SNIa_DELAY_TIME = 0.00693    // 1.5e9 years
-const double SNII_DELAY_TIME = 0.19608    // 1.0e7 years
-const double AGB_END_TIME    = 0.75191    // 1.0e10 years
+const double SNIa_DELAY_TIME = 0.00693;    // 1.5e9 years
+const double SNII_DELAY_TIME = 0.19608;    // 1.0e7 years
+const double AGB_END_TIME    = 0.75191;    // 1.0e10 years
 
 const double MASS_RETURN_SNII = 0.10;           // fraction of m_star
 const double MASS_RETURN_AGB = 0.30;            // fraction of m_star
