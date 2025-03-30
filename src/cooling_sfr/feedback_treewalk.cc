@@ -179,8 +179,8 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
 
     double age = fw->current_time - Sp->P[i].StellarAge;
 
-    printf("[Feedback IsActive Check] %s -- StellarAge: %.3e, StarAge: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\\n",
-        fw->ev_label, Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
+    printf("[Feedback IsActive Check] -- StellarAge: %.3e, StarAge: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
+        Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
  
     if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
         return 0;
