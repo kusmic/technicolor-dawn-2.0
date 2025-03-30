@@ -117,9 +117,12 @@ const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
 const double AGB_ENERGY_PER_MASS = 1.0e47;      // erg / Msun
 
 const double SNIa_RATE_PER_MASS = 5e-4;         // events per Msun formed
-const double SNIa_DELAY_TIME = 1.5e9;           // yr
-const double SNII_DELAY_TIME = 1.0e7;           // yr
-const double AGB_END_TIME = 1.0e10;             // yr
+
+// Delay times for different feedback types
+// These must be in terms of scaling factor a!
+const double SNIa_DELAY_TIME = 0.00693    // 1.5e9 years
+const double SNII_DELAY_TIME = 0.19608    // 1.0e7 years
+const double AGB_END_TIME    = 0.75191    // 1.0e10 years
 
 const double MASS_RETURN_SNII = 0.10;           // fraction of m_star
 const double MASS_RETURN_AGB = 0.30;            // fraction of m_star
@@ -173,6 +176,12 @@ struct FeedbackWalk {
     const char* ev_label;
 };
 
+// FEEDBACK_SNII  1
+// FEEDBACK_AGB   2
+// FEEDBACK_SNIa  4
+// SNIa_DELAY_TIME = 0.00693    // 1.5e9 years
+// SNII_DELAY_TIME = 0.19608    // 1.0e7 years
+// AGB_END_TIME    = 0.75191
 static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[i].getType() != 4)
         return 0;
@@ -188,7 +197,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     }
 
     printf("[MADE IT HERE]");
-    exit(0); // Zero usually indicates successful termination
+    //exit(0); // Zero usually indicates successful termination
 
 
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
