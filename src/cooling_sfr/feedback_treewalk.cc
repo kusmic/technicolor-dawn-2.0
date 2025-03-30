@@ -182,8 +182,15 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     printf("[Feedback IsActive Check] -- StellarAge: %.3e, StarAge: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
         Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
  
-    if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
-        return 0;
+    // Check if the feedback type has already been applied to the particle.
+    if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0) {
+        return 0; // Feedback has already been applied, so no action is needed.
+    }
+
+    printf("[MADE IT HERE]");
+    exit(0); // Zero usually indicates successful termination
+
+
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
     if (fw->feedback_type == FEEDBACK_AGB && age > SNII_DELAY_TIME && age < AGB_END_TIME) return 1;
     if (fw->feedback_type == FEEDBACK_SNIa && age > SNIa_DELAY_TIME) return 1;
