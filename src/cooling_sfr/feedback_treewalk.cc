@@ -176,7 +176,11 @@ struct FeedbackWalk {
 static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[i].getType() != 4)
         return 0;
+
     double age = fw->current_time - Sp->P[i].StellarAge;
+
+    printf("[Feedback IsActive Check] SNII -- StellarAge: %.3e, Stars actual age: %.3e, Stars actual age: %.3e, Feedback flag: %.3e, fw->feedback_type: %.3e\n", Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
+
     if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
         return 0;
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
@@ -250,6 +254,8 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
 
     Sp->SphP[j].Entropy += in->Energy * w;  // Approximating as entropy input
 
+    printf("[Feedback feedback_ngb] -- Entropy: %.3e\n", Sp->SphP[j].Entropy);
+
     double old_mass = Sp->P[j].getMass();
     Sp->P[j].setMass(old_mass + in->MassReturn * w);
 
@@ -284,6 +290,8 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
+    printf("[Feedback apply_stellar_feedback] -- current_time: %.3e\n", current_time);
+    
     apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
     apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
