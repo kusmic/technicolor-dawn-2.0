@@ -179,8 +179,9 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
 
     double age = fw->current_time - Sp->P[i].StellarAge;
 
-    printf("[Feedback IsActive Check] SNII -- StellarAge: %.3e, Stars actual age: %.3e, Stars actual age: %.3e, Feedback flag: %.3e, fw->feedback_type: %.3e\n", Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
-
+    printf("[Feedback IsActive Check] %s -- StellarAge: %.3e, StarAge: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\\n",
+        fw->ev_label, Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
+ 
     if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0)
         return 0;
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
@@ -270,6 +271,8 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
     fw.h = 0.5;
     fw.ev_label = "Feedback";
 
+    printf("[Feedback apply_feedback_treewalk] -- current_time: %.3e, fw.feedback_type: %d\n", current_time, fw.feedback_type);
+
     for (int i = 0; i < Sp->NumPart; i++) {
         if (!feedback_isactive(i, &fw, Sp)) continue;
 
@@ -290,7 +293,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    printf("[Feedback apply_stellar_feedback] -- current_time: %.3e\n", current_time);
+    printf("[Feedback apply_stellar_feedback] -- current_time: %.3e, FEEDBACK_SNII Flag: %d\n", current_time, FEEDBACK_SNII);
     
     apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
