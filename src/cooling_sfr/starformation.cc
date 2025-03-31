@@ -224,7 +224,7 @@
  */
  void coolsfr::convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime)
  {
-   printf("STAR: convert gas particle into star of mass %d!\n", Sp->P[i].getMass());
+   printf("STAR: convert gas particle into star of mass %.3f!\n", Sp->P[i].getMass());
 
    Sp->P[i].setType(STAR_TYPE);
  #if NSOFTCLASSES > 1
@@ -255,7 +255,7 @@
  void coolsfr::convert_sph_particle_into_dust(simparticles *Sp, int i, double birthtime)
  {
 
-    printf("STAR: convert gas particle into dust of mass %d!\n", Sp->P[i].getMass());
+    printf("STAR: convert gas particle into dust of mass %.3f!\n", Sp->P[i].getMass());
      Sp->P[i].setType(DUST_TYPE);  // Change type to PartType6 (Dust)
      
  #if NSOFTCLASSES > 1
@@ -301,7 +301,7 @@
  */
 void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star)
 {
-  printf("STAR: spawn star from gas particle of mass %d!\n", mass_of_star);
+  printf("STAR: spawn star from gas particle of mass %.3f!\n", mass_of_star);
   Sp->P[istar] = Sp->P[igas];
   Sp->P[istar].setType(STAR_TYPE);
 #if NSOFTCLASSES > 1
@@ -346,7 +346,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  */
  void coolsfr::spawn_dust_from_sph_particle(simparticles *Sp, int igas, double birthtime, int idust, MyDouble mass_of_dust)
  {
-  printf("DUST: spawn dust from gas particle of mass %d!\n", mass_of_dust);
+  printf("DUST: spawn dust from gas particle of mass %.3f!\n", mass_of_dust);
 
      // Copy gas properties to new dust particle
      Sp->P[idust] = Sp->P[igas];
