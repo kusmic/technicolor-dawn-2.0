@@ -134,6 +134,12 @@ int FeedbackFlag; /**< feedback flag for star particles */
   MyFloat Metallicity; /**< metallicity of gas or star particle */
 #endif
 
+#ifdef FEEDBACK
+  MyFloat Mass_SNII;
+  MyFloat Mass_AGB;
+  MyFloat Mass_SNIa;
+#endif
+
 #ifdef DUST
   MyFloat DustAge;    /**< formation time of dust particle */
   MyFloat GrainSize;  /**< size of dust particle */

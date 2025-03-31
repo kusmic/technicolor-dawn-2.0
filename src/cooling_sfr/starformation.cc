@@ -56,7 +56,7 @@
    sum_sm = sum_mass_stars = 0; // Initialize sum variables
  
    /* Handle supernova feedback which affects surrounding gas */
-   handle_supernovae(Sp);
+   //handle_supernovae(Sp);
  
    /* Loop over all active particles */
    for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
@@ -128,7 +128,7 @@
  
    if(tot_stars_spawned > 0 || tot_stars_converted > 0)
      {
-       mpi_printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
+       printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
      }
  
    tot_altogether_spawned = tot_stars_spawned;
@@ -224,7 +224,8 @@
  */
  void coolsfr::convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime)
  {
-   mpi_printf("STAR: convert gas particle into star of mass %d!\n", Sp->P[i].getMass());
+   printf("STAR: convert gas particle into star of mass %d!\n", Sp->P[i].getMass());
+
    Sp->P[i].setType(STAR_TYPE);
  #if NSOFTCLASSES > 1
    Sp->P[i].setSofteningClass(All.SofteningClassOfPartType[Sp->P[i].getType()]);
@@ -254,7 +255,7 @@
  void coolsfr::convert_sph_particle_into_dust(simparticles *Sp, int i, double birthtime)
  {
 
-    mpi_printf("STAR: convert gas particle into dust of mass %d!\n", Sp->P[i].getMass());
+    printf("STAR: convert gas particle into dust of mass %d!\n", Sp->P[i].getMass());
      Sp->P[i].setType(DUST_TYPE);  // Change type to PartType6 (Dust)
      
  #if NSOFTCLASSES > 1
@@ -300,7 +301,7 @@
  */
 void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star)
 {
-  mpi_printf("STAR: spawn star from gas particle of mass %d!\n", mass_of_star);
+  printf("STAR: spawn star from gas particle of mass %d!\n", mass_of_star);
   Sp->P[istar] = Sp->P[igas];
   Sp->P[istar].setType(STAR_TYPE);
 #if NSOFTCLASSES > 1
@@ -318,6 +319,11 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   Sp->P[istar].setMass(mass_of_star);
 
   Sp->P[istar].StellarAge = birthtime;
+
+  // Assign feedback portions of the mass
+  Sp->P[istar].Mass_SNII = 0.10 * Sp->P[istar].getMass();
+  Sp->P[istar].Mass_AGB  = 0.35 * Sp->P[istar].getMass();
+  Sp->P[istar].Mass_SNIa = 0.02 * Sp->P[istar].getMass();
 
   /* now change the conserved quantities in the cell in proportion */
   double fac = (Sp->P[igas].getMass() - Sp->P[istar].getMass()) / Sp->P[igas].getMass();
@@ -340,7 +346,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  */
  void coolsfr::spawn_dust_from_sph_particle(simparticles *Sp, int igas, double birthtime, int idust, MyDouble mass_of_dust)
  {
-  mpi_printf("DUST: spawn dust from gas particle of mass %d!\n", mass_of_dust);
+  printf("DUST: spawn dust from gas particle of mass %d!\n", mass_of_dust);
 
      // Copy gas properties to new dust particle
      Sp->P[idust] = Sp->P[igas];
@@ -368,7 +374,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
      // Adjust mass of parent gas particle
      double fac = (Sp->P[igas].getMass() - Sp->P[idust].getMass()) / Sp->P[igas].getMass();
      Sp->P[igas].setMass(fac * Sp->P[igas].getMass());
- 
+
      return;
  }
  

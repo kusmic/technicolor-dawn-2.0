@@ -34,6 +34,18 @@ This file is compiled and executed as part of the Gadget-4 simulation if the FEE
 flag is enabled in the build configuration. The actual injection is triggered during the
 star formation and feedback loop in the main simulation timestep.
 
+NOTE! With bitwise operations, we track which feedback types have been applied to each star:
+   - 0: No feedback applied
+   - 1: SNII feedback applied
+   - 2: AGB feedback applied
+   - 4: SNIa feedback applied
+   - 3: (SNII + AGB) feedback applied
+   - 5: (SNII + SNIa) feedback applied
+   - 6: (AGB + SNIa) feedback applied
+   - 7: (SNII + AGB + SNIa) feedback applied
+This allows us to ensure that each star only contributes feedback once for each type. Once 
+FeedbackFlag = 7, that star particle will not engage in feedback again.
+
 ==========================================================================================
 */
 
@@ -196,9 +208,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         return 0; // Feedback has already been applied, so no action is needed.
     }
 
-    printf("[MADE IT HERE]");
     //exit(0); // Zero usually indicates successful termination
-
 
     if (fw->feedback_type == FEEDBACK_SNII && age > SNII_DELAY_TIME) return 1;
     if (fw->feedback_type == FEEDBACK_AGB && age > SNII_DELAY_TIME && age < AGB_END_TIME) return 1;
