@@ -200,13 +200,13 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
 
     double age = fw->current_time - Sp->P[i].StellarAge;
 
-    printf("[Feedback IsActive Check] -- StellarAge: %.3e, StarAge: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
-        Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
- 
     // Check if the feedback type has already been applied to the particle.
     if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0) {
         return 0; // Feedback has already been applied, so no action is needed.
     }
+
+    printf("[Feedback IsActive] No feedback yet. -- Born: %.3e, Star Age: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
+        Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
 
     //exit(0); // Zero usually indicates successful termination
 
@@ -229,18 +229,18 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
 
     if (fw->feedback_type == FEEDBACK_SNII) {
         energy = SNII_ENERGY_PER_MASS * m_star;
-    printf("[Feedback Debug] SNII -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
+        printf("[Feedback Debug] SNII -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = MASS_RETURN_SNII * m_star;
         y = get_SNII_yields(m_return);
     } else if (fw->feedback_type == FEEDBACK_AGB) {
         energy = AGB_ENERGY_PER_MASS * m_star;
-    printf("[Feedback Debug] AGB -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
+        printf("[Feedback Debug] AGB -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = MASS_RETURN_AGB * m_star;
         y = get_AGB_yields(m_return);
     } else if (fw->feedback_type == FEEDBACK_SNIa) {
         double n_snia = m_star * SNIa_RATE_PER_MASS;
         energy = n_snia * SNIa_ENERGY_PER_EVENT;
-    printf("[Feedback Debug] SNIa -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
+        printf("[Feedback Debug] SNIa -- Star %d: m_star=%.3e, energy=%.3e\n", i, m_star, energy);
         m_return = 0;
         y = get_SNIa_yields(n_snia);
     }
@@ -297,7 +297,7 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
     fw.h = 0.5;
     fw.ev_label = "Feedback";
 
-    printf("[Feedback apply_feedback_treewalk] -- current_time: %.3e, fw.feedback_type: %d\n", current_time, fw.feedback_type);
+    //printf("[Feedback apply_feedback_treewalk] -- current_time: %.3e, fw.feedback_type: %d\n", current_time, fw.feedback_type);
 
     for (int i = 0; i < Sp->NumPart; i++) {
         if (!feedback_isactive(i, &fw, Sp)) continue;
@@ -319,7 +319,7 @@ void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepMassReturned = 0;
     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
 
-    printf("[Feedback apply_stellar_feedback] -- current_time: %.3e, FEEDBACK_SNII Flag: %d\n", current_time, FEEDBACK_SNII);
+    //printf("[Feedback apply_stellar_feedback] -- current_time: %.3e, FEEDBACK_SNII Flag: %d\n", current_time, FEEDBACK_SNII);
     
     apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
