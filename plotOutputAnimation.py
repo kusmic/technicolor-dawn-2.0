@@ -16,7 +16,7 @@ part_colors = {
     'PartType6': {'name': 'Dust', 'color': 'green', 'size': 5}
 }
 
-# Change the glob pattern to match your snapshot filenames.
+# Change the glob pattern to match the snapshot filenames
 snapshot_files = sorted(glob.glob("output/snap*.hdf5"))
 
 # Set up the figure and axis.
@@ -48,8 +48,7 @@ def update(frame):
 # Create the animation.
 ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), interval=500)
 
-# To display the animation interactively:
 plt.show()
 
-# Optionally, to save the animation as a video (requires ffmpeg installed):
+# Optionally, to save the animation as a video (requires ffmpeg):
 ani.save("gadget4_animation.mp4", writer="ffmpeg", dpi=200)
