@@ -108,7 +108,7 @@ TempSupernova       1e+08       % T_SN, effective "supernova temperature",sets f
 TempClouds          1000        % temperature of cold clouds (multi-phase model)
 CritOverDensity     40          % overdensity threshold value for cosmological sims; lower value means conditions easier to reach for SF
 CritPhysDensity     0           % critical physical density for star formation (in cm^(-3))
-TreecoolFile        TREECOOL
+TreecoolFile        data/TREECOOL
 
 
 %----- Dust properties (PartType6)
