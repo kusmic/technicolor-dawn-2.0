@@ -274,7 +274,7 @@ Sp: The full simulation particle data structure.
 */
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
 
-    printf("Calling feedback_ngb for target=%d, source=%d\n", target, in->index);
+    printf("Calling feedback_ngb for int=%d\n", j);
     
     if (Sp->P[j].getType() != 0) return;
 
