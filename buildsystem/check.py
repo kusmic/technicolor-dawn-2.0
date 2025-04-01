@@ -21,7 +21,7 @@ def parseIf(string, defines, fin):
             continue
         
         if s.startswith("/*"):
-            m = re.search("\*/",s)
+            m = re.search(r"\*/", s)
             if m is not None:
                 s = s[m.span()[1]:]
                 continue
