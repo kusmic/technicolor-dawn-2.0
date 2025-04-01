@@ -1098,6 +1098,16 @@ An example for a lightcone definition file could look like this:
 This would define a full-sky light cone from z=1 to z=0, and an octant
 covering positive x>0,y>0,z>0 from redshift z=1.5 to z=0.
 
+-------
+
+**LightConeOriginsFile**    lightcone_origins.txt
+
+Only when `LIGHTCONE_MULTIPLE_ORIGINS` is activated, this option is 
+required. One can then supply a list of coordinate triples, each of
+which is a possible origin of a lightcone as defined above. The
+invividual lightcone defintions from above then require one additional
+number for each lightcone at the end. This number is an index into the 
+listed origins, and thus selected the corresponding origin.
 
 -------
 
@@ -1238,4 +1248,3 @@ in internal length units.
 This parameter is only active when `EXTERNALGRAVITY_STATICHQ` is
 enabled, and then gives the total mass (in internal units) of the
 halos that is added as a static potential to the force computation.
-
