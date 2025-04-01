@@ -93,12 +93,13 @@ Accumulate diagnostics for later logging.
 #define NEAREST_Y(x) NEAREST(x, All.BoxSize)
 #define NEAREST_Z(x) NEAREST(x, All.BoxSize)
 
+
 // Local cubic spline kernel approximation
 /*
 This is the smoothing kernel used to distribute feedback (energy, mass, metals) from a star to nearby gas particles. 
 It's based on the standard cubic spline used in SPH (Smoothed Particle Hydrodynamics).
 
-📌 How it works:
+INPUTS:
 r: distance between the star and a neighbor gas particle
 h: smoothing length (maximum influence radius)
 
@@ -264,8 +265,20 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     ThisStepMetalsInjected[3] += y.Fe;
 }
 
+/*
+&in: Input data for the feedback calculation (probably contains source particle properties).
+&out: Output accumulator structure for collecting changes (e.g., delta mass or energy).
+j: The index of the source particle applying feedback.
+&fw: The treewalk structure (or walker) used for spatial neighbor searching.
+Sp: The full simulation particle data structure.
+*/
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
+
+    printf("Calling feedback_ngb for target=%d, source=%d\n", target, in->index);
+    
     if (Sp->P[j].getType() != 0) return;
+
+    printf("Gets here in feedback_ngb!");
 
     double dx[3] = {
         NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
@@ -312,6 +325,8 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
     }
 }
 
+
+/* This here is the main feedback function called with every time step, after any stars are created */
 void apply_stellar_feedback(double current_time, struct simparticles* Sp) {
     ThisStepEnergy_SNII = 0;
     ThisStepEnergy_SNIa = 0;
