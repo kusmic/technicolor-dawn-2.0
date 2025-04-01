@@ -206,8 +206,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         return 0; // Feedback has already been applied, so no action is needed.
     }
 
-    //printf("[Feedback IsActive] No feedback yet. -- Born: %.3e, Star Age: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
-        Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
+    //printf("[Feedback IsActive] No feedback yet. -- Born: %.3e, Star Age: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
 
     //exit(0); // Zero usually indicates successful termination
 

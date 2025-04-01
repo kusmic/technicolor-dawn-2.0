@@ -2,6 +2,12 @@ TECHNICOLOR DAWN 2.0
 ====================
 Technicolor Dawn is a 3-dimensional radiative transfer solve integrated into Gadget-4.
 
+Requirements
+============
+Many Linux environments will need a few libraries:
+
+sudo apt install mpich libmpich-dev libhdf5-dev libgsl-dev
+
 Gadget-4
 ========
 
