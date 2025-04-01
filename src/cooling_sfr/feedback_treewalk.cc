@@ -206,7 +206,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         return 0; // Feedback has already been applied, so no action is needed.
     }
 
-    printf("[Feedback IsActive] No feedback yet. -- Born: %.3e, Star Age: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
+    //printf("[Feedback IsActive] No feedback yet. -- Born: %.3e, Star Age: %.3e, FeedbackFlag: %d, fw->feedback_type: %d\n",
         Sp->P[i].StellarAge, age, Sp->P[i].FeedbackFlag, fw->feedback_type);
 
     //exit(0); // Zero usually indicates successful termination
@@ -274,11 +274,9 @@ Sp: The full simulation particle data structure.
 */
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
 
-    printf("Calling feedback_ngb for int=%d\n", j);
+    //printf("Calling feedback_ngb for int=%d\n", j);
     
     if (Sp->P[j].getType() != 0) return;
-
-    printf("Gets here in feedback_ngb!");
 
     double dx[3] = {
         NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
@@ -289,6 +287,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     double r = sqrt(r2);
 
     double wk = kernel_weight_cubic(r, fw->h);
+    printf("feedback_ngb! kernel_weight_cubic: %.3e, r=%.3e, h=%.3e\n", wk, r, fw->h);
     if (wk <= 0.0) return;
     double w = wk;
 
