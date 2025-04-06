@@ -122,9 +122,9 @@ const double SNIa_DTD_MIN_TIME = 4.0e7;         // years - minimum delay time
 const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
 
 // Feedback approach parameters
-const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition
-const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution
-const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution
+const double SNII_FEEDBACK_RADIUS = 0.1;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+const double SNIa_FEEDBACK_RADIUS = 0.1;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
+const double AGB_FEEDBACK_RADIUS = 0.1;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
 
 const double WIND_VELOCITY = 500.0;             // km/s
 
@@ -260,8 +260,8 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[i].getType() != 4)
         return 0;
 
-
-    printf("[Feedback] Reached feedback_isactive().");
+    // In feedback_isactive
+    printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
 
     // Convert from scale factor to physical time
     double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
@@ -273,10 +273,13 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
 
     // Different criteria for different feedback types
     if (fw->feedback_type == FEEDBACK_SNII) {
+
+        printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
         // Type II SNe happen promptly after star formation
         return (age_physical > SNII_DELAY_TIME_PHYSICAL) ? 1 : 0;
     } 
     else if (fw->feedback_type == FEEDBACK_AGB) {
+        printf("[Feedback Debug] Star %d is active for AGB feedback type %d\n", i, fw->feedback_type);
         // AGB winds are active after some delay but before stars are too old
         return (age_physical > SNII_DELAY_TIME_PHYSICAL && age_physical < AGB_END_TIME_PHYSICAL) ? 1 : 0;
     }
@@ -303,6 +306,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         // Store the number of events for later use
         Sp->P[i].SNIaEvents = n_events;
         
+        printf("[Feedback Debug] Star %d is active for SNIa feedback type %d\n", i, fw->feedback_type);
         return (n_events > 0) ? 1 : 0;
     }
 
@@ -323,7 +327,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     double energy = 0, m_return = 0;
     Yields y;
 
-    printf("[Feedback] Reached feedback_copy().");
+    printf("[Feedback] Reached feedback_copy().\n");
 
     // Set smoothing length/radius based on feedback type
     if (fw->feedback_type == FEEDBACK_SNII) {
@@ -363,6 +367,9 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     ThisStepMetalsInjected[1] += y.C;
     ThisStepMetalsInjected[2] += y.O;
     ThisStepMetalsInjected[3] += y.Fe;
+
+    // After feedback_copy
+    printf("[Feedback Debug] Copied data for star %d, energy=%e\n", i, in.Energy);
 }
 
 /**
@@ -371,6 +378,9 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
  */
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
+
+    // Before the neighbor loop
+    printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", i);
 
     double dx[3] = {
         NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
@@ -464,7 +474,7 @@ void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
     FeedbackInput in;
     FeedbackResult out;
 
-    printf("[Feedback] Reached apply_feedback_to_star().");
+    printf("[Feedback] Reached apply_feedback_to_star().\n");
 
     // Copy star particle data to feedback input structure
     feedback_copy(i, &in, fw, Sp);
