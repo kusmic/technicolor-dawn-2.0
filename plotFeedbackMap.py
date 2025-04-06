@@ -147,16 +147,20 @@ def update(frame):
     # Create new temperature map
     temp_map, x_edges, y_edges, time = create_temperature_map(filename)
     
-    # Update the plot
-    mesh.set_array(temp_map.T.ravel())
+    # Clear the axis and redraw completely (more robust than trying to update the existing mesh)
+    ax.clear()
     
-    # Update x and y ranges if they changed
-    mesh.set_extent([x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
-    ax.set_xlim(x_edges[0], x_edges[-1])
-    ax.set_ylim(y_edges[0], y_edges[-1])
-    
-    title.set_text(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}')
-    time_text.set_text(f"Time: {time:.3f}")
+    # Create a new mesh with the updated data
+    new_mesh = ax.pcolormesh(x_edges, y_edges, temp_map.T, 
+                           norm=LogNorm(vmin=vmin, vmax=vmax), 
+                           cmap='rainbow')
+                           
+    # Update labels and title
+    ax.set_xlabel('x [kpc]')
+    ax.set_ylabel('y [kpc]')
+    title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}')
+    time_text = ax.text(0.05, 0.95, f"Time: {time:.3f}", transform=ax.transAxes,
+                      fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
     
     print(f"Updated mesh array size: {temp_map.T.size}")
     if np.any(temp_map > 0):
@@ -164,7 +168,7 @@ def update(frame):
     else:
         print("WARNING: Updated temperature map has no positive values!")
     
-    return mesh, title, time_text
+    return new_mesh, title, time_text
 
 # Create output directory for diagnostic images (optional)
 os.makedirs("temp_diagnostics", exist_ok=True)
@@ -186,10 +190,10 @@ for i, filename in enumerate(snapshot_files):
     plt.savefig(f"temp_diagnostics/frame_{i:04d}.png", dpi=150)
     plt.close()
 
-# Create the animation
+# Create the animation - with blit=False for more robust rendering
 print("\nCreating animation...")
 ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), 
-                              blit=True, interval=200)
+                              blit=False, interval=200)
 
 # Save the animation
 print("Saving animation to temperature_evolution.mp4...")
