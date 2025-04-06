@@ -122,9 +122,9 @@ const double SNIa_DTD_MIN_TIME = 4.0e7;         // years - minimum delay time
 const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
 
 // Feedback approach parameters
-const double SNII_FEEDBACK_RADIUS = 0.1;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
-const double SNIa_FEEDBACK_RADIUS = 0.1;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
-const double AGB_FEEDBACK_RADIUS = 0.1;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
+const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
+const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
 
 const double WIND_VELOCITY = 500.0;             // km/s
 
@@ -358,9 +358,12 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     Sp->P[i].FeedbackFlag |= fw->feedback_type;
 
     // Update diagnostic counters
+    printf("[Feedback] Update feedback counters energy=%.3f\n", energy);
     if (fw->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
     if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
     if (fw->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
+
+
 
     ThisStepMassReturned += m_return;
     ThisStepMetalsInjected[0] += y.Z;
@@ -368,8 +371,8 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     ThisStepMetalsInjected[2] += y.O;
     ThisStepMetalsInjected[3] += y.Fe;
 
-    // After feedback_copy
-    printf("[Feedback Debug] Copied data for star %d.\n", i);
+    printf("[Feedback] Copied data for star %d. ThisStepEnergy_SNII=%.3e, ThisStepMassReturned=%.3e\n",
+        i, ThisStepEnergy_SNII, ThisStepMassReturned);
 }
 
 /**
@@ -401,6 +404,8 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     }
 
     if (w <= 0.0) return;
+
+    printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
 
     // Apply energy - different approaches for different feedback types
     if (in->FeedbackType == FEEDBACK_SNII) {
@@ -556,7 +561,9 @@ void apply_stellar_feedback(double current_time, simparticles* Sp) {
         TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
 
     // Print summary (on master process only)
-    if (ThisTask == 0) {
+    if (ThisTask == 0 & (ThisStepEnergy_SNII > 0 ||
+        ThisStepEnergy_SNIa > 0 ||
+        ThisStepEnergy_AGB > 0) ) {
         printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
         printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
