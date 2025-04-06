@@ -6,14 +6,12 @@ import matplotlib.animation as animation
 import glob
 import os
 
-def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200):  # Increased slice thickness, reduced resolution
+def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200):
     """Create a temperature map from a snapshot file"""
     print(f"\nProcessing {snapshot_file}...")
     
     try:
         with h5py.File(snapshot_file, 'r') as f:
-            # Debug info omitted for brevity
-            
             # Extract header info
             time = f['Header'].attrs['Time']
             
@@ -72,10 +70,6 @@ def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200): 
             from scipy.ndimage import gaussian_filter
             temp_map = gaussian_filter(temp_map, sigma=1.0)
             
-            # Print some diagnostics
-            if np.any(temp_map > 0):
-                print(f"Temperature range: [{temp_map[temp_map > 0].min():.2e}, {temp_map.max():.2e}]")
-            
             return temp_map, x_edges, y_edges, time
             
     except Exception as e:
@@ -91,43 +85,58 @@ if len(snapshot_files) == 0:
     print("No snapshot files found! Please check the file pattern and directory.")
     exit(1)
 
-# Process first snapshot
-temp_map, x_edges, y_edges, time = create_temperature_map(snapshot_files[0])
+# Create output directory
+os.makedirs("temp_diagnostics", exist_ok=True)
 
-# Determine temperature range
-if np.any(temp_map > 0):
-    vmin = temp_map[temp_map > 0].min()
-    vmax = temp_map.max()
-else:
-    vmin, vmax = 1e4, 1e7
+# Process all snapshots once, storing the data for animation
+print("Processing all snapshots and saving diagnostic frames...")
+all_data = []
 
-# Set up the figure and axis - use a larger figure size
+for i, filename in enumerate(snapshot_files):
+    # Create temperature map
+    temp_map, x_edges, y_edges, time = create_temperature_map(filename)
+    
+    # Store for animation
+    all_data.append((temp_map, x_edges, y_edges, time))
+    
+    # Save diagnostic frame
+    plt.figure(figsize=(12, 10))
+    extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
+    plt.imshow(temp_map.T, origin='lower', extent=extent,
+               norm=LogNorm(vmin=1e4, vmax=1e7), 
+               cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
+    plt.colorbar(label='Temperature [K]', format='%.1e')
+    plt.xlabel('x [kpc]', fontsize=14)
+    plt.ylabel('y [kpc]', fontsize=14)
+    plt.title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
+    plt.grid(True, color='white', alpha=0.3, linestyle=':')
+    
+    plt.savefig(f"temp_diagnostics/frame_{i:04d}.png", dpi=150)
+    plt.close()
+
+# Set up the figure for animation
 fig, ax = plt.subplots(figsize=(12, 10))
 
-# Use imshow instead of pcolormesh for a more continuous representation
-# Transpose and flip the data to match the correct orientation
+# Get the first frame data
+first_data = all_data[0]
+temp_map, x_edges, y_edges, time = first_data
+
+# Initialize the plot
 extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
 im = ax.imshow(temp_map.T, origin='lower', extent=extent,
-               norm=LogNorm(vmin=vmin, vmax=vmax), 
+               norm=LogNorm(vmin=1e4, vmax=1e7), 
                cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
-
-# Use a colorbar with a better format
 cbar = fig.colorbar(im, label='Temperature [K]', format='%.1e')
 ax.set_xlabel('x [kpc]', fontsize=14)
 ax.set_ylabel('y [kpc]', fontsize=14)
 title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
 time_text = ax.text(0.05, 0.95, f"Time: {time:.3f}", transform=ax.transAxes,
-                  fontsize=14, bbox=dict(facecolor='white', alpha=0.7))
-
-# Add grid for better spatial reference
+                   fontsize=14, bbox=dict(facecolor='white', alpha=0.7))
 ax.grid(True, color='white', alpha=0.3, linestyle=':')
 
 def update(frame):
-    filename = snapshot_files[frame]
-    print(f"\nProcessing frame {frame+1}/{len(snapshot_files)}: {filename}")
-    
-    # Create new temperature map
-    temp_map, x_edges, y_edges, time = create_temperature_map(filename)
+    # Get pre-processed data for this frame
+    temp_map, x_edges, y_edges, time = all_data[frame]
     
     # Clear the axis
     ax.clear()
@@ -135,7 +144,7 @@ def update(frame):
     # Create a new image with the updated data
     extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
     im = ax.imshow(temp_map.T, origin='lower', extent=extent,
-                  norm=LogNorm(vmin=vmin, vmax=vmax), 
+                  norm=LogNorm(vmin=1e4, vmax=1e7), 
                   cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
     
     # Add grid
@@ -150,31 +159,9 @@ def update(frame):
     
     return [im, title, time_text]
 
-# Create output directory
-os.makedirs("temp_diagnostics", exist_ok=True)
-
-# Save diagnostic frames - using improved visualization
-print("\nSaving diagnostic frames...")
-for i, filename in enumerate(snapshot_files):
-    temp_map, x_edges, y_edges, time = create_temperature_map(filename)
-    
-    plt.figure(figsize=(12, 10))
-    extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
-    plt.imshow(temp_map.T, origin='lower', extent=extent,
-               norm=LogNorm(vmin=vmin, vmax=vmax), 
-               cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
-    plt.colorbar(label='Temperature [K]', format='%.1e')
-    plt.xlabel('x [kpc]', fontsize=14)
-    plt.ylabel('y [kpc]', fontsize=14)
-    plt.title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
-    plt.grid(True, color='white', alpha=0.3, linestyle=':')
-    
-    plt.savefig(f"temp_diagnostics/frame_{i:04d}.png", dpi=150)
-    plt.close()
-
-# Create animation
+# Create animation using pre-processed data
 print("\nCreating animation...")
-ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), 
+ani = animation.FuncAnimation(fig, update, frames=len(all_data), 
                               blit=False, interval=200)
 
 # Save the animation
