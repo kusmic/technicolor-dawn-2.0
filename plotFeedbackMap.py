@@ -54,7 +54,7 @@ def create_temperature_map(snapshot_file, slice_thickness=0.1, resolution=500):
         return temp_map, x_edges, y_edges, time
 
 # Get all snapshot files, sorted by number
-snapshot_files = sorted(glob.glob("snapshot_*.hdf5"))
+snapshot_files = sorted(glob.glob("output/snapshot_*.hdf5"))
 print(f"Found {len(snapshot_files)} snapshot files")
 
 # Temperature range for consistent colormap
