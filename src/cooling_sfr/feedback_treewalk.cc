@@ -403,9 +403,9 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         w = kernel_weight_cubic(r, in->h);
     }
 
-    if (w <= 0.0) return;
-
     printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
+
+    if (w <= 0.0) return;
 
     // Apply energy - different approaches for different feedback types
     if (in->FeedbackType == FEEDBACK_SNII) {
