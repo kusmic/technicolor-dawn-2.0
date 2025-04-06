@@ -84,7 +84,7 @@ def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200): 
 
 # Get snapshot files
 snapshot_pattern = "snapshot_*.hdf5"
-snapshot_files = sorted(glob.glob(snapshot_pattern))
+snapshot_files = sorted(glob.glob("output/"+snapshot_pattern))
 print(f"Found {len(snapshot_files)} snapshot files matching pattern: {snapshot_pattern}")
 
 if len(snapshot_files) == 0:
