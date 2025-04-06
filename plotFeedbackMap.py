@@ -6,72 +6,48 @@ import matplotlib.animation as animation
 import glob
 import os
 
-def create_temperature_map(snapshot_file, slice_thickness=0.1, resolution=500):
+def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200):  # Increased slice thickness, reduced resolution
     """Create a temperature map from a snapshot file"""
     print(f"\nProcessing {snapshot_file}...")
     
     try:
         with h5py.File(snapshot_file, 'r') as f:
-            # Debug: Check file structure
-            print(f"Keys in file: {list(f.keys())}")
-            if 'PartType0' not in f:
-                print(f"WARNING: No gas particles (PartType0) in file!")
-                return np.zeros((resolution, resolution)), np.linspace(-20, 20, resolution), np.linspace(-20, 20, resolution), 0
+            # Debug info omitted for brevity
             
-            print(f"Gas particles: {len(f['PartType0/Coordinates'])}")
-            print(f"Available fields: {list(f['PartType0'].keys())}")
-            
-            # Extract header info (for title)
-            time = f['Header'].attrs['Time']  # Scale factor or time
-            print(f"Snapshot time: {time}")
+            # Extract header info
+            time = f['Header'].attrs['Time']
             
             # Extract gas particle data
-            pos = f['PartType0/Coordinates'][:]  # Gas particle positions
-            print(f"Position range: x=[{pos[:, 0].min():.2f}, {pos[:, 0].max():.2f}], "
-                  f"y=[{pos[:, 1].min():.2f}, {pos[:, 1].max():.2f}], "
-                  f"z=[{pos[:, 2].min():.2f}, {pos[:, 2].max():.2f}]")
-            
-            mass = f['PartType0/Masses'][:]      # Gas particle masses
-            print(f"Mass range: [{mass.min():.2e}, {mass.max():.2e}]")
+            pos = f['PartType0/Coordinates'][:]
+            mass = f['PartType0/Masses'][:]
             
             # Get temperature data
             if 'PartType0/Temperature' in f:
                 temp = f['PartType0/Temperature'][:]
-                print(f"Temperature range: [{temp.min():.2e}, {temp.max():.2e}]")
             else:
-                print("No direct temperature field. Using internal energy...")
                 if 'PartType0/InternalEnergy' in f:
                     u = f['PartType0/InternalEnergy'][:]
-                    print(f"Internal energy range: [{u.min():.2e}, {u.max():.2e}]")
-                    # You'll need to convert u to T based on your simulation's EOS
-                    # This is a placeholder conversion:
-                    temp = u * 10000  # Adjust this conversion as needed
-                    print(f"Converted temperature range: [{temp.min():.2e}, {temp.max():.2e}]")
+                    temp = u * 10000  # Adjust conversion factor as needed
                 else:
-                    print("ERROR: Neither Temperature nor InternalEnergy found!")
                     return np.zeros((resolution, resolution)), np.linspace(-20, 20, resolution), np.linspace(-20, 20, resolution), time
             
-            # Create 2D histogram (projection)
-            # Select particles in a thin slice around z=0
+            # Create 2D histogram (projection) - use thicker slice
             mask = np.abs(pos[:, 2]) < slice_thickness
             print(f"Particles in slice: {np.sum(mask)} out of {len(mask)} ({np.sum(mask)/len(mask)*100:.2f}%)")
             
             if np.sum(mask) == 0:
-                print("WARNING: No particles in this slice!")
                 return np.zeros((resolution, resolution)), np.linspace(-20, 20, resolution), np.linspace(-20, 20, resolution), time
             
-            # Determine sensible grid ranges based on actual particle positions
+            # Determine ranges based on particle positions
             x_min, x_max = pos[:, 0].min(), pos[:, 0].max()
             y_min, y_max = pos[:, 1].min(), pos[:, 1].max()
             
-            # Add a small buffer
+            # Add buffer
             x_buffer = (x_max - x_min) * 0.05
             y_buffer = (y_max - y_min) * 0.05
             
             x_edges = np.linspace(x_min - x_buffer, x_max + x_buffer, resolution)
             y_edges = np.linspace(y_min - y_buffer, y_max + y_buffer, resolution)
-            
-            print(f"Grid ranges: x=[{x_edges[0]:.2f}, {x_edges[-1]:.2f}], y=[{y_edges[0]:.2f}, {y_edges[-1]:.2f}]")
             
             # Create temperature map
             H, _, _ = np.histogram2d(
@@ -87,16 +63,18 @@ def create_temperature_map(snapshot_file, slice_thickness=0.1, resolution=500):
                 weights=mass[mask]
             )
             
-            # Mass-weighted temperature
+            # Mass-weighted temperature, with Gaussian smoothing
             temp_map = np.zeros_like(H)
             nonzero = M > 0
             temp_map[nonzero] = H[nonzero] / M[nonzero]
             
-            print(f"Temperature map statistics:")
-            print(f"  Min: {temp_map[temp_map > 0].min() if np.any(temp_map > 0) else 0:.2e}")
-            print(f"  Max: {temp_map.max():.2e}")
-            print(f"  Mean: {np.mean(temp_map[temp_map > 0]) if np.any(temp_map > 0) else 0:.2e}")
-            print(f"  Non-zero cells: {np.count_nonzero(temp_map)} out of {temp_map.size} ({np.count_nonzero(temp_map)/temp_map.size*100:.2f}%)")
+            # Apply Gaussian smoothing to make the map more continuous
+            from scipy.ndimage import gaussian_filter
+            temp_map = gaussian_filter(temp_map, sigma=1.0)
+            
+            # Print some diagnostics
+            if np.any(temp_map > 0):
+                print(f"Temperature range: [{temp_map[temp_map > 0].min():.2e}, {temp_map.max():.2e}]")
             
             return temp_map, x_edges, y_edges, time
             
@@ -104,41 +82,45 @@ def create_temperature_map(snapshot_file, slice_thickness=0.1, resolution=500):
         print(f"ERROR processing {snapshot_file}: {str(e)}")
         return np.zeros((resolution, resolution)), np.linspace(-20, 20, resolution), np.linspace(-20, 20, resolution), 0
 
-# Get all snapshot files, sorted by number
-snapshot_pattern = "snapshot_*.hdf5"  # Adjust this pattern as needed
-snapshot_files = sorted(glob.glob("output/"+snapshot_pattern))
+# Get snapshot files
+snapshot_pattern = "snapshot_*.hdf5"
+snapshot_files = sorted(glob.glob(snapshot_pattern))
 print(f"Found {len(snapshot_files)} snapshot files matching pattern: {snapshot_pattern}")
 
 if len(snapshot_files) == 0:
     print("No snapshot files found! Please check the file pattern and directory.")
     exit(1)
 
-# Process the first snapshot to get initial data and determine ranges
+# Process first snapshot
 temp_map, x_edges, y_edges, time = create_temperature_map(snapshot_files[0])
 
-# Determine temperature range from the first frame
+# Determine temperature range
 if np.any(temp_map > 0):
     vmin = temp_map[temp_map > 0].min()
     vmax = temp_map.max()
-    print(f"Auto-detected temperature range: [{vmin:.2e}, {vmax:.2e}]")
 else:
-    # Default range if no data
     vmin, vmax = 1e4, 1e7
-    print(f"No valid temperature data in first frame. Using default range: [{vmin:.2e}, {vmax:.2e}]")
 
-# Set up the figure and axis
-fig, ax = plt.subplots(figsize=(10, 8))
+# Set up the figure and axis - use a larger figure size
+fig, ax = plt.subplots(figsize=(12, 10))
 
-# Initialize the plot with the first frame
-mesh = ax.pcolormesh(x_edges, y_edges, temp_map.T, 
-                    norm=LogNorm(vmin=vmin, vmax=vmax), 
-                    cmap='rainbow')  # Changed to rainbow colormap
-cbar = fig.colorbar(mesh, label='Temperature [K]')
-ax.set_xlabel('x [kpc]')
-ax.set_ylabel('y [kpc]')
-title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}')
+# Use imshow instead of pcolormesh for a more continuous representation
+# Transpose and flip the data to match the correct orientation
+extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
+im = ax.imshow(temp_map.T, origin='lower', extent=extent,
+               norm=LogNorm(vmin=vmin, vmax=vmax), 
+               cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
+
+# Use a colorbar with a better format
+cbar = fig.colorbar(im, label='Temperature [K]', format='%.1e')
+ax.set_xlabel('x [kpc]', fontsize=14)
+ax.set_ylabel('y [kpc]', fontsize=14)
+title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
 time_text = ax.text(0.05, 0.95, f"Time: {time:.3f}", transform=ax.transAxes,
-                  fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
+                  fontsize=14, bbox=dict(facecolor='white', alpha=0.7))
+
+# Add grid for better spatial reference
+ax.grid(True, color='white', alpha=0.3, linestyle=':')
 
 def update(frame):
     filename = snapshot_files[frame]
@@ -147,50 +129,50 @@ def update(frame):
     # Create new temperature map
     temp_map, x_edges, y_edges, time = create_temperature_map(filename)
     
-    # Clear the axis and redraw completely (more robust than trying to update the existing mesh)
+    # Clear the axis
     ax.clear()
     
-    # Create a new mesh with the updated data
-    new_mesh = ax.pcolormesh(x_edges, y_edges, temp_map.T, 
-                           norm=LogNorm(vmin=vmin, vmax=vmax), 
-                           cmap='rainbow')
-                           
+    # Create a new image with the updated data
+    extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
+    im = ax.imshow(temp_map.T, origin='lower', extent=extent,
+                  norm=LogNorm(vmin=vmin, vmax=vmax), 
+                  cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
+    
+    # Add grid
+    ax.grid(True, color='white', alpha=0.3, linestyle=':')
+    
     # Update labels and title
-    ax.set_xlabel('x [kpc]')
-    ax.set_ylabel('y [kpc]')
-    title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}')
+    ax.set_xlabel('x [kpc]', fontsize=14)
+    ax.set_ylabel('y [kpc]', fontsize=14)
+    title = ax.set_title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
     time_text = ax.text(0.05, 0.95, f"Time: {time:.3f}", transform=ax.transAxes,
-                      fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
+                      fontsize=14, bbox=dict(facecolor='white', alpha=0.7))
     
-    print(f"Updated mesh array size: {temp_map.T.size}")
-    if np.any(temp_map > 0):
-        print(f"Updated temperature range: [{temp_map[temp_map > 0].min():.2e}, {temp_map.max():.2e}]")
-    else:
-        print("WARNING: Updated temperature map has no positive values!")
-    
-    return new_mesh, title, time_text
+    return [im, title, time_text]
 
-# Create output directory for diagnostic images (optional)
+# Create output directory
 os.makedirs("temp_diagnostics", exist_ok=True)
 
-# Save individual frames for diagnosis (optional)
+# Save diagnostic frames - using improved visualization
 print("\nSaving diagnostic frames...")
 for i, filename in enumerate(snapshot_files):
     temp_map, x_edges, y_edges, time = create_temperature_map(filename)
     
-    plt.figure(figsize=(10, 8))
-    plt.pcolormesh(x_edges, y_edges, temp_map.T, 
-                  norm=LogNorm(vmin=vmin, vmax=vmax), 
-                  cmap='rainbow')
-    plt.colorbar(label='Temperature [K]')
-    plt.xlabel('x [kpc]')
-    plt.ylabel('y [kpc]')
-    plt.title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}')
+    plt.figure(figsize=(12, 10))
+    extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
+    plt.imshow(temp_map.T, origin='lower', extent=extent,
+               norm=LogNorm(vmin=vmin, vmax=vmax), 
+               cmap='nipy_spectral', interpolation='gaussian', aspect='auto')
+    plt.colorbar(label='Temperature [K]', format='%.1e')
+    plt.xlabel('x [kpc]', fontsize=14)
+    plt.ylabel('y [kpc]', fontsize=14)
+    plt.title(f'Gas Temperature Map (z=0 slice) - Time: {time:.3f}', fontsize=16)
+    plt.grid(True, color='white', alpha=0.3, linestyle=':')
     
     plt.savefig(f"temp_diagnostics/frame_{i:04d}.png", dpi=150)
     plt.close()
 
-# Create the animation - with blit=False for more robust rendering
+# Create animation
 print("\nCreating animation...")
 ani = animation.FuncAnimation(fig, update, frames=len(snapshot_files), 
                               blit=False, interval=200)
@@ -202,10 +184,7 @@ try:
     print("Animation saved successfully!")
 except Exception as e:
     print(f"Error saving animation: {str(e)}")
-    print("Try saving individual frames in the temp_diagnostics folder instead.")
+    print("Check the individual frames in the temp_diagnostics folder.")
 
-# Show the animation (optional - comment out for large animations or headless environments)
-print("Displaying animation (close window to continue)...")
 plt.show()
-
 print("Done!")
