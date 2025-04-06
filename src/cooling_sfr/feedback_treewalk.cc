@@ -369,7 +369,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     ThisStepMetalsInjected[3] += y.Fe;
 
     // After feedback_copy
-    printf("[Feedback Debug] Copied data for star %d, energy=%e\n", i, in.Energy);
+    printf("[Feedback Debug] Copied data for star %d.\n", i);
 }
 
 /**
@@ -380,7 +380,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
     // Before the neighbor loop
-    printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", i);
+    printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", j);
 
     double dx[3] = {
         NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
