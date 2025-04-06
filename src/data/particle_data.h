@@ -138,6 +138,7 @@ int FeedbackFlag; /**< feedback flag for star particles */
   MyFloat Mass_SNII;
   MyFloat Mass_AGB;
   MyFloat Mass_SNIa;
+  int SNIaEvents;  /// Number of Type Ia supernova events for a single star particle
 #endif
 
 #ifdef DUST

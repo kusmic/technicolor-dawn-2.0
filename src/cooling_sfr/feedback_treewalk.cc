@@ -100,7 +100,6 @@ This allows us to ensure that each star only contributes feedback once for each 
 #define FEEDBACK_SNIa  4
 
 // Physical constants and conversion factors
-const double SEC_PER_YEAR = 3.1536e7;           // seconds per year
 const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
 
 // Feedback energy/mass return constants
@@ -148,7 +147,8 @@ struct Yields {
 };
 
 // This random number generator will be used for stochastic SNIa events
-std::mt19937 random_generator(std::random_device{}());
+// Using a different name to avoid conflict with Gadget's existing random_generator
+std::mt19937 feedback_random_gen(std::random_device{}());
 
 /**
  * Convert cosmological scale factor to physical time in years
@@ -294,7 +294,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         
         // Draw from Poisson distribution
         std::poisson_distribution<int> poisson(mean_events);
-        int n_events = poisson(random_generator);
+        int n_events = poisson(feedback_random_gen);
         
         // Store the number of events for later use
         Sp->P[i].SNIaEvents = n_events;
