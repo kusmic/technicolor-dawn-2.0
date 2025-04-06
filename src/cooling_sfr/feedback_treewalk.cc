@@ -474,15 +474,18 @@ void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
     FeedbackInput in;
     FeedbackResult out;
 
-    printf("[Feedback] Reached apply_feedback_to_star().\n");
+    printf("[Feedback Debug] Entering apply_feedback_to_star for star %d, type=%d\n", 
+        i, fw->feedback_type);
 
     // Copy star particle data to feedback input structure
     feedback_copy(i, &in, fw, Sp);
 
-    // Find neighbors and apply feedback
+    // Find neighbors and apply feedback - ONLY to gas particles
     // This is using direct particle loop, but could be replaced with tree-based search
     for (int j = 0; j < Sp->NumPart; j++) {
-        feedback_ngb(&in, &out, j, fw, Sp);
+        if (Sp->P[j].getType() == 0) {  // Only process gas particles (Type 0)
+            feedback_ngb(&in, &out, j, fw, Sp);
+        }
     }
 }
 
@@ -541,8 +544,8 @@ void apply_stellar_feedback(double current_time, simparticles* Sp) {
     
     // Apply each feedback type
     apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
-    apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
-    apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
+    //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
+    //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
 
     // Accumulate totals
     TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
