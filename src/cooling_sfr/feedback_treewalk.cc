@@ -260,6 +260,9 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[i].getType() != 4)
         return 0;
 
+
+    printf("[Feedback] Reached feedback_isactive().");
+
     // Convert from scale factor to physical time
     double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
 
@@ -320,7 +323,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     double energy = 0, m_return = 0;
     Yields y;
 
-    printf("[Feedback] Reached feedback_copy()");
+    printf("[Feedback] Reached feedback_copy().");
 
     // Set smoothing length/radius based on feedback type
     if (fw->feedback_type == FEEDBACK_SNII) {
@@ -482,9 +485,10 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
     fw.feedback_type = feedback_type;
     fw.ev_label = "Feedback";
 
-    // Loop through all particles (could be parallelized)
+    // Loop through star particles only (could be parallelized)
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (feedback_isactive(i, &fw, Sp)) {
+        // Only check star particles (Type 4)
+        if (Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp)) {
             apply_feedback_to_star(i, &fw, Sp);
         }
     }
