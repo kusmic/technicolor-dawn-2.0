@@ -285,6 +285,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         double m_star = Sp->P[i].getMass();
         double time_since_eligible = age_physical - SNIa_DTD_MIN_TIME;
         
+        // Probability for SNIa events:
         // DTD ~ t^power 
         double rate = SNIa_RATE_PER_MASS * pow(time_since_eligible / 1.0e9, SNIa_DTD_POWER);
         
@@ -486,6 +487,30 @@ void apply_feedback_treewalk(double current_time, int feedback_type, simparticle
  * Main feedback function called each timestep
  */
 void apply_stellar_feedback(double current_time, simparticles* Sp) {
+
+
+// -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
+    static double last_time = 0;
+    double timestep = current_time - last_time;
+    
+    // Convert from scale factor difference to physical time if needed
+    double physical_timestep = 0;
+    if (current_time > 0 && last_time > 0) {
+        physical_timestep = scale_factor_to_physical_time(current_time) - 
+                           scale_factor_to_physical_time(last_time);
+        
+        if (ThisTask == 0) {
+            printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
+            printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
+            printf("[Feedback Diagnostic] Timestep in physical years: %.2e\n", physical_timestep);
+        }
+    }
+    
+    last_time = current_time;
+// -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
+
+
+
     // Reset diagnostic counters
     ThisStepEnergy_SNII = 0;
     ThisStepEnergy_SNIa = 0;
