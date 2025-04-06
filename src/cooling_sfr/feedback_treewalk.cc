@@ -290,7 +290,7 @@ static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
         double rate = SNIa_RATE_PER_MASS * pow(time_since_eligible / 1.0e9, SNIa_DTD_POWER);
         
         // Estimate the expected number of events
-        double delta_t = 1.0e8; // Approximate timestep in years - adjust based on your simulation
+        double delta_t = 1.0e8; // Approximate SN 1a timestep in years
         double mean_events = m_star * rate * delta_t;
         
         // Draw from Poisson distribution
@@ -319,6 +319,8 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     double z_star = Sp->P[i].Metallicity; // Assumes this field exists
     double energy = 0, m_return = 0;
     Yields y;
+
+    printf("[Feedback] Reached feedback_copy()");
 
     // Set smoothing length/radius based on feedback type
     if (fw->feedback_type == FEEDBACK_SNII) {
@@ -395,6 +397,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         // Add a radial velocity kick - more important for SNII
         if (r > 0) {
             double kick_strength = 0.5 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying SN II feedback: %.4e\n", kick_strength);
             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
@@ -406,6 +409,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         // Small random velocity perturbation
         if (r > 0) {
             double kick_strength = 0.1 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying SN Ia feedback: %.4e\n", kick_strength);
             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
@@ -417,6 +421,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         // Very mild velocity perturbation
         if (r > 0) {
             double kick_strength = 0.05 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying AGB feedback: %.4e\n", kick_strength);
             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
@@ -455,6 +460,8 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
 void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
     FeedbackInput in;
     FeedbackResult out;
+
+    printf("[Feedback] Reached apply_feedback_to_star().");
 
     // Copy star particle data to feedback input structure
     feedback_copy(i, &in, fw, Sp);
@@ -500,8 +507,8 @@ void apply_stellar_feedback(double current_time, simparticles* Sp) {
                            scale_factor_to_physical_time(last_time);
         
         if (ThisTask == 0) {
-            printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
-            printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
+            //printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
+            //printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
             printf("[Feedback Diagnostic] Timestep in physical years: %.2e\n", physical_timestep);
         }
     }
