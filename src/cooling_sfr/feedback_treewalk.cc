@@ -26,6 +26,21 @@ galaxy formation and evolution.
       - AGB: Similar to Type Ia but with different yields and timing
    • Tracks energy and mass diagnostics for logging and analysis
 
+    Type II Supernovae (SNII)
+
+        Localized Energy Deposition: Uses a top-hat kernel with a smaller radius (0.3 kpc) for more concentrated feedback
+        Stronger Kinetic Feedback: Applies stronger radial velocity kicks to simulate the blast wave
+        Metallicity-Dependent Yields: Enhanced oxygen production at low metallicity
+        Quick Timescale: Activates after a short delay (~10 million years)
+
+    Type Ia Supernovae (SNIa)
+
+        Extended Distribution: Uses a cubic spline kernel with a larger radius (0.8 kpc) for a smoother, more extended energy distribution
+        Primarily Thermal Feedback: Emphasizes thermal energy over kinetic energy
+        Iron-Rich Yields: Produces much more iron than other elements
+        Stochastic Implementation: Uses a realistic delay-time distribution with t^-1.1 power law and Poisson sampling
+        Longer Timescales: Can occur billions of years after star formation
+
 ❖ Key components:
    - Constants defining feedback strength and timing
    - Kernel weight function for distributing feedback to nearby gas (primarily for SNIa)
