@@ -122,7 +122,7 @@ const double SNIa_DTD_MIN_TIME = 4.0e7;         // years - minimum delay time
 const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
 
 // Feedback approach parameters
-const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
 const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
 const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
 
@@ -487,7 +487,10 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
 /**
  * Add detailed diagnostics for a feedback event
  */
-void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
+/**
+ * Add detailed diagnostics for a feedback event
+ */
+ void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
     // Count neighbors and track energy distribution
     int neighbor_count = 0;
     double total_energy_distributed = 0.0;
@@ -496,9 +499,24 @@ void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simp
     
     printf("[Feedback Diagnostics] Starting neighbor check for star %d\n", i);
     
-    // First pass - count neighbors and calculate total kernel weight
+    // Print star position for reference
+    printf("[Feedback Diagnostics] Star %d position: [%.3f, %.3f, %.3f]\n", 
+           i, in->Pos[0], in->Pos[1], in->Pos[2]);
+    
+    // Find closest gas particle and distance statistics
+    double min_dist = 1e10;
+    double dist_sum = 0;
+    int closest_gas = -1;
+    int gas_count = 0;
+    int gas_within_2h = 0;
+    int gas_within_5h = 0;
+    int gas_within_10h = 0;
+    
+    // First pass - count neighbors and find closest
     for (int j = 0; j < Sp->NumPart; j++) {
         if (Sp->P[j].getType() != 0) continue;  // Skip non-gas particles
+        
+        gas_count++;
         
         double dx[3] = {
             NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
@@ -507,6 +525,20 @@ void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simp
         };
         double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
         double r = sqrt(r2);
+        
+        // Track distance statistics
+        dist_sum += r;
+        
+        // Count gas at different distances
+        if (r < 2.0 * in->h) gas_within_2h++;
+        if (r < 5.0 * in->h) gas_within_5h++;
+        if (r < 10.0 * in->h) gas_within_10h++;
+        
+        // Find closest gas
+        if (r2 < min_dist) {
+            min_dist = r2;
+            closest_gas = j;
+        }
         
         // Check if within feedback radius
         if (r < in->h) {
@@ -528,11 +560,38 @@ void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simp
         }
     }
     
+    // Report closest gas particle
+    if (closest_gas >= 0) {
+        double closest_dist = sqrt(min_dist);
+        printf("[Feedback Diagnostics] Closest gas particle %d at distance %.3f (radius is %.3f)\n", 
+               closest_gas, closest_dist, in->h);
+        
+        // If closest gas is too far, print its position for comparison
+        if (closest_dist > in->h) {
+            printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
+                   Sp->P[closest_gas].IntPos[0], Sp->P[closest_gas].IntPos[1], Sp->P[closest_gas].IntPos[2]);
+        }
+    }
+    
+    // Report distance statistics
+    double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
+    printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
+    printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
+           in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
+    
     printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
            i, in->FeedbackType, neighbor_count, in->h);
     
     if (neighbor_count == 0) {
         printf("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
+        printf("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f).\n", in->h);
+        
+        // If there's gas in wider radius, suggest adjustment
+        if (gas_within_5h > 0) {
+            double suggested_radius = sqrt(min_dist) * 1.1; // 10% larger than closest gas
+            printf("[Feedback SUGGESTION] Try increasing radius to at least %.3f\n", suggested_radius);
+        }
+        
         return;
     }
     
