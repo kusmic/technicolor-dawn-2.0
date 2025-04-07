@@ -243,6 +243,7 @@ struct FeedbackInput {
     MyFloat Yield[4];
     int FeedbackType;
     double h;  // Smoothing length/radius for this feedback type
+    int SourceIndex; // Index of the source star particle for diagnostics
 };
 
 struct FeedbackResult {};
@@ -321,6 +322,7 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     out->Pos[1] = Sp->P[i].IntPos[1];
     out->Pos[2] = Sp->P[i].IntPos[2];
     out->FeedbackType = fw->feedback_type;
+    out->SourceIndex = i;  // Store source index for diagnostics
 
     double m_star = Sp->P[i].getMass();
     double z_star = Sp->P[i].Metallicity; // Assumes this field exists
@@ -363,8 +365,6 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
     if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
     if (fw->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
 
-
-
     ThisStepMassReturned += m_return;
     ThisStepMetalsInjected[0] += y.Z;
     ThisStepMetalsInjected[1] += y.C;
@@ -406,6 +406,18 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
 
     if (w <= 0.0) return;
+
+    // Calculate energy diagnostics before applying feedback
+    double gas_mass = Sp->P[j].getMass();
+    double old_thermal_energy = Sp->SphP[j].Entropy * gas_mass; // Approximate
+    double feedback_energy = in->Energy * w;
+    double energy_ratio = feedback_energy / old_thermal_energy;
+    
+    // Only print detailed diagnostics for significant contributions
+    if (energy_ratio > 0.01) {
+        printf("[Feedback Energy] Star%d->Gas%d: r=%.3f, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
+               in->SourceIndex, j, r, old_thermal_energy, feedback_energy, energy_ratio);
+    }
 
     // Apply energy - different approaches for different feedback types
     if (in->FeedbackType == FEEDBACK_SNII) {
@@ -473,6 +485,111 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
 }
 
 /**
+ * Add detailed diagnostics for a feedback event
+ */
+void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
+    // Count neighbors and track energy distribution
+    int neighbor_count = 0;
+    double total_energy_distributed = 0.0;
+    double total_kernel_weight = 0.0;
+    double max_gas_temp_before = 0.0;
+    
+    printf("[Feedback Diagnostics] Starting neighbor check for star %d\n", i);
+    
+    // First pass - count neighbors and calculate total kernel weight
+    for (int j = 0; j < Sp->NumPart; j++) {
+        if (Sp->P[j].getType() != 0) continue;  // Skip non-gas particles
+        
+        double dx[3] = {
+            NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
+            NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
+            NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
+        };
+        double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+        double r = sqrt(r2);
+        
+        // Check if within feedback radius
+        if (r < in->h) {
+            double w = 0.0;
+            if (in->FeedbackType == FEEDBACK_SNII) {
+                w = kernel_weight_tophat(r, in->h);
+            } else {
+                w = kernel_weight_cubic(r, in->h);
+            }
+            
+            if (w > 0.0) {
+                neighbor_count++;
+                total_kernel_weight += w;
+                
+                // Track maximum temperature
+                double temp = Sp->SphP[j].Entropy;  // Using entropy as proxy for temperature
+                if (temp > max_gas_temp_before) max_gas_temp_before = temp;
+            }
+        }
+    }
+    
+    printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
+           i, in->FeedbackType, neighbor_count, in->h);
+    
+    if (neighbor_count == 0) {
+        printf("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
+        return;
+    }
+    
+    // Check potential energy impact
+    double gas_mass_total = 0.0;
+    double avg_gas_temp = 0.0;
+    int neighbors_sampled = 0;
+    
+    // Sample some neighbors to estimate energy impact
+    for (int j = 0; j < Sp->NumPart && neighbors_sampled < 5; j++) {
+        if (Sp->P[j].getType() != 0) continue;
+        
+        double dx[3] = {
+            NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
+            NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
+            NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
+        };
+        double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+        double r = sqrt(r2);
+        
+        if (r < in->h) {
+            double w = 0.0;
+            if (in->FeedbackType == FEEDBACK_SNII) {
+                w = kernel_weight_tophat(r, in->h);
+            } else {
+                w = kernel_weight_cubic(r, in->h);
+            }
+            
+            if (w > 0.0) {
+                double m = Sp->P[j].getMass();
+                double temp = Sp->SphP[j].Entropy;
+                double energy_before = temp * m;  // Approximate thermal energy
+                double energy_to_add = in->Energy * w;
+                double energy_after = energy_before + energy_to_add;
+                double temp_after = energy_after / m;
+                double energy_ratio = energy_to_add / energy_before;
+                
+                printf("[Feedback Energy] Gas %d: Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
+                       j, temp, temp_after, energy_before, energy_after, energy_ratio);
+                
+                gas_mass_total += m;
+                avg_gas_temp += temp;
+                neighbors_sampled++;
+            }
+        }
+    }
+    
+    if (neighbors_sampled > 0) {
+        avg_gas_temp /= neighbors_sampled;
+        printf("[Feedback Summary] Star %d: Avg Gas Temp: %.3e, Total Gas Mass: %.3e\n",
+               i, avg_gas_temp, gas_mass_total);
+        printf("[Feedback Summary] Available Energy: %.3e, Energy per Gas Mass: %.3e\n",
+               in->Energy, in->Energy / gas_mass_total);
+    }
+}
+
+/**
  * Apply feedback from a single star particle
  */
 void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
@@ -484,6 +601,9 @@ void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
 
     // Copy star particle data to feedback input structure
     feedback_copy(i, &in, fw, Sp);
+    
+    // Add neighbor diagnostics before applying feedback
+    debug_feedback_diagnostics(i, &in, fw, Sp);
 
     // Find neighbors and apply feedback - ONLY to gas particles
     // This is using direct particle loop, but could be replaced with tree-based search
