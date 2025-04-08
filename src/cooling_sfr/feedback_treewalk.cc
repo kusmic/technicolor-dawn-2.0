@@ -126,6 +126,11 @@
  const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
  const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
  
+ // Conversion from fixed-point integer positions to physical units (kpc)
+ // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
+ const double NUM_INT_STEPS = 4294967296.0;        // 2^32
+ const double conversionFactor = All.BoxSize / NUM_INT_STEPS;
+
  const double WIND_VELOCITY = 500.0;             // km/s
  
  // Per-timestep diagnostics
@@ -318,11 +323,12 @@
   * Copy data from a star particle to the feedback input structure
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
-     out->Pos[0] = Sp->P[i].IntPos[0];
-     out->Pos[1] = Sp->P[i].IntPos[1];
-     out->Pos[2] = Sp->P[i].IntPos[2];
-     out->FeedbackType = fw->feedback_type;
-     out->SourceIndex = i;  // Store source index for diagnostics
+    // Convert star particle integer positions to physical positions (in kpc)
+    out->Pos[0] = Sp->P[i].IntPos[0] * conversionFactor;
+    out->Pos[1] = Sp->P[i].IntPos[1] * conversionFactor;
+    out->Pos[2] = Sp->P[i].IntPos[2] * conversionFactor;
+    out->FeedbackType = fw->feedback_type;
+    out->SourceIndex = i;  // Store source index for diagnostics
  
      double m_star = Sp->P[i].getMass();
      double z_star = Sp->P[i].Metallicity; // Assumes this field exists
@@ -385,11 +391,19 @@
      // Before the neighbor loop
      printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", j);
  
-     double dx[3] = {
-         NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-         NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-         NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-     };
+    // Convert gas particle's fixed-point positions to physical positions (in kpc)
+    double gasPos[3];
+    gasPos[0] = Sp->P[j].IntPos[0] * conversionFactor;
+    gasPos[1] = Sp->P[j].IntPos[1] * conversionFactor;
+    gasPos[2] = Sp->P[j].IntPos[2] * conversionFactor;
+
+    // Compute the differences with periodic wrapping (NEAREST macros operate on physical distances now)
+    double dx[3] = {
+        NEAREST_X(gasPos[0] - in->Pos[0]),
+        NEAREST_Y(gasPos[1] - in->Pos[1]),
+        NEAREST_Z(gasPos[2] - in->Pos[2])
+    };
+
      double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
      double r = sqrt(r2);
  
@@ -567,7 +581,9 @@
          // If closest gas is too far, print its position for comparison
          if (closest_dist > in->h) {
              printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
-                    Sp->P[closest_gas].IntPos[0], Sp->P[closest_gas].IntPos[1], Sp->P[closest_gas].IntPos[2]);
+                Sp->P[closest_gas].IntPos[0] * conversionFactor,
+                Sp->P[closest_gas].IntPos[1] * conversionFactor,
+                Sp->P[closest_gas].IntPos[2] * conversionFactor);
          }
      }
      
