@@ -122,7 +122,7 @@
  const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
  
  // Feedback approach parameters
- const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+ const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
  const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
  const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
  
@@ -742,7 +742,7 @@
  
      // Apply each feedback type
      apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
-     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
+     //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
  
      // Accumulate totals
