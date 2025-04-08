@@ -127,7 +127,7 @@
  const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
  // Added a check to make sure the gas particle is not too close, otherwise the
  // feedback is too strong, and the timestep goes to zero.
- const double MIN_FEEDBACK_SEPARATION = 1e-3;  // kpc; adjust this as needed
+ const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
@@ -407,8 +407,21 @@
     double r = sqrt(r2);
 
     // Enforce a minimum separation to prevent excessively high kernel weights or velocity kicks
-    if (r < MIN_FEEDBACK_SEPARATION)
+    if (r < MIN_FEEDBACK_SEPARATION) {
+        if (r < 1e-12) {
+            // If dx is essentially zero, choose a default direction.
+            dx[0] = MIN_FEEDBACK_SEPARATION;
+            dx[1] = 0.0;
+            dx[2] = 0.0;
+        } else {
+            // Otherwise scale the dx vector so that its magnitude is MIN_FEEDBACK_SEPARATION.
+            double factor = MIN_FEEDBACK_SEPARATION / r;
+            dx[0] *= factor;
+            dx[1] *= factor;
+            dx[2] *= factor;
+        }
         r = MIN_FEEDBACK_SEPARATION;
+    }
 
     // Different kernel approaches for different feedback types
     double w = 0.0;
