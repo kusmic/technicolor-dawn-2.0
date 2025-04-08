@@ -124,14 +124,15 @@ class coolsfr : public setcomm
   int tot_dust_converted;     /**< global number of gas cells converted into stars in the time step */
 #endif
 
-void inject_supernova_feedback(simparticles *Sp, int i);
+/* void inject_supernova_feedback(simparticles *Sp, int i); */
 
 #ifdef SUPERNOVA
+  /*
   void handle_supernovae(simparticles *Sp);
   
   void spawn_dust_from_supernova(simparticles *Sp, int i);
-  double compute_distance(const double pos1[3], const double pos2[3], double box_size);
-
+   double compute_distance(const double pos1[3], const double pos2[3], double box_size);
+*/
 #endif
 
 #ifdef STARFORMATION
