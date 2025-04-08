@@ -125,7 +125,10 @@
  const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
  const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
  const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
- 
+ // Added a check to make sure the gas particle is not too close, otherwise the
+ // feedback is too strong, and the timestep goes to zero.
+ const double MIN_FEEDBACK_SEPARATION = 1e-3;  // kpc; adjust this as needed
+
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
  const double NUM_INT_STEPS = 4294967296.0;        // 2^32
@@ -385,12 +388,9 @@
   * Apply feedback to a neighboring gas particle
   * This is where we implement the different approaches for Type II vs Type Ia
   */
- static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
-     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
- 
-     // Before the neighbor loop
-     printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", j);
- 
+  static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
+    if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
+
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
     gasPos[0] = Sp->P[j].IntPos[0] * conversionFactor;
@@ -403,100 +403,92 @@
         NEAREST_Y(gasPos[1] - in->Pos[1]),
         NEAREST_Z(gasPos[2] - in->Pos[2])
     };
+    double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+    double r = sqrt(r2);
 
-     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-     double r = sqrt(r2);
- 
-     // Different kernel approaches for different feedback types
-     double w = 0.0;
-     if (in->FeedbackType == FEEDBACK_SNII) {
-         // Type II SNe: Use a sharp top-hat kernel - more localized effect
-         w = kernel_weight_tophat(r, in->h);
-     } else {
-         // Type Ia SNe and AGB winds: Use a smoother cubic spline kernel
-         w = kernel_weight_cubic(r, in->h);
-     }
- 
-     printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
- 
-     if (w <= 0.0) return;
- 
-     // Calculate energy diagnostics before applying feedback
-     double gas_mass = Sp->P[j].getMass();
-     double old_thermal_energy = Sp->SphP[j].Entropy * gas_mass; // Approximate
-     double feedback_energy = in->Energy * w;
-     double energy_ratio = feedback_energy / old_thermal_energy;
- 
-     // Only print detailed diagnostics for significant contributions
-     if (energy_ratio > 0.01) {
-         printf("[Feedback Energy] Star%d->Gas%d: r=%.3f, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
-                in->SourceIndex, j, r, old_thermal_energy, feedback_energy, energy_ratio);
-     }
- 
-     // Apply energy - different approaches for different feedback types
-     if (in->FeedbackType == FEEDBACK_SNII) {
-         // SNII: Direct entropy injection plus velocity kick along radial direction
-         Sp->SphP[j].Entropy += in->Energy * w;
- 
-         // Add a radial velocity kick - more important for SNII
-         if (r > 0) {
-             double kick_strength = 0.5 * WIND_VELOCITY * w;
-             printf("[Feedback] Applying SN II feedback: %.4e\n", kick_strength);
-             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
-         }
-     } 
-     else if (in->FeedbackType == FEEDBACK_SNIa) {
-         // SNIa: More thermal energy, less kinetic
-         Sp->SphP[j].Entropy += in->Energy * w;
-         // Small random velocity perturbation
-         if (r > 0) {
-             double kick_strength = 0.1 * WIND_VELOCITY * w;
-             printf("[Feedback] Applying SN Ia feedback: %.4e\n", kick_strength);
-             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
-         }
-     }
-     else if (in->FeedbackType == FEEDBACK_AGB) {
-         // AGB: Gentler feedback
-         Sp->SphP[j].Entropy += in->Energy * w;
-         // Very mild velocity perturbation
-         if (r > 0) {
-             double kick_strength = 0.05 * WIND_VELOCITY * w;
-             printf("[Feedback] Applying AGB feedback: %.4e\n", kick_strength);
-             Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-             Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-             Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
-         }
-     }
- 
-     // Add mass from stellar winds/ejecta (except for SNIa which don't return stellar mass)
-     double old_mass = Sp->P[j].getMass();
-     Sp->P[j].setMass(old_mass + in->MassReturn * w);
- 
-     // Add metals - but account for mass dilution
-     if (in->MassReturn * w > 0) {
-         // For significant mass return, we need to properly mix old and new metals
-         double old_fraction = old_mass / (old_mass + in->MassReturn * w);
-         double new_fraction = (in->MassReturn * w) / (old_mass + in->MassReturn * w);
- 
-         for (int k = 0; k < 4; k++) {
-             double old_metal = Sp->SphP[j].Metals[k];
-             // New metal is the yield divided by returned mass to get concentration
-             double new_metal = in->Yield[k] / in->MassReturn;
-             // Mix old and new
-             Sp->SphP[j].Metals[k] = old_metal * old_fraction + new_metal * new_fraction;
-         }
-     } else {
-         // For SNIa with no mass return, we just add the metals directly
-         // This slightly increases metal concentration
-         for (int k = 0; k < 4; k++) {
-             Sp->SphP[j].Metals[k] += in->Yield[k] * w / old_mass;
-         }
-     }
- }
+    // Enforce a minimum separation to prevent excessively high kernel weights or velocity kicks
+    if (r < MIN_FEEDBACK_SEPARATION)
+        r = MIN_FEEDBACK_SEPARATION;
+
+    // Different kernel approaches for different feedback types
+    double w = 0.0;
+    if (in->FeedbackType == FEEDBACK_SNII) {
+        // Type II SNe: Use a sharp top-hat kernel - more localized effect
+        w = kernel_weight_tophat(r, in->h);
+    } else {
+        // Type Ia SNe and AGB winds: Use a smoother cubic spline kernel
+        w = kernel_weight_cubic(r, in->h);
+    }
+
+    printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
+
+    if (w <= 0.0) return;
+
+    // Calculate energy diagnostics before applying feedback
+    double gas_mass = Sp->P[j].getMass();
+    double old_thermal_energy = Sp->SphP[j].Entropy * gas_mass; // Approximate
+    double feedback_energy = in->Energy * w;
+    double energy_ratio = feedback_energy / old_thermal_energy;
+
+    if (energy_ratio > 0.01) {
+        printf("[Feedback Energy] Star%d->Gas%d: r=%.3f, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
+               in->SourceIndex, j, r, old_thermal_energy, feedback_energy, energy_ratio);
+    }
+
+    // Apply energy deposition and velocity kick depending on feedback type
+    if (in->FeedbackType == FEEDBACK_SNII) {
+        // SNII: Direct entropy injection plus velocity kick along radial direction
+        Sp->SphP[j].Entropy += in->Energy * w;
+        // Add a radial velocity kick - more important for SNII
+        if (r > 0) {
+            double kick_strength = 0.5 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying SN II feedback: %.4e\n", kick_strength);
+            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+        }
+    } else if (in->FeedbackType == FEEDBACK_SNIa) {
+        // SNIa: More thermal energy, less kinetic
+        Sp->SphP[j].Entropy += in->Energy * w;
+        if (r > 0) {
+            double kick_strength = 0.1 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying SN Ia feedback: %.4e\n", kick_strength);
+            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+        }
+    } else if (in->FeedbackType == FEEDBACK_AGB) {
+        // AGB: Gentler feedback
+        Sp->SphP[j].Entropy += in->Energy * w;
+        if (r > 0) {
+            double kick_strength = 0.05 * WIND_VELOCITY * w;
+            printf("[Feedback] Applying AGB feedback: %.4e\n", kick_strength);
+            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+        }
+    }
+
+    // Adjust gas mass due to the returned stellar material
+    double old_mass = Sp->P[j].getMass();
+    Sp->P[j].setMass(old_mass + in->MassReturn * w);
+
+    // Adjust metallicity mixing
+    if (in->MassReturn * w > 0) {
+        double old_fraction = old_mass / (old_mass + in->MassReturn * w);
+        double new_fraction = (in->MassReturn * w) / (old_mass + in->MassReturn * w);
+        for (int k = 0; k < 4; k++) {
+            double old_metal = Sp->SphP[j].Metals[k];
+            double new_metal = in->Yield[k] / in->MassReturn;
+            Sp->SphP[j].Metals[k] = old_metal * old_fraction + new_metal * new_fraction;
+        }
+    } else {
+        for (int k = 0; k < 4; k++) {
+            Sp->SphP[j].Metals[k] += in->Yield[k] * w / old_mass;
+        }
+    }
+}
+
  
  /*
   * Add detailed diagnostics for a feedback event
