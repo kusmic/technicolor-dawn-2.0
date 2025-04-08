@@ -5,16 +5,7 @@ FEEDBACK_TREEWALK.CC — Stellar Feedback Injection in Gadget-4
 
 ❖ Purpose:
 This file implements a feedback algorithm for injecting stellar feedback (energy, mass,
-and metals) from stars into the surrounding interstellar medium (ISM) in cosmological
-simulations using Gadget-4.
-
-❖ What is "feedback"?
-In astrophysical simulations, feedback refers to the physical processes by which stars 
-influence their environment after they form — primarily through:
-   • Supernova explosions (Type II and Type Ia)
-   • Winds from dying stars (AGB stars)
-These processes return energy and enriched material to the surrounding gas, regulating
-galaxy formation and evolution.
+and metals) from Type II and Type Ia supernovae and AGB stars into the surrounding interstellar medium (ISM)...
 
 ❖ What this file does:
    • Loops over all active star particles (Type == 4)
@@ -41,15 +32,11 @@ galaxy formation and evolution.
         Stochastic Implementation: Uses a realistic delay-time distribution with t^-1.1 power law and Poisson sampling
         Longer Timescales: Can occur billions of years after star formation
 
-❖ Key components:
+❖ Pieces included:
    - Constants defining feedback strength and timing
    - Kernel weight function for distributing feedback to nearby gas (primarily for SNIa)
    - Metal yield functions for each type of feedback
    - Diagnostic accumulators to track what's been injected
-
-❖ Usage:
-This file is compiled and executed as part of the Gadget-4 simulation if the FEEDBACK
-flag is enabled in the build configuration.
 
 NOTE! With bitwise operations, we track which feedback types have been applied to each star:
    - 0: No feedback applied
@@ -122,9 +109,9 @@ const double SNIa_DTD_MIN_TIME = 4.0e7;         // years - minimum delay time
 const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
 
 // Feedback approach parameters
-const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
-const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
-const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
+const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~1.5 kpc for SNII
+const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa
+const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds
 
 const double WIND_VELOCITY = 500.0;             // km/s
 
@@ -149,6 +136,32 @@ struct Yields {
 // This random number generator will be used for stochastic SNIa events
 // Using a different name to avoid conflict with Gadget's existing random_generator
 std::mt19937 feedback_random_gen(std::random_device{}());
+
+/**
+ * Convert integer position to physical position in kpc
+ * @param int_pos  Integer position from particle data
+ * @return         Physical position in kpc
+ */
+inline double int_to_physical_pos(double int_pos) {
+    const double NUM_INT_STEPS = static_cast<double>(1ULL << 32);
+    double conversionFactor = All.BoxSize / NUM_INT_STEPS;
+    return int_pos * conversionFactor;
+}
+
+/**
+ * Calculate physical distance between two points with integer coordinates
+ * @param pos1  First position (integer coordinates)
+ * @param pos2  Second position (integer coordinates)
+ * @return      Physical distance in kpc
+ */
+double physical_distance(const MyDouble pos1[3], const MyDouble pos2[3]) {
+    double dx[3];
+    for (int d = 0; d < 3; d++) {
+        dx[d] = NEAREST_X(pos1[d] - pos2[d]);
+        dx[d] = int_to_physical_pos(dx[d]);
+    }
+    return sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
+}
 
 /**
  * Convert cosmological scale factor to physical time in years
@@ -382,16 +395,11 @@ static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simpartic
 static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
+    // Calculate physical distance with proper position conversion
+    double r = physical_distance(in->Pos, Sp->P[j].IntPos);
+
     // Before the neighbor loop
     printf("[Feedback Debug] feedback_ngb() -- Finding neighbors for star %d\n", j);
-
-    double dx[3] = {
-        NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-        NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-        NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-    };
-    double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-    double r = sqrt(r2);
 
     // Different kernel approaches for different feedback types
     double w = 0.0;
@@ -403,7 +411,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         w = kernel_weight_cubic(r, in->h);
     }
 
-    printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
+    printf("[Feedback] Kernel weight for r=%.3f kpc, h=%.3f kpc: w=%.3e\n", r, in->h, w);
 
     if (w <= 0.0) return;
 
@@ -415,7 +423,7 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     
     // Only print detailed diagnostics for significant contributions
     if (energy_ratio > 0.01) {
-        printf("[Feedback Energy] Star%d->Gas%d: r=%.3f, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
+        printf("[Feedback Energy] Star%d->Gas%d: r=%.3f kpc, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
                in->SourceIndex, j, r, old_thermal_energy, feedback_energy, energy_ratio);
     }
 
@@ -426,11 +434,19 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         
         // Add a radial velocity kick - more important for SNII
         if (r > 0) {
+            // Calculate direction vector in physical space
+            double dx[3];
+            for (int d = 0; d < 3; d++) {
+                dx[d] = NEAREST_X(Sp->P[j].IntPos[d] - in->Pos[d]);
+                dx[d] = int_to_physical_pos(dx[d]);
+            }
+            double dir[3] = {dx[0]/r, dx[1]/r, dx[2]/r};
+            
             double kick_strength = 0.5 * WIND_VELOCITY * w;
             printf("[Feedback] Applying SN II feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
+            Sp->P[j].Vel[0] += kick_strength * dir[0];
+            Sp->P[j].Vel[1] += kick_strength * dir[1];
+            Sp->P[j].Vel[2] += kick_strength * dir[2];
         }
     } 
     else if (in->FeedbackType == FEEDBACK_SNIa) {
@@ -438,11 +454,19 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         Sp->SphP[j].Entropy += in->Energy * w;
         // Small random velocity perturbation
         if (r > 0) {
+            // Calculate direction vector in physical space
+            double dx[3];
+            for (int d = 0; d < 3; d++) {
+                dx[d] = NEAREST_X(Sp->P[j].IntPos[d] - in->Pos[d]);
+                dx[d] = int_to_physical_pos(dx[d]);
+            }
+            double dir[3] = {dx[0]/r, dx[1]/r, dx[2]/r};
+            
             double kick_strength = 0.1 * WIND_VELOCITY * w;
             printf("[Feedback] Applying SN Ia feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
+            Sp->P[j].Vel[0] += kick_strength * dir[0];
+            Sp->P[j].Vel[1] += kick_strength * dir[1];
+            Sp->P[j].Vel[2] += kick_strength * dir[2];
         }
     }
     else if (in->FeedbackType == FEEDBACK_AGB) {
@@ -450,11 +474,19 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         Sp->SphP[j].Entropy += in->Energy * w;
         // Very mild velocity perturbation
         if (r > 0) {
+            // Calculate direction vector in physical space
+            double dx[3];
+            for (int d = 0; d < 3; d++) {
+                dx[d] = NEAREST_X(Sp->P[j].IntPos[d] - in->Pos[d]);
+                dx[d] = int_to_physical_pos(dx[d]);
+            }
+            double dir[3] = {dx[0]/r, dx[1]/r, dx[2]/r};
+            
             double kick_strength = 0.05 * WIND_VELOCITY * w;
             printf("[Feedback] Applying AGB feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0]/r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1]/r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2]/r;
+            Sp->P[j].Vel[0] += kick_strength * dir[0];
+            Sp->P[j].Vel[1] += kick_strength * dir[1];
+            Sp->P[j].Vel[2] += kick_strength * dir[2];
         }
     }
 
@@ -485,12 +517,9 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
 }
 
 /**
- * Add detailed diagnostics for a feedback event
+ * Add detailed diagnostics for a feedback event with proper position conversion
  */
-/**
- * Add detailed diagnostics for a feedback event
- */
- void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
+void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
     // Count neighbors and track energy distribution
     int neighbor_count = 0;
     double total_energy_distributed = 0.0;
@@ -499,9 +528,22 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     
     printf("[Feedback Diagnostics] Starting neighbor check for star %d\n", i);
     
-    // Print star position for reference
-    printf("[Feedback Diagnostics] Star %d position: [%.3f, %.3f, %.3f]\n", 
+    // Print star position (both integer and physical units)
+    double star_phys_pos[3];
+    for (int d = 0; d < 3; d++) {
+        star_phys_pos[d] = int_to_physical_pos(in->Pos[d]);
+    }
+    
+    printf("[Feedback Diagnostics] Star %d integer position: [%.3e, %.3e, %.3e]\n", 
            i, in->Pos[0], in->Pos[1], in->Pos[2]);
+    printf("[Feedback Diagnostics] Star %d physical position (kpc): [%.3f, %.3f, %.3f]\n", 
+           i, star_phys_pos[0], star_phys_pos[1], star_phys_pos[2]);
+    
+    // Print conversion info
+    const double NUM_INT_STEPS = static_cast<double>(1ULL << 32);
+    double conversionFactor = All.BoxSize / NUM_INT_STEPS;
+    printf("[Feedback Diagnostics] Position conversion: BoxSize=%.3f, Factor=%.3e\n", 
+           All.BoxSize, conversionFactor);
     
     // Find closest gas particle and distance statistics
     double min_dist = 1e10;
@@ -512,41 +554,39 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     int gas_within_5h = 0;
     int gas_within_10h = 0;
     
+    // Physical feedback radius in kpc
+    double h_physical = in->h;  // Already in kpc
+    
     // First pass - count neighbors and find closest
     for (int j = 0; j < Sp->NumPart; j++) {
         if (Sp->P[j].getType() != 0) continue;  // Skip non-gas particles
         
         gas_count++;
         
-        double dx[3] = {
-            NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-            NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-            NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-        };
-        double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-        double r = sqrt(r2);
+        // Calculate physical distance
+        double r = physical_distance(in->Pos, Sp->P[j].IntPos);
         
         // Track distance statistics
         dist_sum += r;
         
         // Count gas at different distances
-        if (r < 2.0 * in->h) gas_within_2h++;
-        if (r < 5.0 * in->h) gas_within_5h++;
-        if (r < 10.0 * in->h) gas_within_10h++;
+        if (r < 2.0 * h_physical) gas_within_2h++;
+        if (r < 5.0 * h_physical) gas_within_5h++;
+        if (r < 10.0 * h_physical) gas_within_10h++;
         
         // Find closest gas
-        if (r2 < min_dist) {
-            min_dist = r2;
+        if (r < min_dist) {
+            min_dist = r;
             closest_gas = j;
         }
         
         // Check if within feedback radius
-        if (r < in->h) {
+        if (r < h_physical) {
             double w = 0.0;
             if (in->FeedbackType == FEEDBACK_SNII) {
-                w = kernel_weight_tophat(r, in->h);
+                w = kernel_weight_tophat(r, h_physical);
             } else {
-                w = kernel_weight_cubic(r, in->h);
+                w = kernel_weight_cubic(r, h_physical);
             }
             
             if (w > 0.0) {
@@ -560,36 +600,40 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
         }
     }
     
-    // Report closest gas particle
+            // Report closest gas particle
     if (closest_gas >= 0) {
-        double closest_dist = sqrt(min_dist);
-        printf("[Feedback Diagnostics] Closest gas particle %d at distance %.3f (radius is %.3f)\n", 
-               closest_gas, closest_dist, in->h);
+        double gas_phys_pos[3];
+        for (int d = 0; d < 3; d++) {
+            gas_phys_pos[d] = int_to_physical_pos(Sp->P[closest_gas].IntPos[d]);
+        }
+        
+        printf("[Feedback Diagnostics] Closest gas particle %d at physical distance %.3f kpc (radius is %.3f kpc)\n", 
+               closest_gas, min_dist, h_physical);
         
         // If closest gas is too far, print its position for comparison
-        if (closest_dist > in->h) {
-            printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
-                   Sp->P[closest_gas].IntPos[0], Sp->P[closest_gas].IntPos[1], Sp->P[closest_gas].IntPos[2]);
+        if (min_dist > h_physical) {
+            printf("[Feedback Diagnostics] Closest gas physical position (kpc): [%.3f, %.3f, %.3f]\n", 
+                   gas_phys_pos[0], gas_phys_pos[1], gas_phys_pos[2]);
         }
     }
     
     // Report distance statistics
     double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
-    printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
+    printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f kpc\n", gas_count, mean_dist);
     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
-           in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
+           h_physical*2, gas_within_2h, h_physical*5, gas_within_5h, h_physical*10, gas_within_10h);
     
-    printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
-           i, in->FeedbackType, neighbor_count, in->h);
+    printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f kpc\n", 
+           i, in->FeedbackType, neighbor_count, h_physical);
     
     if (neighbor_count == 0) {
         printf("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
-        printf("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f).\n", in->h);
+        printf("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f kpc).\n", h_physical);
         
         // If there's gas in wider radius, suggest adjustment
         if (gas_within_5h > 0) {
-            double suggested_radius = sqrt(min_dist) * 1.1; // 10% larger than closest gas
-            printf("[Feedback SUGGESTION] Try increasing radius to at least %.3f\n", suggested_radius);
+            double suggested_radius = min_dist * 1.1; // 10% larger than closest gas
+            printf("[Feedback SUGGESTION] Try increasing radius to at least %.3f kpc\n", suggested_radius);
         }
         
         return;
@@ -604,20 +648,15 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
     for (int j = 0; j < Sp->NumPart && neighbors_sampled < 5; j++) {
         if (Sp->P[j].getType() != 0) continue;
         
-        double dx[3] = {
-            NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-            NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-            NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-        };
-        double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-        double r = sqrt(r2);
+        // Calculate physical distance
+        double r = physical_distance(in->Pos, Sp->P[j].IntPos);
         
-        if (r < in->h) {
+        if (r < h_physical) {
             double w = 0.0;
             if (in->FeedbackType == FEEDBACK_SNII) {
-                w = kernel_weight_tophat(r, in->h);
+                w = kernel_weight_tophat(r, h_physical);
             } else {
-                w = kernel_weight_cubic(r, in->h);
+                w = kernel_weight_cubic(r, h_physical);
             }
             
             if (w > 0.0) {
@@ -647,108 +686,3 @@ static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, Feedback
                in->Energy, in->Energy / gas_mass_total);
     }
 }
-
-/**
- * Apply feedback from a single star particle
- */
-void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
-    FeedbackInput in;
-    FeedbackResult out;
-
-    printf("[Feedback Debug] Entering apply_feedback_to_star for star %d, type=%d\n", 
-        i, fw->feedback_type);
-
-    // Copy star particle data to feedback input structure
-    feedback_copy(i, &in, fw, Sp);
-    
-    // Add neighbor diagnostics before applying feedback
-    debug_feedback_diagnostics(i, &in, fw, Sp);
-
-    // Find neighbors and apply feedback - ONLY to gas particles
-    // This is using direct particle loop, but could be replaced with tree-based search
-    for (int j = 0; j < Sp->NumPart; j++) {
-        if (Sp->P[j].getType() == 0) {  // Only process gas particles (Type 0)
-            feedback_ngb(&in, &out, j, fw, Sp);
-        }
-    }
-}
-
-/**
- * Apply feedback for a specific type
- */
-void apply_feedback_treewalk(double current_time, int feedback_type, simparticles *Sp) {
-    FeedbackWalk fw;
-    fw.current_time = current_time;
-    fw.feedback_type = feedback_type;
-    fw.ev_label = "Feedback";
-
-    // Loop through star particles only (could be parallelized)
-    for (int i = 0; i < Sp->NumPart; i++) {
-        // Only check star particles (Type 4)
-        if (Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp)) {
-            apply_feedback_to_star(i, &fw, Sp);
-        }
-    }
-}
-
-/**
- * Main feedback function called each timestep
- */
-void apply_stellar_feedback(double current_time, simparticles* Sp) {
-
-
-// -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
-    static double last_time = 0;
-    double timestep = current_time - last_time;
-    
-    // Convert from scale factor difference to physical time if needed
-    double physical_timestep = 0;
-    if (current_time > 0 && last_time > 0) {
-        physical_timestep = scale_factor_to_physical_time(current_time) - 
-                           scale_factor_to_physical_time(last_time);
-        
-        if (ThisTask == 0) {
-            //printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
-            //printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
-            printf("[Feedback Diagnostic] Timestep in physical years: %.2e\n", physical_timestep);
-        }
-    }
-    
-    last_time = current_time;
-// -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
-
-
-
-    // Reset diagnostic counters
-    ThisStepEnergy_SNII = 0;
-    ThisStepEnergy_SNIa = 0;
-    ThisStepEnergy_AGB = 0;
-    ThisStepMassReturned = 0;
-    std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
-    
-    // Apply each feedback type
-    apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
-    apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
-    //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
-
-    // Accumulate totals
-    TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
-    TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
-    TotalEnergyInjected_AGB  += ThisStepEnergy_AGB;
-    TotalMassReturned += ThisStepMassReturned;
-    for (int k = 0; k < 4; k++)
-        TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
-
-    // Print summary (on master process only)
-    if (ThisTask == 0 & (ThisStepEnergy_SNII > 0 ||
-        ThisStepEnergy_SNIa > 0 ||
-        ThisStepEnergy_AGB > 0) ) {
-        printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
-               ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
-        printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
-        printf("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
-               ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
-    }
-}
-
-#endif // FEEDBACK
