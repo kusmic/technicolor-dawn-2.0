@@ -122,7 +122,7 @@
  const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
  
  // Feedback approach parameters
- const double SNII_FEEDBACK_RADIUS = 1.5;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+ const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
  const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
  const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
  // Added a check to make sure the gas particle is not too close, otherwise the
@@ -273,7 +273,7 @@
          return 0;
  
      // In feedback_isactive
-     printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
+     // printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
  
      // Convert from scale factor to physical time
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
@@ -330,9 +330,9 @@
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
     // Convert star particle integer positions to physical positions (in kpc)
-    out->Pos[0] = Sp->P[i].IntPos[0] * conversionFactor;
-    out->Pos[1] = Sp->P[i].IntPos[1] * conversionFactor;
-    out->Pos[2] = Sp->P[i].IntPos[2] * conversionFactor;
+    out->Pos[0] = ((double) Sp->P[i].IntPos[0]) * conversionFactor;
+    out->Pos[1] = ((double) Sp->P[i].IntPos[1]) * conversionFactor;
+    out->Pos[2] = ((double) Sp->P[i].IntPos[2]) * conversionFactor;
     out->FeedbackType = fw->feedback_type;
     out->SourceIndex = i;  // Store source index for diagnostics
  
@@ -396,9 +396,9 @@
 
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
-    gasPos[0] = Sp->P[j].IntPos[0] * conversionFactor;
-    gasPos[1] = Sp->P[j].IntPos[1] * conversionFactor;
-    gasPos[2] = Sp->P[j].IntPos[2] * conversionFactor;
+    gasPos[0] = ((double) Sp->P[j].IntPos[0]) * conversionFactor;
+    gasPos[1] = ((double) Sp->P[j].IntPos[1]) * conversionFactor;
+    gasPos[2] = ((double) Sp->P[j].IntPos[2]) * conversionFactor;
 
     double dx[3] = {
         NEAREST_X(gasPos[0] - in->Pos[0]),
@@ -521,9 +521,9 @@
          gas_count++;
          
          double gasPos[3] = {
-            Sp->P[j].IntPos[0] * conversionFactor,
-            Sp->P[j].IntPos[1] * conversionFactor,
-            Sp->P[j].IntPos[2] * conversionFactor
+            ((double) Sp->P[j].IntPos[0]) * conversionFactor,
+            ((double) Sp->P[j].IntPos[1]) * conversionFactor,
+            ((double) Sp->P[j].IntPos[2]) * conversionFactor
         };
         
         double dx[3] = {
@@ -578,9 +578,9 @@
          // If closest gas is too far, print its position for comparison
          if (closest_dist > in->h) {
              printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
-                Sp->P[closest_gas].IntPos[0] * conversionFactor,
-                Sp->P[closest_gas].IntPos[1] * conversionFactor,
-                Sp->P[closest_gas].IntPos[2] * conversionFactor);
+                ((double) Sp->P[closest_gas].IntPos[0]) * conversionFactor,
+                ((double) Sp->P[closest_gas].IntPos[1]) * conversionFactor,
+                ((double) Sp->P[closest_gas].IntPos[2]) * conversionFactor);
          }
      }
      
@@ -616,9 +616,9 @@
          if (Sp->P[j].getType() != 0) continue;
  
          double gasPos[3] = {
-            Sp->P[j].IntPos[0] * conversionFactor,
-            Sp->P[j].IntPos[1] * conversionFactor,
-            Sp->P[j].IntPos[2] * conversionFactor
+            ((double) Sp->P[j].IntPos[0]) * conversionFactor,
+            ((double) Sp->P[j].IntPos[1]) * conversionFactor,
+            ((double) Sp->P[j].IntPos[2]) * conversionFactor
         };
 
         double dx[3] = {
@@ -745,7 +745,7 @@
  
      // Apply each feedback type
      apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
-     //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
+     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
  
      // Accumulate totals
