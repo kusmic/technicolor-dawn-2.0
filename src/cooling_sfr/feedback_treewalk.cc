@@ -520,11 +520,18 @@
  
          gas_count++;
          
-         double dx[3] = {
-             NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-             NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-             NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-         };
+         double gasPos[3] = {
+            Sp->P[j].IntPos[0] * conversionFactor,
+            Sp->P[j].IntPos[1] * conversionFactor,
+            Sp->P[j].IntPos[2] * conversionFactor
+        };
+        
+        double dx[3] = {
+            NEAREST_X(gasPos[0] - in->Pos[0]),
+            NEAREST_Y(gasPos[1] - in->Pos[1]),
+            NEAREST_Z(gasPos[2] - in->Pos[2])
+        };
+
          double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
          double r = sqrt(r2);
  
@@ -608,11 +615,17 @@
      for (int j = 0; j < Sp->NumPart && neighbors_sampled < 5; j++) {
          if (Sp->P[j].getType() != 0) continue;
  
-         double dx[3] = {
-             NEAREST_X(Sp->P[j].IntPos[0] - in->Pos[0]),
-             NEAREST_Y(Sp->P[j].IntPos[1] - in->Pos[1]),
-             NEAREST_Z(Sp->P[j].IntPos[2] - in->Pos[2])
-         };
+         double gasPos[3] = {
+            Sp->P[j].IntPos[0] * conversionFactor,
+            Sp->P[j].IntPos[1] * conversionFactor,
+            Sp->P[j].IntPos[2] * conversionFactor
+        };
+
+        double dx[3] = {
+            NEAREST_X(gasPos[0] - in->Pos[0]),
+            NEAREST_Y(gasPos[1] - in->Pos[1]),
+            NEAREST_Z(gasPos[2] - in->Pos[2])
+        };
          double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
          double r = sqrt(r2);
  
@@ -714,7 +727,7 @@
          if (ThisTask == 0) {
              //printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
              //printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
-             printf("[Feedback Diagnostic] Timestep in physical years: %.2e\n", physical_timestep);
+             printf("[Feedback Diagnostic] Time resolution in physical years: %.2e\n", physical_timestep);
          }
      }
  
