@@ -397,24 +397,21 @@
     gasPos[1] = Sp->P[j].IntPos[1] * conversionFactor;
     gasPos[2] = Sp->P[j].IntPos[2] * conversionFactor;
 
-    // Compute the differences with periodic wrapping (NEAREST macros operate on physical distances now)
     double dx[3] = {
         NEAREST_X(gasPos[0] - in->Pos[0]),
         NEAREST_Y(gasPos[1] - in->Pos[1]),
         NEAREST_Z(gasPos[2] - in->Pos[2])
     };
+
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2);
 
-    // Enforce a minimum separation to prevent excessively high kernel weights or velocity kicks
     if (r < MIN_FEEDBACK_SEPARATION) {
         if (r < 1e-12) {
-            // If dx is essentially zero, choose a default direction.
             dx[0] = MIN_FEEDBACK_SEPARATION;
             dx[1] = 0.0;
             dx[2] = 0.0;
         } else {
-            // Otherwise scale the dx vector so that its magnitude is MIN_FEEDBACK_SEPARATION.
             double factor = MIN_FEEDBACK_SEPARATION / r;
             dx[0] *= factor;
             dx[1] *= factor;
@@ -423,84 +420,70 @@
         r = MIN_FEEDBACK_SEPARATION;
     }
 
-    // Different kernel approaches for different feedback types
     double w = 0.0;
     if (in->FeedbackType == FEEDBACK_SNII) {
-        // Type II SNe: Use a sharp top-hat kernel - more localized effect
         w = kernel_weight_tophat(r, in->h);
     } else {
-        // Type Ia SNe and AGB winds: Use a smoother cubic spline kernel
         w = kernel_weight_cubic(r, in->h);
     }
 
-    printf("[Feedback] Kernel weight for r=%.3f, h=%.3f: w=%.3e\n", r, in->h, w);
-
     if (w <= 0.0) return;
 
-    // Calculate energy diagnostics before applying feedback
     double gas_mass = Sp->P[j].getMass();
-    double old_thermal_energy = Sp->SphP[j].Entropy * gas_mass; // Approximate
-    double feedback_energy = in->Energy * w;
-    double energy_ratio = feedback_energy / old_thermal_energy;
 
-    if (energy_ratio > 0.01) {
-        printf("[Feedback Energy] Star%d->Gas%d: r=%.3f, OldE=%.3e, AddedE=%.3e, Ratio=%.3e\n",
-               in->SourceIndex, j, r, old_thermal_energy, feedback_energy, energy_ratio);
+    // Convert feedback energy to code units and calculate specific energy
+    const double erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+    double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+
+    double max_delta_u = 1e4;  // safe cap for code units
+    if (delta_u > max_delta_u) {
+        printf("[Feedback Capped] Limiting Δu=%.3e to max=%.3e for gas %d\n", delta_u, max_delta_u, j);
+        delta_u = max_delta_u;
     }
 
-    // Apply energy deposition and velocity kick depending on feedback type
-    if (in->FeedbackType == FEEDBACK_SNII) {
-        // SNII: Direct entropy injection plus velocity kick along radial direction
-        Sp->SphP[j].Entropy += in->Energy * w;
-        // Add a radial velocity kick - more important for SNII
-        if (r > 0) {
-            double kick_strength = 0.5 * WIND_VELOCITY * w;
-            printf("[Feedback] Applying SN II feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
-        }
-    } else if (in->FeedbackType == FEEDBACK_SNIa) {
-        // SNIa: More thermal energy, less kinetic
-        Sp->SphP[j].Entropy += in->Energy * w;
-        if (r > 0) {
-            double kick_strength = 0.1 * WIND_VELOCITY * w;
-            printf("[Feedback] Applying SN Ia feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
-        }
-    } else if (in->FeedbackType == FEEDBACK_AGB) {
-        // AGB: Gentler feedback
-        Sp->SphP[j].Entropy += in->Energy * w;
-        if (r > 0) {
-            double kick_strength = 0.05 * WIND_VELOCITY * w;
-            printf("[Feedback] Applying AGB feedback: %.4e\n", kick_strength);
-            Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-            Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-            Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
-        }
+    Sp->SphP[j].Utherm += delta_u;
+
+    if (delta_u > 1000.0) {
+        printf("[Feedback DEBUG] Injecting Δu = %.3e (gas id=%d, w=%.3e)\n", delta_u, j, w);
     }
 
-    // Adjust gas mass due to the returned stellar material
-    double old_mass = Sp->P[j].getMass();
-    Sp->P[j].setMass(old_mass + in->MassReturn * w);
+    // Apply velocity kicks based on feedback type
+    if (r > 0) {
+        double kick_strength = 0.0;
+        if (in->FeedbackType == FEEDBACK_SNII) {
+            kick_strength = 0.5 * WIND_VELOCITY * w;
+        } else if (in->FeedbackType == FEEDBACK_SNIa) {
+            kick_strength = 0.1 * WIND_VELOCITY * w;
+        } else if (in->FeedbackType == FEEDBACK_AGB) {
+            kick_strength = 0.05 * WIND_VELOCITY * w;
+        }
 
-    // Adjust metallicity mixing
+        Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+        Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+        Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+    }
+
+    // Add returned stellar mass to gas particle
+    Sp->P[j].setMass(gas_mass + in->MassReturn * w);
+
+    // Apply metal enrichment
     if (in->MassReturn * w > 0) {
-        double old_fraction = old_mass / (old_mass + in->MassReturn * w);
-        double new_fraction = (in->MassReturn * w) / (old_mass + in->MassReturn * w);
+        double total_mass = gas_mass + in->MassReturn * w;
+        double old_frac = gas_mass / total_mass;
+        double new_frac = (in->MassReturn * w) / total_mass;
+
         for (int k = 0; k < 4; k++) {
             double old_metal = Sp->SphP[j].Metals[k];
             double new_metal = in->Yield[k] / in->MassReturn;
-            Sp->SphP[j].Metals[k] = old_metal * old_fraction + new_metal * new_fraction;
+            Sp->SphP[j].Metals[k] = old_metal * old_frac + new_metal * new_frac;
         }
     } else {
         for (int k = 0; k < 4; k++) {
-            Sp->SphP[j].Metals[k] += in->Yield[k] * w / old_mass;
+            Sp->SphP[j].Metals[k] += in->Yield[k] * w / gas_mass;
         }
     }
 }
+
 
  
  /*
@@ -512,7 +495,7 @@
      double total_energy_distributed = 0.0;
      double total_kernel_weight = 0.0;
      double max_gas_temp_before = 0.0;
- 
+
      printf("[Feedback Diagnostics] Starting neighbor check for star %d\n", i);
  
      // First pass - count neighbors and calculate total kernel weight
@@ -571,7 +554,7 @@
                  total_kernel_weight += w;
  
                  // Track maximum temperature
-                 double temp = Sp->SphP[j].Entropy;  // Using entropy as proxy for temperature
+                 double temp = Sp->SphP[j].Utherm;
                  if (temp > max_gas_temp_before) max_gas_temp_before = temp;
              }
          }
@@ -641,11 +624,11 @@
  
              if (w > 0.0) {
                  double m = Sp->P[j].getMass();
-                 double temp = Sp->SphP[j].Entropy;
-                 double energy_before = temp * m;  // Approximate thermal energy
-                 double energy_to_add = in->Energy * w;
-                 double energy_after = energy_before + energy_to_add;
-                 double temp_after = energy_after / m;
+                 double temp = Sp->SphP[j].Utherm;
+                 double energy_before = temp * m;
+                    double energy_to_add = in->Energy * w * erg_to_code;
+                    double energy_after = energy_before + energy_to_add;
+                    double temp_after = energy_after / m;
                  double energy_ratio = energy_to_add / energy_before;
  
                  printf("[Feedback Energy] Gas %d: Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
