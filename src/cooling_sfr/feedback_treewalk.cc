@@ -129,6 +129,9 @@
  // feedback is too strong, and the timestep goes to zero.
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
+ // In case we have ergs and needs to get it to internal units
+ const double erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
  const double NUM_INT_STEPS = 4294967296.0;        // 2^32
@@ -432,7 +435,6 @@
     double gas_mass = Sp->P[j].getMass();
 
     // Convert feedback energy to code units and calculate specific energy
-    const double erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
     double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
 
     double max_delta_u = 1e4;  // safe cap for code units
