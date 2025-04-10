@@ -446,7 +446,10 @@
         delta_u = max_delta_u;
     }
 
-    Sp->SphP[j].Utherm += delta_u;
+    // Update internal energy (Entropy)
+    double utherm_before = Sp->get_utherm_from_entropy(j);
+    double utherm_after = utherm_before + delta_u;
+    Sp->set_entropy_from_utherm(utherm_after, j);
 
     if (delta_u > 1000.0) {
         printf("[Feedback DEBUG] Injecting Δu = %.3e (gas id=%d, w=%.3e)\n", delta_u, j, w);
@@ -572,7 +575,7 @@
                  total_kernel_weight += w;
  
                  // Track maximum temperature
-                 double temp = Sp->SphP[j].Utherm;
+                 double temp = Sp->get_utherm_from_entropy(j);
                  if (temp > max_gas_temp_before) max_gas_temp_before = temp;
              }
          }
@@ -647,21 +650,22 @@
              }
  
              if (w > 0.0) {
-                 if (w > 1.0) w = 1.0; // prevent unusually high weights, probably wouldn't happen
-                 double m = Sp->P[j].getMass();
-                 double temp = Sp->SphP[j].Utherm;
-                 double energy_before = temp * m;
-                 double energy_to_add = in->Energy * w * erg_to_code;
-                 double energy_after = energy_before + energy_to_add;
-                 double temp_after = energy_after / m;
-                 double energy_ratio = energy_to_add / energy_before;
+                if (w > 1.0) w = 1.0; // prevent unusually high weights, probably wouldn't happen
+
+                double m = Sp->P[j].getMass();
+                double temp = Sp->get_utherm_from_entropy(j);
+                double energy_before = temp * m;
+                double energy_to_add = in->Energy * w * erg_to_code;
+                double energy_after = energy_before + energy_to_add;
+                double temp_after = energy_after / m;
+                double energy_ratio = energy_to_add / energy_before;
  
-                 printf("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
+                printf("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
                         j, m, temp, temp_after, energy_before, energy_after, energy_ratio);
  
-                 gas_mass_total += m;
-                 avg_gas_temp += temp;
-                 neighbors_sampled++;
+                gas_mass_total += m;
+                avg_gas_temp += temp;
+                neighbors_sampled++;
              }
          }
      }
@@ -767,9 +771,9 @@
          TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
  
      // Print summary (on master process only)
-     if (ThisTask == 0 & (ThisStepEnergy_SNII > 0 ||
-         ThisStepEnergy_SNIa > 0 ||
-         ThisStepEnergy_AGB > 0) ) {
+     if (ThisTask == 0 && (ThisStepEnergy_SNII > 0 ||
+        ThisStepEnergy_SNIa > 0 ||
+        ThisStepEnergy_AGB > 0))
          printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                 ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
          printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);

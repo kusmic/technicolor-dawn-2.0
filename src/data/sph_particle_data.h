@@ -55,9 +55,7 @@ struct sph_particle_data_hydrocore
  */
 struct sph_particle_data : public sph_particle_data_hydrocore
 {
-  MyFloat Utherm; /*!< thermal energy */
-
-  MyFloat Entropy;     /*!< value of the entropic function */
+  MyFloat Entropy;     /*!< value of the entropic function -- This is related to InternalEnergy! */
   MyFloat EntropyPred; /*!< predicted entropy at current time, needed if the particle is inactive */
 
   MyFloat HydroAccel[3]; /*!< acceleration due to hydrodynamical forces */
