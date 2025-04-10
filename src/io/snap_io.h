@@ -277,7 +277,7 @@ class snap_io : public IO_Def
     if(mode == 0)
       {
         MyFloat *out_buffer = (MyFloat *)buffer;
-        //out_buffer[0] = thisobj->Sp->get_utherm_from_entropy(particle);
+        out_buffer[0] = thisobj->Sp->get_utherm_from_entropy(particle);
         out_buffer[0] = thisobj->Sp->SphP[particle].Utherm;  // Ezra added this 4-10-25
         // so Entropy is the same as InternalEnergy, I just don't know if Gadget-4 will look for Entropy specifically
 
@@ -286,7 +286,7 @@ class snap_io : public IO_Def
     else
       {
         MyFloat *in_buffer                  = (MyFloat *)buffer;
-        //thisobj->Sp->SphP[particle].Entropy = in_buffer[0];
+        thisobj->Sp->SphP[particle].Entropy = in_buffer[0];
         thisobj->Sp->SphP[particle].Utherm = in_buffer[0];
       }
   }
