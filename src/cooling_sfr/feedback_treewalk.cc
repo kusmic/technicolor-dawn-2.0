@@ -592,8 +592,8 @@
      // Report distance statistics
      double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
      printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
-     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d, r=%.3f\n", 
-            in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h, r);
+     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
+            in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
      
      printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
             i, in->FeedbackType, neighbor_count, in->h);
