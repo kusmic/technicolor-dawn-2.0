@@ -107,7 +107,7 @@
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
  const double AGB_ENERGY_PER_MASS = 1.0e47;      // erg / Msun
  
- // Feedback timescales - now in physical time rather than scale factor!
+ // Feedback timescales - physical time!
  const double SNII_DELAY_TIME_PHYSICAL = 1.0e7;     // years
  const double SNIa_DELAY_TIME_PHYSICAL = 1.0e9;     // years 
  const double AGB_END_TIME_PHYSICAL = 1.0e10;       // years
@@ -453,6 +453,7 @@
     }
 
     // Apply velocity kicks based on feedback type
+    // Note the scaled down kick strengths for SNIa and AGB
     if (r > 0) {
         double kick_strength = 0.0;
         if (in->FeedbackType == FEEDBACK_SNII) {
@@ -462,11 +463,15 @@
         } else if (in->FeedbackType == FEEDBACK_AGB) {
             kick_strength = 0.05 * WIND_VELOCITY * w;
         }
-        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e), r=%.3e\n", j, in->FeedbackType, kick_strength, r);
         
         Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
         Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
         Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+
+        // DEBUG
+        double vel_after_kick = sqrt(SQR(P[j].Vel[0]) + SQR(P[j].Vel[1]) + SQR(P[j].Vel[2]));
+        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, vel_after_kick);
+        
     }
 
     // Add returned stellar mass to gas particle
@@ -642,16 +647,17 @@
              }
  
              if (w > 0.0) {
+                 if (w > 1.0) w = 1.0; // prevent unusually high weights, probably wouldn't happen
                  double m = Sp->P[j].getMass();
                  double temp = Sp->SphP[j].Utherm;
                  double energy_before = temp * m;
-                    double energy_to_add = in->Energy * w * erg_to_code;
-                    double energy_after = energy_before + energy_to_add;
-                    double temp_after = energy_after / m;
+                 double energy_to_add = in->Energy * w * erg_to_code;
+                 double energy_after = energy_before + energy_to_add;
+                 double temp_after = energy_after / m;
                  double energy_ratio = energy_to_add / energy_before;
  
-                 printf("[Feedback Energy] Gas %d: Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
-                        j, temp, temp_after, energy_before, energy_after, energy_ratio);
+                 printf("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
+                        j, m, temp, temp_after, energy_before, energy_after, energy_ratio);
  
                  gas_mass_total += m;
                  avg_gas_temp += temp;
