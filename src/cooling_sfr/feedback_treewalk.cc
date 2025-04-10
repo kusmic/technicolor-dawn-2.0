@@ -134,8 +134,12 @@
 
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
- const double NUM_INT_STEPS = 4294967296.0;        // 2^32
- const double conversionFactor = All.BoxSize / NUM_INT_STEPS;
+ //const double NUM_INT_STEPS = 4294967296.0;        // 2^32
+ //const double conversionFactor = All.BoxSize / NUM_INT_STEPS;
+
+ inline double intpos_to_kpc(uint32_t ipos) {
+    return (double) ipos * All.BoxSize / 4294967296.0;
+ }
 
  const double WIND_VELOCITY = 500.0;             // km/s
  
@@ -329,9 +333,9 @@
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
     // Convert star particle integer positions to physical positions (in kpc)
-    out->Pos[0] = ((double) Sp->P[i].IntPos[0]) * conversionFactor;
-    out->Pos[1] = ((double) Sp->P[i].IntPos[1]) * conversionFactor;
-    out->Pos[2] = ((double) Sp->P[i].IntPos[2]) * conversionFactor;
+    out->Pos[0] = intpos_to_kpc( Sp->P[i].IntPos[0] );
+    out->Pos[1] = intpos_to_kpc( Sp->P[i].IntPos[1] );
+    out->Pos[2] = intpos_to_kpc( Sp->P[i].IntPos[2] );
     out->FeedbackType = fw->feedback_type;
     out->SourceIndex = i;  // Store source index for diagnostics
  
@@ -395,9 +399,9 @@
 
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
-    gasPos[0] = ((double) Sp->P[j].IntPos[0]) * conversionFactor;
-    gasPos[1] = ((double) Sp->P[j].IntPos[1]) * conversionFactor;
-    gasPos[2] = ((double) Sp->P[j].IntPos[2]) * conversionFactor;
+    gasPos[0] = intpos_to_kpc( Sp->P[j].IntPos[0] );
+    gasPos[1] = intpos_to_kpc( Sp->P[j].IntPos[1] );
+    gasPos[2] = intpos_to_kpc( Sp->P[j].IntPos[2] );
 
     double dx[3] = {
         NEAREST_X(gasPos[0] - in->Pos[0]),
@@ -458,7 +462,7 @@
         } else if (in->FeedbackType == FEEDBACK_AGB) {
             kick_strength = 0.05 * WIND_VELOCITY * w;
         }
-        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, kick_strength=%.3e)\n", j, kick_strength);
+        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e), r=%.3e\n", j, in->FeedbackType, kick_strength, r);
         
         // Pause this for now
         //Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
@@ -522,9 +526,9 @@
          gas_count++;
          
          double gasPos[3] = {
-            ((double) Sp->P[j].IntPos[0]) * conversionFactor,
-            ((double) Sp->P[j].IntPos[1]) * conversionFactor,
-            ((double) Sp->P[j].IntPos[2]) * conversionFactor
+            intpos_to_kpc( Sp->P[j].IntPos[0] ),
+            intpos_to_kpc( Sp->P[j].IntPos[1] ),
+            intpos_to_kpc( Sp->P[j].IntPos[2] )
         };
         
         double dx[3] = {
@@ -579,17 +583,17 @@
          // If closest gas is too far, print its position for comparison
          if (closest_dist > in->h) {
              printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
-                ((double) Sp->P[closest_gas].IntPos[0]) * conversionFactor,
-                ((double) Sp->P[closest_gas].IntPos[1]) * conversionFactor,
-                ((double) Sp->P[closest_gas].IntPos[2]) * conversionFactor);
+                intpos_to_kpc( Sp->P[closest_gas].IntPos[0] ),
+                intpos_to_kpc( Sp->P[closest_gas].IntPos[1] ),
+                intpos_to_kpc( Sp->P[closest_gas].IntPos[2] ) );
          }
      }
      
      // Report distance statistics
      double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
      printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
-     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
-            in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
+     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d, r=%.3f\n", 
+            in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h, r);
      
      printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
             i, in->FeedbackType, neighbor_count, in->h);
@@ -617,9 +621,9 @@
          if (Sp->P[j].getType() != 0) continue;
  
          double gasPos[3] = {
-            ((double) Sp->P[j].IntPos[0]) * conversionFactor,
-            ((double) Sp->P[j].IntPos[1]) * conversionFactor,
-            ((double) Sp->P[j].IntPos[2]) * conversionFactor
+            intpos_to_kpc( Sp->P[j].IntPos[0] ),
+            intpos_to_kpc( Sp->P[j].IntPos[1] ),
+            intpos_to_kpc( Sp->P[j].IntPos[2] )
         };
 
         double dx[3] = {
