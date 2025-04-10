@@ -469,7 +469,7 @@
         Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
 
         // DEBUG
-        double vel_after_kick = sqrt(SQR(P[j].Vel[0]) + SQR(P[j].Vel[1]) + SQR(P[j].Vel[2]));
+        double vel_after_kick = sqrt(SQR(Sp->P[j].Vel[0]) + SQR(Sp->P[j].Vel[1]) + SQR(Sp->P[j].Vel[2]));
         printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, vel_after_kick);
         
     }
