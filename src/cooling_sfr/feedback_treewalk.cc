@@ -727,7 +727,7 @@
          if (ThisTask == 0) {
              //printf("[Feedback Diagnostic] Current scale factor: %.6e\n", current_time);
              //printf("[Feedback Diagnostic] Timestep in scale factor: %.6e\n", timestep);
-             printf("[Feedback Diagnostic] Time resolution in physical years: %.2e\n", physical_timestep);
+             //printf("[Feedback Diagnostic] Time resolution in physical years: %.2e\n", physical_timestep);
          }
      }
  
