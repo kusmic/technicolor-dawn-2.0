@@ -285,13 +285,12 @@
  
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
- 
-         printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
+         //printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
          // Type II SNe happen promptly after star formation
          return (age_physical > SNII_DELAY_TIME_PHYSICAL) ? 1 : 0;
      } 
      else if (fw->feedback_type == FEEDBACK_AGB) {
-         printf("[Feedback Debug] Star %d is active for AGB feedback type %d\n", i, fw->feedback_type);
+         //printf("[Feedback Debug] Star %d is active for AGB feedback type %d\n", i, fw->feedback_type);
          // AGB winds are active after some delay but before stars are too old
          return (age_physical > SNII_DELAY_TIME_PHYSICAL && age_physical < AGB_END_TIME_PHYSICAL) ? 1 : 0;
      }
@@ -459,10 +458,12 @@
         } else if (in->FeedbackType == FEEDBACK_AGB) {
             kick_strength = 0.05 * WIND_VELOCITY * w;
         }
-
-        Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-        Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-        Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, kick_strength=%.3e)\n", j, kick_strength);
+        
+        // Pause this for now
+        //Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+        //Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+        //Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
     }
 
     // Add returned stellar mass to gas particle
