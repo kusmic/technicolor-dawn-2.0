@@ -464,10 +464,9 @@
         }
         printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e), r=%.3e\n", j, in->FeedbackType, kick_strength, r);
         
-        // Pause this for now
-        //Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-        //Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-        //Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+        Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
+        Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
+        Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
     }
 
     // Add returned stellar mass to gas particle
