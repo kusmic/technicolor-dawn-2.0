@@ -261,7 +261,7 @@ class simparticles : public intposconvert, public setcomm
 
     if (!std::isfinite(utherm) || utherm < 0) {
       printf("[Entropy WARNING] set Non-finite utherm (%.3e) for gas %d (rho=%.3e)\n",
-        utherm, ji SphP[i].Density);
+        utherm, i, SphP[i].Density);
     }
   }
 
