@@ -437,7 +437,7 @@
     if (w > 1.0) {
         printf("[Feedback WARNING] High kernel weight w=%.3f for gas %d (r=%.3f, h=%.3f)\n", w, j, r, in->h);
         w = 1.0;
-    } else (w <= 0.0) return;
+    } else if (w <= 0.0) return;
 
     double gas_mass = Sp->P[j].getMass();
 
