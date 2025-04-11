@@ -506,7 +506,7 @@
   void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
      // Count neighbors and track energy distribution
      int neighbor_count = 0;
-     double total_energy_distributed = 0.0;
+     //double total_energy_distributed = 0.0;
      double total_kernel_weight = 0.0;
      double max_gas_temp_before = 0.0;
 
@@ -725,7 +725,7 @@
  void apply_stellar_feedback(double current_time, simparticles* Sp) {
  
  
- // -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
+ /* -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
      static double last_time = 0;
      double timestep = current_time - last_time;
  
@@ -744,7 +744,7 @@
  
      last_time = current_time;
  // -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
- 
+ */
  
  
      // Reset diagnostic counters
@@ -770,7 +770,7 @@
      // Print summary (on master process only)
      if (ThisTask == 0 && (ThisStepEnergy_SNII > 0 ||
         ThisStepEnergy_SNIa > 0 ||
-        ThisStepEnergy_AGB > 0))
+        ThisStepEnergy_AGB > 0)) {
          printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                 ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
          printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
