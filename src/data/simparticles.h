@@ -236,7 +236,7 @@ class simparticles : public intposconvert, public setcomm
 
   inline MyFloat get_OldAcc(int i) { return P[i].OldAcc; }
 
-  /* sets the internal energy per unit mass of particle i  from its entropy */
+  /* gets the internal energy per unit mass of particle i  from its entropy */
   inline double get_utherm_from_entropy(int i)
   {
 #ifdef ISOTHERM_EQS

@@ -344,7 +344,7 @@
      double energy = 0, m_return = 0;
      Yields y;
  
-     printf("[Feedback] Reached feedback_copy().\n");
+     //printf("[Feedback] Reached feedback_copy().\n");
  
      // Set smoothing length/radius based on feedback type
      if (fw->feedback_type == FEEDBACK_SNII) {
@@ -375,7 +375,7 @@
      Sp->P[i].FeedbackFlag |= fw->feedback_type;
  
      // Update diagnostic counters
-     printf("[Feedback] Update feedback counters energy=%.3f\n", energy);
+     //printf("[Feedback] Update feedback counters energy=%.3f\n", energy);
      if (fw->feedback_type == FEEDBACK_SNII) ThisStepEnergy_SNII += energy;
      if (fw->feedback_type == FEEDBACK_AGB)  ThisStepEnergy_AGB  += energy;
      if (fw->feedback_type == FEEDBACK_SNIa) ThisStepEnergy_SNIa += energy;
@@ -473,7 +473,7 @@
 
         // DEBUG
         double vel_after_kick = sqrt( (Sp->P[j].Vel[0] * Sp->P[j].Vel[0]) + (Sp->P[j].Vel[1] * Sp->P[j].Vel[1]) + (Sp->P[j].Vel[2] * Sp->P[j].Vel[2]) );
-        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, vel_after_kick);
+        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, w=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, w, vel_after_kick);
         
     }
 
@@ -510,12 +510,8 @@
      double total_kernel_weight = 0.0;
      double max_gas_temp_before = 0.0;
 
-     printf("[Feedback Diagnostics] Starting neighbor check for star %d\n", i);
- 
      // First pass - count neighbors and calculate total kernel weight
-     // Print star position for reference
-     printf("[Feedback Diagnostics] Star %d position: [%.3f, %.3f, %.3f]\n", 
-            i, in->Pos[0], in->Pos[1], in->Pos[2]);
+     printf("[Feedback Diagnostics] Starting neighbor check for star %d at Position: [%.3f, %.3f, %.3f]\n", i, in->Pos[0], in->Pos[1], in->Pos[2]);
      
      // Find closest gas particle and distance statistics
      double min_dist = 1e10;
@@ -693,6 +689,7 @@
      feedback_copy(i, &in, fw, Sp);
  
      // Add neighbor diagnostics before applying feedback
+     // Comment this out in production runs
      debug_feedback_diagnostics(i, &in, fw, Sp);
  
      // Find neighbors and apply feedback - ONLY to gas particles

@@ -29,6 +29,17 @@ def update(frame):
         # Loop through our defined particle types.
         for part, props in part_colors.items():
             if part in f:
+                snap_num = int(filename.split("_")[-1].split(".")[0])
+                time = f['Header'].attrs['Time']  # Scale factor
+                
+                # Calculate redshift from scale factor: z = 1/a - 1
+                redshift = 1.0/time - 1.0
+
+                # Count star particles (Type 4)
+                num_stars = 0
+                if 'PartType4' in f:
+                    num_stars = len(f['PartType4/Coordinates'])
+
                 # Read the particle coordinates.
                 coords = f[part]['Coordinates'][:]  # Expecting shape (N, 3)
                 # Plot only x and y (2D projection).
@@ -39,7 +50,8 @@ def update(frame):
                            alpha=0.7)
     ax.set_xlabel("X [kpc]")
     ax.set_ylabel("Y [kpc]")
-    ax.set_title(f"Snapshot {frame}: {filename}")
+    #ax.set_title(f"Snapshot {frame}: {filename}")
+    ax.set_title(f'Particle Map - Snapshot {snap_num} - z={redshift:.2f} - Stars: {num_stars}', fontsize=16)
     # Optionally, set the axis limits based on your simulation scale.
     # ax.set_xlim(-500, 500)
     # ax.set_ylim(-500, 500)
