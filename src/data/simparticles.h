@@ -239,6 +239,7 @@ class simparticles : public intposconvert, public setcomm
   /* gets the internal energy per unit mass of particle i  from its entropy */
   inline double get_utherm_from_entropy(int i)
   {
+
 #ifdef ISOTHERM_EQS
     return SphP[i].Entropy;
 #else
@@ -257,6 +258,11 @@ class simparticles : public intposconvert, public setcomm
 #ifdef PRESSURE_ENTROPY_SPH
     SphP[i].EntropyToInvGammaPred = pow(SphP[i].EntropyPred, 1.0 / GAMMA);
 #endif
+
+    if (!std::isfinite(utherm) || utherm < 0) {
+      printf("[Entropy WARNING] set Non-finite utherm (%.3e) for gas %d (rho=%.3e)\n",
+        utherm, ji SphP[i].Density);
+    }
   }
 
   void fill_active_gravity_list_with_all_particles(void)

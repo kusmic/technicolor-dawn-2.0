@@ -761,7 +761,7 @@
  
      // Apply each feedback type
      apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
-     apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
+     //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
  
      // Accumulate totals
