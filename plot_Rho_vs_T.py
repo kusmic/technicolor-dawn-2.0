@@ -33,6 +33,10 @@ for snap in snapshots:
             print(f"  Error: {e}")
 
 
+        # Right after loading u = f['PartType0']['InternalEnergy'][:]
+        if np.isnan(u).any() or np.all(u == 0):
+            print(f"[WARNING] Snapshot {snap} has NaNs or all-zero InternalEnergy!")
+
 exit(0)
 
 
