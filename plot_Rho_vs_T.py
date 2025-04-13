@@ -12,7 +12,7 @@ gamma = 5.0 / 3.0      # adiabatic index for monoatomic gas
 UnitEnergy_in_cgs = 1.0  # 1.0 means u is already in erg/g
 
 # Load snapshot
-snap = h5py.File("output/snapshot_060.hdf5", "r")
+snap = h5py.File("output/snapshot_045.hdf5", "r")
 header = dict(snap["Header"].attrs)
 
 scale_factor = header["Time"]
