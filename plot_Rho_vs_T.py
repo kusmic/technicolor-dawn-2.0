@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import glob
+import os
 
 # Parameters
 snapshot_dir = "./output"
@@ -14,6 +15,27 @@ save_anim = True  # Set to False to skip saving the animation
 
 # Preload snapshot data
 all_data = []
+
+
+for snap in snapshots:
+    with h5py.File(snap, 'r') as f:
+        print(f"\n--- {os.path.basename(snap)} ---")
+        try:
+            rho = f['PartType0']['Density'][:]
+            print(f"  Density shape: {rho.shape}")
+            try:
+                u = f['PartType0']['InternalEnergy'][:]
+                print("  Using InternalEnergy.")
+            except KeyError:
+                entropy = f['PartType0']['Entropy'][:]
+                print("  Using Entropy.")
+        except Exception as e:
+            print(f"  Error: {e}")
+
+
+exit(0)
+
+
 
 for snap in snapshots:
     with h5py.File(snap, 'r') as f:
