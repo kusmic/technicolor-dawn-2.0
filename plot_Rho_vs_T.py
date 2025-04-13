@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import glob
 
-<<<<<<< HEAD
 # Parameters
 snapshot_dir = "./output"
 snapshots = sorted(glob.glob(f"{snapshot_dir}/snap*.hdf5"))
