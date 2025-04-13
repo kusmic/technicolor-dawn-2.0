@@ -30,38 +30,49 @@ for snap in snapshots:
             rho_phys = rho
             u = entropy * (rho_phys)**(2/3) / (5./3 - 1)  # assuming gamma = 5/3
 
-        temp = (u * (5./3 - 1))  # assuming μ, k_B, etc. folded into units
-        mask = (rho > density_floor) & (temp > energy_floor)
-        all_data.append((rho[mask], temp[mask]))
 
-# Set up figure
-fig, ax = plt.subplots(figsize=(8, 6))
-sc = ax.hexbin(all_data[0][0], all_data[0][1], gridsize=num_bins, 
-               bins='log', cmap='plasma', mincnt=1)
-ax.set_xscale('log')
-ax.set_yscale('log')
-ax.set_xlabel("Density [code units]")
-ax.set_ylabel("Temperature [code units]")
-cb = fig.colorbar(sc, ax=ax, label="log(N)")
 
-# Animation update function
-def update(i):
-    ax.clear()
-    rho, temp = all_data[i]
-    sc = ax.hexbin(rho, temp, gridsize=num_bins, bins='log', cmap='plasma', mincnt=1)
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlabel("Density [code units]")
-    ax.set_ylabel("Temperature [code units]")
-    ax.set_title(f"Snapshot {i}, z={redshift:.2f}")
-    return sc,
+        # Constants
+        gamma = 5.0 / 3.0
+        mu = 0.6             # Mean molecular weight (approx. for ionized gas)
+        m_H = 1.6726e-24     # Hydrogen mass [g]
+        k_B = 1.3807e-16     # Boltzmann constant [erg/K]
 
-# Create animation
-print("\nCreating animation...")
-ani = animation.FuncAnimation(fig, update, frames=len(all_data), interval=300)
+        # Convert internal energy to temperature
+        T = (gamma - 1.0) * mu * m_H / k_B * u  # Temperature in K
 
-# Save or show
-if save_anim:
-    ani.save("rho_T_evolution.mp4", writer="ffmpeg", dpi=150)
-else:
-    plt.show()
+        # Clip temperature to reasonable range
+        T_clipped = np.clip(T, 1e2, 1e8)
+        log_T = np.log10(T_clipped)
+        log_rho = np.log10(rho)
+
+        # Histogram of Internal Energy
+        plt.figure(figsize=(8, 5))
+        plt.hist(np.log10(u), bins=100, color='gray', alpha=0.7)
+        plt.xlabel('log₁₀(InternalEnergy)')
+        plt.ylabel('Number of Particles')
+        plt.title('Distribution of Internal Energy')
+        plt.tight_layout()
+        plt.savefig('internal_energy_histogram.png')
+        plt.close()
+
+        # Debug: check for extreme internal energy values
+        high_energy_mask = u > 1e5
+        n_outliers = np.sum(high_energy_mask)
+        print(f"[DEBUG] Number of particles with InternalEnergy > 1e5: {n_outliers}")
+        if n_outliers > 0:
+            print("[DEBUG] Sample of high-energy particles (ρ, T, u):")
+            for i in np.where(high_energy_mask)[0][:10]:
+                print(f"  rho = {rho[i]:.3e}, T = {T[i]:.3e}, u = {u[i]:.3e}")
+
+        # Plot ρ–T phase diagram
+        plt.figure(figsize=(7, 6))
+        plt.scatter(log_rho, log_T, s=1, alpha=0.4)
+        plt.xlabel(r'$\log_{10}(\rho)$ [g/cm$^3$]')
+        plt.ylabel(r'$\log_{10}(T)$ [K]')
+        plt.xlim(-8, 2)
+        plt.ylim(2, 8)
+        plt.title('Density–Temperature Phase Space')
+        plt.tight_layout()
+        plt.savefig('rho_T_phase.png')
+        plt.close()
