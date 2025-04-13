@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import glob
 
+<<<<<<< HEAD
 # Parameters
-snapshot_dir = "./snapshots"
+snapshot_dir = "./output"
 snapshots = sorted(glob.glob(f"{snapshot_dir}/snap*.hdf5"))
 num_bins = 200
 density_floor = 1e-6
@@ -17,6 +18,10 @@ all_data = []
 
 for snap in snapshots:
     with h5py.File(snap, 'r') as f:
+
+        time = f['Header'].attrs['Time']  # Scale factor
+        redshift = 1.0/time - 1.0
+
         rho = f['PartType0']['Density'][:] * f['Header'].attrs['Time']**-3
         try:
             u = f['PartType0']['InternalEnergy'][:]
@@ -48,7 +53,7 @@ def update(i):
     ax.set_yscale('log')
     ax.set_xlabel("Density [code units]")
     ax.set_ylabel("Temperature [code units]")
-    ax.set_title(f"Snapshot {i}")
+    ax.set_title(f"Snapshot {i}, z={redshift:.2f}")
     return sc,
 
 # Create animation
