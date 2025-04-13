@@ -6,7 +6,7 @@ import glob
 import os
 
 # Parameters
-snapshot_dir = "./output"
+snapshot_dir = "output"
 snapshots = sorted(glob.glob(f"{snapshot_dir}/snap*.hdf5"))
 num_bins = 200
 density_floor = 1e-6
@@ -15,31 +15,6 @@ save_anim = True  # Set to False to skip saving the animation
 
 # Preload snapshot data
 all_data = []
-
-
-for snap in snapshots:
-    with h5py.File(snap, 'r') as f:
-        print(f"\n--- {os.path.basename(snap)} ---")
-        try:
-            rho = f['PartType0']['Density'][:]
-            print(f"  Density shape: {rho.shape}")
-            try:
-                u = f['PartType0']['InternalEnergy'][:]
-                print("  Using InternalEnergy.")
-            except KeyError:
-                entropy = f['PartType0']['Entropy'][:]
-                print("  Using Entropy.")
-        except Exception as e:
-            print(f"  Error: {e}")
-
-
-        # Right after loading u = f['PartType0']['InternalEnergy'][:]
-        if np.isnan(u).any() or np.all(u == 0):
-            print(f"[WARNING] Snapshot {snap} has NaNs or all-zero InternalEnergy!")
-
-exit(0)
-
-
 
 for snap in snapshots:
     with h5py.File(snap, 'r') as f:
