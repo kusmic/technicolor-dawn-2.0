@@ -64,16 +64,16 @@ ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an a
 #--------------------------------------- SPH treatment and formulation
 
 #REUSE_HYDRO_ACCELERATIONS_FROM_PREVIOUS_STEP # does not recompute the pressure forces after application of source functions 
-#VISCOSITY_LIMITER_FOR_LARGE_TIMESTEPS        # limits the acceleration due to the viscosity  
-#PRESSURE_ENTROPY_SPH                         # enables the Hopkins (2013) pressure-entropy formulation, other density-entropy is used
+VISCOSITY_LIMITER_FOR_LARGE_TIMESTEPS        # limits the acceleration due to the viscosity  
+PRESSURE_ENTROPY_SPH                         # enables the Hopkins (2013) pressure-entropy formulation, other density-entropy is used
 #GAMMA=1.4                                    # sets the adiabatic index
-#ISOTHERM_EQS                                 # selects an isothermal equation of state
+#ISOTHERM_EQS                                 # selects an isothermal equation of state (read to NOT include this if using PRESSURE_ENTROPY_SPH)
 #IMPROVED_VELOCITY_GRADIENTS                  # use higher-order gradients of the velocities according to Hu et. al (2014)
 
 
 #--------------------------------------- SPH kernels
 
-#CUBIC_SPLINE_KERNEL                          # uses the cubic spline kernel (default)
+CUBIC_SPLINE_KERNEL                          # uses the cubic spline kernel (default)
 #WENDLAND_C2_KERNEL                           # use the Wendland C2 kernel from Dehnen & Aly 2012
 #WENDLAND_C4_KERNEL                           # use the Wendland C4 kernel from Dehnen & Aly 2012
 #WENDLAND_C6_KERNEL                           # use the Wendland C6 kernel from Dehnen & Aly 2012
@@ -82,7 +82,7 @@ ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an a
 
 #--------------------------------------- SPH viscosity options
 
-#TIMEDEP_ART_VISC                             # enables time dependend viscosity
+TIMEDEP_ART_VISC                             # enables time dependend viscosity (read to include with PRESSURE_ENTROPY_SPH)
 #HIGH_ART_VISC_START                          # start with high rather than low viscosity
 #NO_SHEAR_VISCOSITY_LIMITER                   # turns of the shear viscosity supression
 
@@ -92,7 +92,7 @@ ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an a
 COOLING                                      # Enables radiative atomic cooling by hydrogen and helium
 STARFORMATION                                # Enables star formation with the Springel & Hernquist (2003) model
 DUST
-SUPERNOVA
+#SUPERNOVA
 FEEDBACK
 
 #---------------------------------------- Single/double precision and data types
@@ -112,18 +112,18 @@ IDS_32BIT                                    # selects 32-bit IDs for internal s
 
 #---------------------------------------- Output/Input options
 
-INITIAL_CONDITIONS_CONTAIN_ENTROPY
+#INITIAL_CONDITIONS_CONTAIN_ENTROPY
 #OUTPUT_VELOCITY_GRADIENT                     # output velocity gradients
-#OUTPUT_PRESSURE                              # output gas pressure   
-#OUTPUT_ENTROPY                               # output gas entropy
+OUTPUT_PRESSURE                              # output gas pressure   
+OUTPUT_ENTROPY                               # output gas entropy
 #OUTPUT_CHANGEOFENTROPY                       # output rate of change of entropy
 #OUTPUT_POTENTIAL                             # output gravitational potential
-#OUTPUT_ACCELERATION                          # output total acceleration
-#OUTPUT_TIMESTEP                              # output timesteps
+OUTPUT_ACCELERATION                          # output total acceleration
+OUTPUT_TIMESTEP                              # output timesteps
 #OUTPUT_DIVVEL                                # output velocity divergence
 #OUTPUT_CURLVEL                               # output velocity curl
 #OUTPUT_COOLHEAT                              # output actual energy loss/gain in cooling/heating routine
-#OUTPUT_PRESSURE_SPH_DENSITY                  # output also density computed in the pressure-entropy forumulation
+OUTPUT_PRESSURE_SPH_DENSITY                  # output also density computed in the pressure-entropy forumulation
 #OUTPUT_VISCOSITY_PARAMETER                   # output current viscosity parameter in SPH particle output (only for time-dependent viscosity)
 #OUTPUT_NON_SYNCHRONIZED_ALLOWED              # allow snapshot creation also at steps that are not fully synchronized
 #OUTPUT_VELOCITIES_IN_HALF_PRECISION          # special option to store velocities in reduced precision
@@ -227,4 +227,3 @@ DEBUG                                        # enables core-dumps in case MPI_In
 #EWALD_TEST                                   # a development test for the Ewald tables
 #STOP_AFTER_STEP=10                           # ends a simulation after the specified timestep (to simplify scalability tests)
 #TREE_NO_SAFETY_BOX                           # when set, this disables the geometric 'near node' protection
-
