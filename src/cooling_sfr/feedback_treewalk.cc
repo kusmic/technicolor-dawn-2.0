@@ -397,6 +397,8 @@
   static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
+    printf("[Feedback Energy Info] Energy to deposit = %.3e erg\n", in->Energy);
+    
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
     gasPos[0] = intpos_to_kpc( Sp->P[j].IntPos[0] );
@@ -441,8 +443,18 @@
 
     double gas_mass = Sp->P[j].getMass();
 
+    if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) {
+        printf("[Feedback WARNING] Skipping gas %d with bad mass: %.3e\n", j, gas_mass);
+        return;
+    }
+
     // Convert feedback energy to code units and calculate specific energy
     double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+
+    if (!isfinite(delta_u) || delta_u < 0) {
+        printf("[Feedback WARNING] Non-finite or negative delta_u: %.3e for gas %d\n", delta_u, j);
+        return;
+    }
 
     double max_delta_u = 1e4;  // safe cap for code units
     if (delta_u > max_delta_u) {
@@ -477,6 +489,9 @@
 
         // DEBUG
         double vel_after_kick = sqrt( (Sp->P[j].Vel[0] * Sp->P[j].Vel[0]) + (Sp->P[j].Vel[1] * Sp->P[j].Vel[1]) + (Sp->P[j].Vel[2] * Sp->P[j].Vel[2]) );
+        if (!isfinite(vel_after_kick)) {
+            printf("[Feedback WARNING] Velocity went non-finite for gas %d\n", j);
+        }
         printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, w=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, w, vel_after_kick);
         
     }
