@@ -361,6 +361,7 @@ inline double kernel_weight_cubic_dimless(double u) {
      MyFloat MassReturn;
      MyFloat Yield[4];
      int FeedbackType;
+     int NeighborCount;
      double h;  // Smoothing length/radius for this feedback type
      int SourceIndex; // Index of the source star particle for diagnostics
  };
@@ -557,11 +558,11 @@ inline double kernel_weight_cubic_dimless(double u) {
     // Handles SNII's without a kernel, but divide energy amongst the neighbors
     if (in->FeedbackType == FEEDBACK_SNII) {
         if (in->NeighborCount > 0)
-            delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
+            double delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
         else
-            delta_u = 0.0;
+            double delta_u = 0.0;
     } else {
-        delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+        double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
     }
 
     // Cap or skip bad delta_u
