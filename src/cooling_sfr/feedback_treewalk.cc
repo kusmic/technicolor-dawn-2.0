@@ -566,9 +566,11 @@ inline double kernel_weight_cubic_dimless(double u) {
         delta_u = (in->Energy * w) * erg_to_code / gas_mass;
     }
 
+    printf("[Feedback] Calculated delta_u: %.3e neighbors: %d for gas ID %d\n", delta_u, in->NeighborCount, j);
+        
     // Cap or skip bad delta_u
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e15) {
-        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e for gas ID %d\n", delta_u, j);
+        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e, energy: %.3e, neighbors: %.3e, gas_mass: %.3e, for gas ID %d\n", delta_u, in->Energy, in->NeighborCount, gas_mass, j);
         delta_u = 0.0;  // or skip this gas particle
     }
 
