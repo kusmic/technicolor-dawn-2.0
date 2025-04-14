@@ -554,15 +554,16 @@ inline double kernel_weight_cubic_dimless(double u) {
         return;
     }
 
+    double delta_u = 0.0;
     // Convert feedback energy to code units and calculate specific energy
     // Handles SNII's without a kernel, but divide energy amongst the neighbors
     if (in->FeedbackType == FEEDBACK_SNII) {
         if (in->NeighborCount > 0)
-            double delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
+            delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
         else
-            double delta_u = 0.0;
+            delta_u = 0.0;
     } else {
-        double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+        delta_u = (in->Energy * w) * erg_to_code / gas_mass;
     }
 
     // Cap or skip bad delta_u
