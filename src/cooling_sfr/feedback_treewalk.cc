@@ -225,7 +225,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Dynamically determines a suitable radius h for a given star
  * so that it finds ~TARGET_NEIGHBORS gas neighbors.
  */
- double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp) {
+ double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr) {
     if (ThisTask == 0)
     printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", feedback_type);
 
@@ -275,6 +275,7 @@ inline double kernel_weight_cubic_dimless(double u) {
         }
 
         printf("[Feedback Adaptive h] Neighbors found=%d!\n", neighbors_found);
+        *neighbors_ptr = neighbors_found;
 
         if (neighbors_found < TARGET_NEIGHBORS)
             h *= 1.25;
@@ -449,8 +450,8 @@ inline double kernel_weight_cubic_dimless(double u) {
      Yields y;
  
      // Determine feedback radius based on the number of neighbors
-     out->h = adaptive_feedback_radius(out->Pos, fw->feedback_type, Sp);
-     if (out->h < 0) return; // Skip feedback if no neighbors found
+    out->h = adaptive_feedback_radius(out->Pos, fw->feedback_type, Sp, &out->NeighborCount);
+    if (out->h < 0) return;  // skip feedback if no gas found
 
      if (fw->feedback_type == FEEDBACK_SNII) {
          energy = SNII_ENERGY_PER_MASS * m_star;
@@ -537,11 +538,13 @@ inline double kernel_weight_cubic_dimless(double u) {
         w = kernel_weight_cubic(r, in->h);
     }
 
-    // Moderate the kernel weight, if necessary
-    if (w > 1.0) {
-        printf("[Feedback WARNING] High kernel weight w=%.3f for gas %d (r=%.3f, h=%.3f)\n", w, j, r, in->h);
-        w = 1.0;
-    } else if (w <= 0.0) return;
+    // Moderate the kernel weight, if necessary, for 1a and AGB feedback
+    if (in->FeedbackType != FEEDBACK_SNII) {
+        if (w > 1.0) {
+            printf("[Feedback WARNING] High kernel weight w=%.3f for gas %d (r=%.3f, h=%.3f)\n", w, j, r, in->h);
+            w = 1.0;
+        } else if (w <= 0.0) return;
+    }
 
     double gas_mass = Sp->P[j].getMass();
 
@@ -551,7 +554,15 @@ inline double kernel_weight_cubic_dimless(double u) {
     }
 
     // Convert feedback energy to code units and calculate specific energy
-    double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+    // Handles SNII's without a kernel, but divide energy amongst the neighbors
+    if (in->FeedbackType == FEEDBACK_SNII) {
+        if (in->NeighborCount > 0)
+            delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
+        else
+            delta_u = 0.0;
+    } else {
+        delta_u = (in->Energy * w) * erg_to_code / gas_mass;
+    }
 
     // Cap or skip bad delta_u
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e15) {
