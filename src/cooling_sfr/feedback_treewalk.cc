@@ -122,9 +122,9 @@
  const double SNIa_DTD_POWER = -1.1;             // power-law slope of delay-time distribution
  
  // Feedback approach parameters
- const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
- const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
- const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
+ //const double SNII_FEEDBACK_RADIUS = 0.3;        // kpc - local deposition: ~0.3 kpc for SNII, which is more localized
+ //const double SNIa_FEEDBACK_RADIUS = 0.8;        // kpc - wider distribution ~0.8 kpc for SNIa to account for the more diffuse nature of these events
+ //const double AGB_FEEDBACK_RADIUS = 0.5;         // kpc - intermediate distribution ~0.5 kpc for AGB winds, which are more diffuse than SNII but more concentrated than SNIa
  // Added a check to make sure the gas particle is not too close, otherwise the
  // feedback is too strong, and the timestep goes to zero.
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
@@ -218,6 +218,86 @@ inline double kernel_weight_cubic_dimless(double u) {
          return 0.0;
  }
  
+/** Having a constant feedback radius can lead to too few or too many neighbors
+   Let's try adapting the radius (h) based on the number of neighbors found
+
+ * Adaptive feedback radius based on local gas density
+ * Dynamically determines a suitable radius h for a given star
+ * so that it finds ~TARGET_NEIGHBORS gas neighbors.
+ */
+ double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp) {
+    int TARGET_NEIGHBORS;
+    if (feedback_type == FEEDBACK_SNII)
+        TARGET_NEIGHBORS = 16;
+    else if (feedback_type == FEEDBACK_SNIa)
+        TARGET_NEIGHBORS = 64;
+    else if (feedback_type == FEEDBACK_AGB)
+        TARGET_NEIGHBORS = 32;
+    else
+        TARGET_NEIGHBORS = 48;
+
+    const double H_MIN = 0.05;  // kpc
+    const double H_MAX = 3.0;   // kpc
+    const int MAX_ATTEMPTS = 10;
+
+    double h = 0.3;  // initial guess
+    int attempt = 0;
+    int neighbors_found = 0;
+
+    static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
+    static int gas_count = 0;
+    if (!gas_x) {
+        gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
+    }
+
+    gas_count = 0;
+    for (int j = 0; j < Sp->NumPart; j++) {
+        if (Sp->P[j].getType() != 0) continue;
+        gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
+        gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
+        gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
+        gas_count++;
+    }
+
+    do {
+        neighbors_found = 0;
+        for (int j = 0; j < gas_count; j++) {
+            double dx = NEAREST_X(gas_x[j] - starPos[0]);
+            double dy = NEAREST_Y(gas_y[j] - starPos[1]);
+            double dz = NEAREST_Z(gas_z[j] - starPos[2]);
+            double r2 = dx*dx + dy*dy + dz*dz;
+            if (sqrt(r2) < h) neighbors_found++;
+        }
+
+        if (neighbors_found < TARGET_NEIGHBORS)
+            h *= 1.25;
+        else if (neighbors_found > TARGET_NEIGHBORS * 1.5)
+            h *= 0.8;
+
+        h = fmax(fmin(h, H_MAX), H_MIN);
+        attempt++;
+    } while ((neighbors_found < TARGET_NEIGHBORS || neighbors_found > TARGET_NEIGHBORS * 2)
+             && attempt < MAX_ATTEMPTS);
+
+    if (neighbors_found == 0) {
+        if (ThisTask == 0) {
+            printf("[Feedback Adaptive h] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
+        }
+        return -1.0;
+    }
+
+    if (ThisTask == 0) {
+        printf("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
+               h, attempt, feedback_type, neighbors_found);
+    }
+
+    return h;
+}
+
+
+
  /**
   * Get SNII yields - enhanced metallicity-dependent model
   */
@@ -362,23 +442,21 @@ inline double kernel_weight_cubic_dimless(double u) {
      double energy = 0, m_return = 0;
      Yields y;
  
-     //printf("[Feedback] Reached feedback_copy().\n");
- 
-     // Set smoothing length/radius based on feedback type
+     // Determine feedback radius based on the number of neighbors
+     out->h = adaptive_feedback_radius(out->Pos, fw->feedback_type, Sp);
+     if (out->h < 0) return; // Skip feedback if no neighbors found
+
      if (fw->feedback_type == FEEDBACK_SNII) {
-         out->h = SNII_FEEDBACK_RADIUS; // Smaller radius for SNII - more localized
          energy = SNII_ENERGY_PER_MASS * m_star;
          m_return = MASS_RETURN_SNII * m_star;
          y = get_SNII_yields(m_return, z_star);
      } 
      else if (fw->feedback_type == FEEDBACK_AGB) {
-         out->h = AGB_FEEDBACK_RADIUS; // Medium radius for AGB
          energy = AGB_ENERGY_PER_MASS * m_star;
          m_return = MASS_RETURN_AGB * m_star;
          y = get_AGB_yields(m_return, z_star);
      } 
      else if (fw->feedback_type == FEEDBACK_SNIa) {
-         out->h = SNIa_FEEDBACK_RADIUS; // Larger radius for SNIa - more distributed
          int n_snia = Sp->P[i].SNIaEvents;
          energy = n_snia * SNIa_ENERGY_PER_EVENT;
          m_return = 0; // SNIa don't return stellar mass
