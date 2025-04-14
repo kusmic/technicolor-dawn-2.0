@@ -65,7 +65,7 @@ ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an a
 
 #REUSE_HYDRO_ACCELERATIONS_FROM_PREVIOUS_STEP # does not recompute the pressure forces after application of source functions 
 VISCOSITY_LIMITER_FOR_LARGE_TIMESTEPS        # limits the acceleration due to the viscosity  
-PRESSURE_ENTROPY_SPH                         # enables the Hopkins (2013) pressure-entropy formulation, other density-entropy is used
+#PRESSURE_ENTROPY_SPH                         # enables the Hopkins (2013) pressure-entropy formulation, other density-entropy is used
 #GAMMA=1.4                                    # sets the adiabatic index
 #ISOTHERM_EQS                                 # selects an isothermal equation of state (read to NOT include this if using PRESSURE_ENTROPY_SPH)
 #IMPROVED_VELOCITY_GRADIENTS                  # use higher-order gradients of the velocities according to Hu et. al (2014)
