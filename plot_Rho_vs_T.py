@@ -61,7 +61,7 @@ def update(frame):
     ax.set_title(f"\u03c1–T diagram from snapshot {snapnum}")
     ax.grid(True, which="both", ls="--", alpha=0.3)
     plt.tight_layout()
-    plt.savefig(f"rho_T_frames/frame_{snapnum:04d}.png", dpi=150)
+    plt.savefig(f"rho_T_frames/frame_{snapnum}.png", dpi=150)
 
 ani = animation.FuncAnimation(fig, update, frames=len(snapshot_data), interval=500)
 
