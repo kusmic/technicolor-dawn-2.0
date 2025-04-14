@@ -226,6 +226,9 @@ inline double kernel_weight_cubic_dimless(double u) {
  * so that it finds ~TARGET_NEIGHBORS gas neighbors.
  */
  double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp) {
+    if (ThisTask == 0)
+    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", fw->feedback_type);
+
     int TARGET_NEIGHBORS;
     if (feedback_type == FEEDBACK_SNII)
         TARGET_NEIGHBORS = 16;
@@ -270,6 +273,8 @@ inline double kernel_weight_cubic_dimless(double u) {
             double r2 = dx*dx + dy*dy + dz*dz;
             if (sqrt(r2) < h) neighbors_found++;
         }
+
+        printf("[Feedback Adaptive h] Neighbors found=%d!\n", neighbors_found);
 
         if (neighbors_found < TARGET_NEIGHBORS)
             h *= 1.25;
@@ -430,8 +435,6 @@ inline double kernel_weight_cubic_dimless(double u) {
   * Copy data from a star particle to the feedback input structure
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
-    if (ThisTask == 0)
-    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", fw->feedback_type);
 
     // Convert star particle integer positions to physical positions (in kpc)
     out->Pos[0] = intpos_to_kpc( Sp->P[i].IntPos[0] );
