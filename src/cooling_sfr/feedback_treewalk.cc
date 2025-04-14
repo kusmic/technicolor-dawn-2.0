@@ -430,6 +430,9 @@ inline double kernel_weight_cubic_dimless(double u) {
   * Copy data from a star particle to the feedback input structure
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
+    if (ThisTask == 0)
+    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", fw->feedback_type);
+
     // Convert star particle integer positions to physical positions (in kpc)
     out->Pos[0] = intpos_to_kpc( Sp->P[i].IntPos[0] );
     out->Pos[1] = intpos_to_kpc( Sp->P[i].IntPos[1] );
@@ -493,7 +496,7 @@ inline double kernel_weight_cubic_dimless(double u) {
   static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
-    printf("[Feedback Energy Info] Energy to deposit = %.3e erg\n", in->Energy);
+    //printf("[Feedback Energy Info] Energy to deposit = %.3e erg\n", in->Energy);
 
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
