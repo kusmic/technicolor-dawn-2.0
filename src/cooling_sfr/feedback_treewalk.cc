@@ -181,16 +181,34 @@
      return pow(time_physical / HUBBLE_TIME, 2.0/3.0); // Simple matter-dominated universe approximation
  }
  
+ // Dimensionless cubic spline kernel (Monaghan 1992) for 3D
+inline double kernel_weight_cubic_dimless(double u) {
+    if (u < 0.0) return 0.0;  // safety
+    if (u < 0.5)
+        return 1.0 - 6.0*u*u + 6.0*u*u*u;
+    else if (u < 1.0)
+        return 2.0 * pow(1.0 - u, 3);
+    else
+        return 0.0;
+}
+
  // Local cubic spline kernel approximation for Type Ia SNe and AGB wind distribution
  inline double kernel_weight_cubic(double r, double h) {
-     double u = r / h;
-     if (u < 0.5)
-         return (8.0 / (M_PI * h * h * h)) * (1 - 6 * u * u + 6 * u * u * u);
-     else if (u < 1.0)
-         return (8.0 / (M_PI * h * h * h)) * (2.0 * pow(1.0 - u, 3));
-     else
-         return 0.0;
- }
+    const double h_min_feedback = 0.3;  // Prevent explosive w at early times
+    if (h < h_min_feedback)
+        h = h_min_feedback;
+
+    double u = r / h;
+    double w_dimless = kernel_weight_cubic_dimless(u);
+    double w = (8.0 / (M_PI * h * h * h)) * w_dimless;
+
+    // Optional cap for stability
+    if (!isfinite(w) || w > 10.0 || w < 0.0) {
+        printf("[Feedback WARNING] Kernel weight w=%.3e clipped for r=%.3e h=%.3e u=%.3e\n", w, r, h, u);
+        w = 0.0;
+    }
+    return w;
+}
  
  // Step function for Type II SNe (simpler, more direct energy deposition)
  inline double kernel_weight_tophat(double r, double h) {
@@ -398,7 +416,7 @@
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
     printf("[Feedback Energy Info] Energy to deposit = %.3e erg\n", in->Energy);
-    
+
     // Convert gas particle's fixed-point positions to physical positions (in kpc)
     double gasPos[3];
     gasPos[0] = intpos_to_kpc( Sp->P[j].IntPos[0] );
@@ -451,9 +469,10 @@
     // Convert feedback energy to code units and calculate specific energy
     double delta_u = (in->Energy * w) * erg_to_code / gas_mass;
 
-    if (!isfinite(delta_u) || delta_u < 0) {
-        printf("[Feedback WARNING] Non-finite or negative delta_u: %.3e for gas %d\n", delta_u, j);
-        return;
+    // Cap or skip bad delta_u
+    if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e15) {
+        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e for gas ID %d\n", delta_u, target->ID);
+        delta_u = 0.0;  // or skip this gas particle
     }
 
     double max_delta_u = 1e4;  // safe cap for code units
