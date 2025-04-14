@@ -227,7 +227,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  */
  double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp) {
     if (ThisTask == 0)
-    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", fw->feedback_type);
+    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", feedback_type);
 
     int TARGET_NEIGHBORS;
     if (feedback_type == FEEDBACK_SNII)
