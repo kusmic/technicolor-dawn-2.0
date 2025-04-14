@@ -452,6 +452,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  
      // Determine feedback radius based on the number of neighbors
     out->h = adaptive_feedback_radius(out->Pos, fw->feedback_type, Sp, &out->NeighborCount);
+    //out->NeighborCount = neighbors_found;
     if (out->h < 0) return;  // skip feedback if no gas found
 
      if (fw->feedback_type == FEEDBACK_SNII) {
@@ -559,7 +560,8 @@ inline double kernel_weight_cubic_dimless(double u) {
     // Handles SNII's without a kernel, but divide energy amongst the neighbors
     if (in->FeedbackType == FEEDBACK_SNII) {
         if (in->NeighborCount > 0)
-            delta_u = (in->Energy / in->NeighborCount) * erg_to_code / gas_mass;
+            delta_u = (in->Energy / (double)in->NeighborCount) * erg_to_code / gas_mass;
+
         else
             delta_u = 0.0;
     } else {
@@ -570,7 +572,7 @@ inline double kernel_weight_cubic_dimless(double u) {
         
     // Cap or skip bad delta_u
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e15) {
-        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e, energy: %.3e, neighbors: %.3e, gas_mass: %.3e, for gas ID %d\n", delta_u, in->Energy, in->NeighborCount, gas_mass, j);
+        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e, energy: %.3e, neighbors: %d, gas_mass: %.3e, for gas ID %d\n", delta_u, in->Energy, in->NeighborCount, gas_mass, j);
         delta_u = 0.0;  // or skip this gas particle
     }
 
