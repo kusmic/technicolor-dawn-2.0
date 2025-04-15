@@ -13,6 +13,8 @@ gamma = 5.0 / 3.0      # Adiabatic index for monoatomic gas
 
 # Simulation unit for internal energy
 UnitEnergy_in_cgs = 1.989e53  # erg/g
+# Since Gadget stores u as specific internal energy (i.e., energy per unit mass), we do:
+UnitEnergy_in_cgs = 2.774e20  # derived from your simulation units
 
 # Gather snapshot files
 snapshots = sorted(glob.glob("output/snapshot_*.hdf5"))
