@@ -62,7 +62,7 @@ def update(frame):
     global sc
     rho, T, snapnum = snapshot_data[frame]
     ax.clear()
-    ax.loglog(rho, T, ',', alpha=0.5)
+    ax.loglog(rho, T, 'o', markersize=2, alpha=0.7)
     ax.set_xlabel("Density [g/cm³]")
     ax.set_ylabel("Temperature [K]")
     ax.set_title(f"\u03c1–T diagram from snapshot {snapnum}")
