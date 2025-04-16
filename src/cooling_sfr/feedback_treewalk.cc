@@ -787,36 +787,6 @@ void run_feedback(simparticles *Sp) {
      }
  }
  
- /**
-  * Apply feedback from a single star particle
-  */
- void apply_feedback_to_star(int i, FeedbackWalk *fw, simparticles *Sp) {
-     FeedbackInput in;
-     FeedbackResult out;
- 
-     printf("[Feedback Debug] Entering apply_feedback_to_star for star %d, type=%d\n", 
-         i, fw->feedback_type);
- 
-     // Copy star particle data to feedback input structure
-     feedback_copy(i, &in, fw, Sp);
- 
-    // SNII feedback goes through TreeWalk
-    if (in.FeedbackType == FEEDBACK_SNII) {
-        // Check there’s actual energy to deposit
-        printf("[Feedback Debug] Applying SNII energy: %.3e, from star %d\n", in->Energy, i);
-        if (in->Energy > 0.0) {
-            inject_SNII_feedback(i, in->Energy);
-        }
-    }
-    // SNIa or AGB feedback: use brute-force gas loop
-    else {
-        for (int j = 0; j < Sp->NumPart; j++) {
-            if (Sp->P[j].getType() == 0) {  // Gas particle
-                feedback_ngb(&in, &out, j, fw, Sp);
-            }
-        }
-    }
- }
  
  /**
   * Apply feedback for a specific type
