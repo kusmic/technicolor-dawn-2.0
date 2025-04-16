@@ -583,7 +583,7 @@ void run_feedback(simparticles *Sp) {
 
         if (!feedback_isactive(i, &fw, Sp)) continue;
 
-        apply_feedback_to_star(i, &fw, Sp);
+        //apply_feedback_to_star(i, &fw, Sp);
 
         // Set up feedback input for neighbors
         in.Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
@@ -872,7 +872,7 @@ void run_feedback(simparticles *Sp) {
      std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
  
      // Apply each feedback type
-     run_feedback(&Sp);
+     run_feedback(Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
