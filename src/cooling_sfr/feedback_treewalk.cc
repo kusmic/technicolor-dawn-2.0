@@ -580,7 +580,7 @@ void run_feedback(simparticles *Sp) {
     FeedbackResult out;
     FeedbackWalk fw;
 
-    printf("[Feedback] run_feedback() started... Star ID=%d\n", i);
+    printf("[Feedback] run_feedback() started...\n");
 
     for (int i = 0; i < Sp->NumPart; i++) {
         if (Sp->P[i].getType() != 4) continue;  // Star particles only
