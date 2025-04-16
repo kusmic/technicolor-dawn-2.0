@@ -788,24 +788,7 @@ void run_feedback(simparticles *Sp) {
  }
  
  
- /**
-  * Apply feedback for a specific type
-  */
- void apply_feedback_treewalk(double current_time, int feedback_type, simparticles *Sp) {
-     FeedbackWalk fw;
-     fw.current_time = current_time;
-     fw.feedback_type = feedback_type;
-     fw.ev_label = "Feedback";
- 
-     // Loop through star particles only (could be parallelized)
-     for (int i = 0; i < Sp->NumPart; i++) {
-         // Only check star particles (Type 4)
-         if (Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp)) {
-             apply_feedback_to_star(i, &fw, Sp);
-         }
-     }
- }
- 
+
  /**
   * Main feedback function called each timestep
   */
