@@ -387,6 +387,8 @@ inline double kernel_weight_cubic_dimless(double u) {
      // In feedback_isactive
      //printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
  
+     printf("Star %d | current_time (a)=%.6f | StellarAge=%.6f\n", i, fw->current_time, Sp->P[i].StellarAge);
+
      // Convert from scale factor to physical time
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
@@ -516,10 +518,13 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 /**
  * Loop over star particles and apply feedback to their neighbors
  */
-void run_feedback(simparticles *Sp) {
+void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
+    
     FeedbackInput in;
     FeedbackResult out;
     FeedbackWalk fw;
+    fw.current_time = current_time;
+    fw.feedback_type = feedback_type;
 
     //printf("[Feedback] run_feedback() started...\n");
 
@@ -771,7 +776,7 @@ void run_feedback(simparticles *Sp) {
      std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
  
      // Apply each feedback type
-     run_feedback(Sp);
+     run_feedback(current_time, FEEDBACK_SNII, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
