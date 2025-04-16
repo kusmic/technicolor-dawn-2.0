@@ -381,19 +381,25 @@ inline double kernel_weight_cubic_dimless(double u) {
   * Determine if a star particle is eligible for feedback
   */
  static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
-     if (Sp->P[i].getType() != 4)
+     if (Sp->P[i].getType() != 4) // needs to be a star
          return 0;
  
      // In feedback_isactive
-     printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
+     //printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
  
      // Convert from scale factor to physical time
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
+     // Check if the star is too young
+     printf("[Feedback Debug] Considering star %d | age=%.2e yr | type=%d | flag=%d\n",
+        i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
+
      // Check if this feedback type has already been applied
      if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0) {
          return 0; // Already processed
      }
+ 
+     printf("[Feedback Debug] Did we get past feedback flag? =%d\n",Sp->P[i].FeedbackFlag);
  
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
@@ -515,7 +521,7 @@ void run_feedback(simparticles *Sp) {
     FeedbackResult out;
     FeedbackWalk fw;
 
-    printf("[Feedback] run_feedback() started...\n");
+    //printf("[Feedback] run_feedback() started...\n");
 
     for (int i = 0; i < Sp->NumPart; i++) {
         if (Sp->P[i].getType() != 4) continue;  // Star particles only
