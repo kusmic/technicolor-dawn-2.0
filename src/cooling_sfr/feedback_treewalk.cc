@@ -99,11 +99,14 @@
  #define FEEDBACK_AGB   2
  #define FEEDBACK_SNIa  4
  
+ #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
+
  // Physical constants and conversion factors
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
  // Feedback energy/mass return constants
  const double SNII_ENERGY_PER_MASS = 1.0e49;     // erg / Msun
+ const double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
  const double AGB_ENERGY_PER_MASS = 1.0e47;      // erg / Msun
  
@@ -432,7 +435,74 @@ inline double kernel_weight_cubic_dimless(double u) {
  
      return 0;
  }
- 
+
+
+
+ /*! Structure for the input of the TreeWalk */
+typedef struct {
+    TreeWalkQueryBase base;
+    MyFloat TotalEnergy;
+} TreeWalkQuery_SNII;
+
+/*! Structure for the result of the TreeWalk */
+typedef struct {
+    TreeWalkResultBase base;
+} TreeWalkResult_SNII;
+
+/*! TreeWalk function for applying SNII feedback to gas neighbors */
+static void SNII_feedback_ngb(TreeWalkQuery_SNII *input, TreeWalkResult_SNII *output, int j, TreeWalk *tw)
+{
+    int i = tw->data_get_index(tw);
+    if(P[j].Type != 0) return;
+
+    // Thermal feedback injection
+    double E_kin = input->TotalEnergy * SNKickFraction;
+    double E_therm = input->TotalEnergy * (1.0 - SNKickFraction);
+
+    double E_per_ngb = E_therm / P[i].NumNgb;
+    double E_kin_per_ngb = E_kin / P[i].NumNgb;
+
+    SphP[j].Utherm += E_per_ngb / P[j].Mass;
+
+    // Radial kick
+    double dx[3], r2 = 0;
+    for(int k = 0; k < 3; k++) {
+        dx[k] = NEAREST(P[j].Pos[k] - P[i].Pos[k]);
+        r2 += dx[k] * dx[k];
+    }
+    double r = sqrt(r2) + 1e-10;
+    double v_kick = sqrt(2.0 * E_kin_per_ngb / P[j].Mass);
+
+    for(int k = 0; k < 3; k++)
+        P[j].Vel[k] += v_kick * dx[k] / r;
+
+#ifdef DEBUG_FEEDBACK
+    printf("[TreeWalk SNII Kick] Star ID=%lld -> Gas ID=%lld | v_kick=%.3g | E_therm=%.2e\n",
+           (long long)P[i].ID, (long long)P[j].ID, v_kick, E_per_ngb);
+#endif
+}
+
+/*! Main function to trigger TreeWalk-based SNII feedback */
+void inject_SNII_feedback(int target_idx, MyFloat TotalEnergy)
+{
+    TreeWalk tw[1] = {{0}};
+    TreeWalkQuery_SNII input;
+    TreeWalkResult_SNII result;
+
+    input.TotalEnergy = TotalEnergy;
+
+    tw->ev_label = "SNIIFeedback";
+    tw->type = TREEWALK_FIXED;
+    tw->QueryType = TREEWALK_SNII;
+    tw->visit = (TreeWalkVisitFunction) SNII_feedback_ngb;
+    tw->query_type_elsize = sizeof(TreeWalkQuery_SNII);
+    tw->result_type_elsize = sizeof(TreeWalkResult_SNII);
+    tw->data = &input;
+
+    treewalk_run(tw, target_idx, 1);
+}
+
+
  /**
   * Copy data from a star particle to the feedback input structure
   */
@@ -499,143 +569,111 @@ inline double kernel_weight_cubic_dimless(double u) {
   * Apply feedback to a neighboring gas particle
   * This is where we implement the different approaches for Type II vs Type Ia
   */
-  static void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
+ /**
+ * Apply feedback to a neighboring gas particle
+ */
+void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
-    //printf("[Feedback Energy Info] Energy to deposit = %.3e erg\n", in->Energy);
+    double gas_mass = Sp->P[j].getMass();
+    if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
-    // Convert gas particle's fixed-point positions to physical positions (in kpc)
+    printf("[Feedback] Processing gas particle ID=%d\n", j);
+
+    // Radial vector from feedback source to this gas particle
     double gasPos[3];
-    gasPos[0] = intpos_to_kpc( Sp->P[j].IntPos[0] );
-    gasPos[1] = intpos_to_kpc( Sp->P[j].IntPos[1] );
-    gasPos[2] = intpos_to_kpc( Sp->P[j].IntPos[2] );
+    gasPos[0] = intpos_to_kpc(Sp->P[j].IntPos[0]);
+    gasPos[1] = intpos_to_kpc(Sp->P[j].IntPos[1]);
+    gasPos[2] = intpos_to_kpc(Sp->P[j].IntPos[2]);
 
     double dx[3] = {
         NEAREST_X(gasPos[0] - in->Pos[0]),
         NEAREST_Y(gasPos[1] - in->Pos[1]),
         NEAREST_Z(gasPos[2] - in->Pos[2])
     };
-
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-    double r = sqrt(r2);
+    double r = sqrt(r2) + 1e-10;
 
-    if (r < MIN_FEEDBACK_SEPARATION) {
-        if (r < 1e-12) {
-            dx[0] = MIN_FEEDBACK_SEPARATION;
-            dx[1] = 0.0;
-            dx[2] = 0.0;
-        } else {
-            double factor = MIN_FEEDBACK_SEPARATION / r;
-            dx[0] *= factor;
-            dx[1] *= factor;
-            dx[2] *= factor;
-        }
-        r = MIN_FEEDBACK_SEPARATION;
-    }
+    printf("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
-    double w = 0.0;
-    if (in->FeedbackType == FEEDBACK_SNII) {
-        w = kernel_weight_tophat(r, in->h);
-    } else {
-        w = kernel_weight_cubic(r, in->h);
-    }
+    // Distribute energy equally among neighbors (for SNII)
+    double E_total = in->Energy;
+    double E_kin = E_total * SNKickFraction;
+    double E_therm = E_total * (1.0 - SNKickFraction);
 
-    // Moderate the kernel weight, if necessary, for 1a and AGB feedback
-    if (in->FeedbackType != FEEDBACK_SNII) {
-        if (w > 1.0) {
-            printf("[Feedback WARNING] High kernel weight w=%.3f for gas %d (r=%.3f, h=%.3f)\n", w, j, r, in->h);
-            w = 1.0;
-        } else if (w <= 0.0) return;
-    }
+    double E_kin_j = E_kin / (double)in->NeighborCount;
+    double E_therm_j = E_therm / (double)in->NeighborCount;
 
-    double gas_mass = Sp->P[j].getMass();
+    double delta_u = E_therm_j * erg_to_code / gas_mass;
 
-    if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) {
-        printf("[Feedback WARNING] Skipping gas %d with bad mass: %.3e\n", j, gas_mass);
-        return;
-    }
+    printf("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
 
-    double delta_u = 0.0;
-    // Convert feedback energy to code units and calculate specific energy
-    // Handles SNII's without a kernel, but divide energy amongst the neighbors
-    if (in->FeedbackType == FEEDBACK_SNII) {
-        if (in->NeighborCount > 0)
-            delta_u = (in->Energy / (double)in->NeighborCount) * erg_to_code / gas_mass;
-
-        else
-            delta_u = 0.0;
-    } else {
-        delta_u = (in->Energy * w) * erg_to_code / gas_mass;
-    }
-
-    printf("[Feedback] Calculated delta_u: %.3e neighbors: %d for gas ID %d\n", delta_u, in->NeighborCount, j);
-        
-    // Cap or skip bad delta_u
-    if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e15) {
-        printf("[Feedback WARNING] Non-finite or high delta_u: %.3e, energy: %.3e, neighbors: %d, gas_mass: %.3e, for gas ID %d\n", delta_u, in->Energy, in->NeighborCount, gas_mass, j);
-        delta_u = 0.0;  // or skip this gas particle
-    }
-
-    double max_delta_u = 1e4;  // safe cap for code units
-    if (delta_u > max_delta_u) {
-        printf("[Feedback Capped] Limiting Δu=%.3e to max=%.3e for gas %d\n", delta_u, max_delta_u, j);
-        delta_u = max_delta_u;
-    }
-
-    // Update internal energy (Entropy)
+    // Update thermal energy
     double utherm_before = Sp->get_utherm_from_entropy(j);
     double utherm_after = utherm_before + delta_u;
     Sp->set_entropy_from_utherm(utherm_after, j);
 
-    if (delta_u > 1000.0) {
-        printf("[Feedback DEBUG] Injecting Δu = %.3e (gas id=%d, w=%.3e)\n", delta_u, j, w);
+    printf("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
+
+    // Apply radial kinetic kick
+    double v_kick = sqrt(2.0 * E_kin_j * erg_to_code / gas_mass);
+    for (int k = 0; k < 3; k++)
+        Sp->P[j].Vel[k] += v_kick * dx[k] / r;
+
+    printf("[Feedback] Applied radial kick v_kick=%.3e km/s\n", v_kick);
+
+    // Mass return
+    double mass_return = in->MassReturn / (double)in->NeighborCount;
+    Sp->P[j].setMass(gas_mass + mass_return);
+
+    printf("[Feedback] Mass return: %.3e -> New mass: %.3e\n", mass_return, Sp->P[j].getMass());
+
+    // Metal enrichment
+    for (int k = 0; k < 4; k++) {
+        double metal_add = in->Yield[k] / (double)in->NeighborCount / gas_mass;
+        Sp->SphP[j].Metals[k] += metal_add;
+        printf("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
     }
+}
 
-    // Apply velocity kicks based on feedback type
-    // Note the scaled down kick strengths for SNIa and AGB
-    if (r > 0) {
-        double kick_strength = 0.0;
-        if (in->FeedbackType == FEEDBACK_SNII) {
-            kick_strength = 0.5 * WIND_VELOCITY * w;
-        } else if (in->FeedbackType == FEEDBACK_SNIa) {
-            kick_strength = 0.1 * WIND_VELOCITY * w;
-        } else if (in->FeedbackType == FEEDBACK_AGB) {
-            kick_strength = 0.05 * WIND_VELOCITY * w;
-        }
-        
-        Sp->P[j].Vel[0] += kick_strength * dx[0] / r;
-        Sp->P[j].Vel[1] += kick_strength * dx[1] / r;
-        Sp->P[j].Vel[2] += kick_strength * dx[2] / r;
+/**
+ * Loop over star particles and apply feedback to their neighbors
+ */
+void run_feedback(simparticles *Sp) {
+    FeedbackInput in;
+    FeedbackResult out;
+    FeedbackWalk fw;
 
-        // DEBUG
-        double vel_after_kick = sqrt( (Sp->P[j].Vel[0] * Sp->P[j].Vel[0]) + (Sp->P[j].Vel[1] * Sp->P[j].Vel[1]) + (Sp->P[j].Vel[2] * Sp->P[j].Vel[2]) );
-        if (!isfinite(vel_after_kick)) {
-            printf("[Feedback WARNING] Velocity went non-finite for gas %d\n", j);
-        }
-        printf("[Feedback DEBUG] Applying velocity kick! Gas id=%d, feedback type=%d, kick_strength=%.3e, r=%.3e, w=%.3e, final vel km/s=%.3e\n", j, in->FeedbackType, kick_strength, r, w, vel_after_kick);
-        
-    }
+    for (int i = 0; i < Sp->NumPart; i++) {
+        if (Sp->P[i].getType() != 4) continue;  // Star particles only
 
-    // Add returned stellar mass to gas particle
-    Sp->P[j].setMass(gas_mass + in->MassReturn * w);
+        if (!feedback_isactive(i, &fw, Sp)) continue;
 
-    // Apply metal enrichment
-    if (in->MassReturn * w > 0) {
-        double total_mass = gas_mass + in->MassReturn * w;
-        double old_frac = gas_mass / total_mass;
-        double new_frac = (in->MassReturn * w) / total_mass;
+        apply_feedback_to_star(i, &fw, Sp);
 
-        for (int k = 0; k < 4; k++) {
-            double old_metal = Sp->SphP[j].Metals[k];
-            double new_metal = in->Yield[k] / in->MassReturn;
-            Sp->SphP[j].Metals[k] = old_metal * old_frac + new_metal * new_frac;
-        }
-    } else {
-        for (int k = 0; k < 4; k++) {
-            Sp->SphP[j].Metals[k] += in->Yield[k] * w / gas_mass;
+        // Set up feedback input for neighbors
+        in.Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+        in.Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+        in.Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
+        in.FeedbackType = FEEDBACK_SNII;
+        in.Energy = SNII_ENERGY;
+        in.MassReturn = 0.1 * Sp->P[i].getMass();
+        in.NeighborCount = 0;
+
+        // First count neighbors
+        for (int j = 0; j < Sp->NumPart; j++)
+            if (Sp->P[j].getType() == 0) in.NeighborCount++;
+
+        printf("[Feedback] Star ID=%d will deposit feedback to %d neighbors\n", i, in.NeighborCount);
+
+        // Then apply feedback to them
+        for (int j = 0; j < Sp->NumPart; j++) {
+            if (Sp->P[j].getType() == 0)
+                feedback_ngb(&in, &out, j, &fw, Sp);
         }
     }
 }
+
 
 
  
@@ -828,17 +866,22 @@ inline double kernel_weight_cubic_dimless(double u) {
      // Copy star particle data to feedback input structure
      feedback_copy(i, &in, fw, Sp);
  
-     // Add neighbor diagnostics before applying feedback
-     // Comment this out in production runs
-     debug_feedback_diagnostics(i, &in, fw, Sp);
- 
-     // Find neighbors and apply feedback - ONLY to gas particles
-     // This is using direct particle loop, but could be replaced with tree-based search
-     for (int j = 0; j < Sp->NumPart; j++) {
-         if (Sp->P[j].getType() == 0) {  // Only process gas particles (Type 0)
-             feedback_ngb(&in, &out, j, fw, Sp);
-         }
-     }
+    // SNII feedback goes through TreeWalk
+    if (in.FeedbackType == FEEDBACK_SNII) {
+        // Check there’s actual energy to deposit
+        printf("[Feedback Debug] Applying SNII energy: %.3e, from star %d\n", in->Energy, i);
+        if (in->Energy > 0.0) {
+            inject_SNII_feedback(i, in->Energy);
+        }
+    }
+    // SNIa or AGB feedback: use brute-force gas loop
+    else {
+        for (int j = 0; j < Sp->NumPart; j++) {
+            if (Sp->P[j].getType() == 0) {  // Gas particle
+                feedback_ngb(&in, &out, j, fw, Sp);
+            }
+        }
+    }
  }
  
  /**
@@ -895,7 +938,8 @@ inline double kernel_weight_cubic_dimless(double u) {
      std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
  
      // Apply each feedback type
-     apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
+     run_feedback(&Sp);
+     //apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
  
