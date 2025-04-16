@@ -385,7 +385,7 @@ inline double kernel_weight_cubic_dimless(double u) {
          return 0;
  
      // In feedback_isactive
-     // printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
+     printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
  
      // Convert from scale factor to physical time
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
@@ -397,7 +397,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
-         //printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
+         printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
          // Type II SNe happen promptly after star formation
          return (age_physical > SNII_DELAY_TIME_PHYSICAL) ? 1 : 0;
      } 
@@ -441,6 +441,8 @@ inline double kernel_weight_cubic_dimless(double u) {
   * Copy data from a star particle to the feedback input structure
   */
  static void feedback_copy(int i, FeedbackInput *out, FeedbackWalk *fw, simparticles *Sp) {
+
+    printf("[Feedback Debug] feedback_copy() starting... Star %d is active for feedback type %d\n", i, fw->feedback_type);
 
     // Convert star particle integer positions to physical positions (in kpc)
     out->Pos[0] = intpos_to_kpc( Sp->P[i].IntPos[0] );
@@ -577,6 +579,8 @@ void run_feedback(simparticles *Sp) {
     FeedbackInput in;
     FeedbackResult out;
     FeedbackWalk fw;
+
+    printf("[Feedback] run_feedback() started... Star ID=%d\n", i);
 
     for (int i = 0; i < Sp->NumPart; i++) {
         if (Sp->P[i].getType() != 4) continue;  // Star particles only
@@ -795,6 +799,7 @@ void run_feedback(simparticles *Sp) {
  void apply_stellar_feedback(double current_time, simparticles* Sp) {
  
  
+    
  /* -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
      static double last_time = 0;
      double timestep = current_time - last_time;
