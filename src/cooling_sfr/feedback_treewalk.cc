@@ -105,7 +105,7 @@
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
  // Feedback energy/mass return constants
- const double SNII_ENERGY_PER_MASS = 1.0e49;     // erg / Msun
+ const double SNII_ENERGY_PER_MASS = 1.0e51;     // erg / Msun
  const double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
  const double AGB_ENERGY_PER_MASS = 1.0e47;      // erg / Msun
