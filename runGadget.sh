@@ -10,7 +10,7 @@ make clean
 make -j7
 
 # run Gadget
-mpirun -np 7 ./Gadget4 param.txt | tee output.log
+mpirun -np 8 ./Gadget4 param.txt | tee output.log
 
 # make output animations
 python3 plotOutputAnimation.py
