@@ -101,6 +101,8 @@
  
  #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
 
+ int FeedbackDebug = 0;
+ 
  // Physical constants and conversion factors
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
