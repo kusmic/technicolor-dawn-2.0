@@ -105,7 +105,8 @@
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
  // Feedback energy/mass return constants
- const double SNII_ENERGY_PER_MASS = 1.0e51;     // erg / Msun
+ const double SNII_ENERGY_PER_MASS = 1.0e52;     // erg / Msun  Should return to ~1.0e51 erg, but in tiny test volumes, 
+                                                 // where the mass of gas particles is especially large, raise it higher so the effect can be seen
  const double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
  const double AGB_ENERGY_PER_MASS = 1.0e47;      // erg / Msun
@@ -388,13 +389,13 @@ inline double kernel_weight_cubic_dimless(double u) {
      // In feedback_isactive
      //printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
  
-     printf("Star %d | current_time (a)=%.6f | StellarAge=%.6f\n", i, fw->current_time, Sp->P[i].StellarAge);
+     //printf("Star %d | current_time (a)=%.6f | StellarAge=%.6f\n", i, fw->current_time, Sp->P[i].StellarAge);
 
      // Convert from scale factor to physical time
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
      // Check if the star is too young
-     printf("[Feedback Debug] Considering star %d | age=%.2e yr | type=%d | flag=%d\n",
+     printf("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
         i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
 
      // Check if this feedback type has already been applied
