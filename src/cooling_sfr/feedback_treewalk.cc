@@ -545,7 +545,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
         in.Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
         in.FeedbackType = feedback_type;
-        in.Energy = SNII_ENERGY;
+        in.Energy = SNII_ENERGY * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
         in.h = 1.0;  // Set search radius (1 kpc)
         in.NeighborCount = 0;
