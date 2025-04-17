@@ -383,7 +383,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Clamp total internal energy (utherm) to prevent entropy exploding...
  * Returns safe u_after for input particle.
  */
- double clamp_feedback_energy(double u_before, double delta_u, int gas_index, int gas_id) {
+ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDStorage gas_id);
     double u_after = u_before + delta_u;
 
     // Skip unphysical or dangerous values
@@ -522,7 +522,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // Update thermal energy
     // added clamp_feedback_energy() because occasionally a gas particle might go nuts
     double utherm_before = Sp->get_utherm_from_entropy(j);
-    double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDStorage gas_id);
+    double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID);
     Sp->set_entropy_from_utherm(utherm_after, j);
 
     printf("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
