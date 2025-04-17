@@ -326,6 +326,7 @@ struct global_data_all_processes : public parameters
   double TempClouds;
   double MaxSfrTimescale;
   double FactorSN;
+  int FeedbackDebug;
   MyIDType MaxID;
 #endif
 
