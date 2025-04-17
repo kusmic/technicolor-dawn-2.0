@@ -133,6 +133,7 @@
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
  // In case we have ergs and needs to get it to internal units
+ // If we set this here, it doesn't get set via the 
  double erg_to_code;
 
  // Conversion from fixed-point integer positions to physical units (kpc)
@@ -455,7 +456,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
     //if (r > in->h) return;  // Skip if it is outside the feedback radius
 
-    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
 
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
@@ -529,7 +530,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     fw.feedback_type = feedback_type;
 
     // Convert erg to code units
-    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
         printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
@@ -547,7 +548,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.FeedbackType = feedback_type;
         in.Energy = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
-        in.h = 1.0;  // Set search radius (1 kpc)
+        in.h = 0.1;  // Set search radius (100 pc)
         in.NeighborCount = 0;
 
         // Count nearby gas neighbors
