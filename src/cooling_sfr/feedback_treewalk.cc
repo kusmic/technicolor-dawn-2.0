@@ -105,7 +105,7 @@
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
  // Feedback energy/mass return constants
- const double SNII_ENERGY_PER_MASS = 1.0e52;     // erg / Msun  Should return to ~1.0e51 erg, but in tiny test volumes, 
+ const double SNII_ENERGY_PER_MASS = 1.0e51;     // erg / Msun  Should return to ~1.0e51 erg, but in tiny test volumes, 
                                                  // where the mass of gas particles is especially large, raise it higher so the effect can be seen
  const double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
@@ -489,7 +489,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double E_therm_j = E_therm / (double)in->NeighborCount;
 
     double delta_u = E_therm_j * erg_to_code / gas_mass;
-
+    if (!isfinite(delta_u) || delta_u < 0) {
+        printf("[FEEDBACK WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
+        return;
+    }
     printf("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
 
     // Update thermal energy
@@ -501,6 +504,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     // Apply radial kinetic kick
     double v_kick = sqrt(2.0 * E_kin_j * erg_to_code / gas_mass);
+    if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
+        printf("[FEEDBACK WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
+        return;
+    }
     for (int k = 0; k < 3; k++)
         Sp->P[j].Vel[k] += v_kick * dx[k] / r;
 
