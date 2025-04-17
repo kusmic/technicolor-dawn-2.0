@@ -1,4 +1,4 @@
-  GNU nano 7.2                                                                                                     runGadget.sh                                                                                                               
+                                                                                                runGadget.sh                                                                                                               
 # reset everything
 rm -r output
 
@@ -7,10 +7,10 @@ git pull origin
 
 # build
 make clean
-make -j4
+make -j7
 
 # run Gadget
-mpirun -np 4 ./Gadget4 param.txt | tee output.log
+mpirun -np 7 ./Gadget4 param.txt | tee output.log
 
 # make output animations
 python3 plotOutputAnimation.py
