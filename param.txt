@@ -14,7 +14,7 @@ TimeLimitCPU              86400   % 24h, in seconds
 CpuTimeBetRestartFile     7200    % 2h,  in seconds
 
 %----- Memory allocation
-MaxMemSize                2000    % in MByte
+MaxMemSize                1000    % in MByte
 
 %---- Characteristics of run
 TimeBegin                 0.015625   % Begin of the simulation, z = 63
@@ -110,6 +110,9 @@ TempClouds          1000        % temperature of cold clouds (multi-phase model)
 CritOverDensity     20          % overdensity threshold value for cosmological sims; lower value means conditions easier to reach for SF
 CritPhysDensity     0           % critical physical density for star formation (in cm^(-3))
 TreecoolFile        data/TREECOOL
+
+%----- Debugging
+FeedbackDebug       1
 
 
 %----- Dust properties (PartType6)

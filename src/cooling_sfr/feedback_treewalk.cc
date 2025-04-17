@@ -209,7 +209,7 @@ inline double kernel_weight_cubic_dimless(double u) {
 
     // Optional cap for stability
     if (!isfinite(w) || w > 10.0 || w < 0.0) {
-        printf("[Feedback WARNING] Kernel weight w=%.3e clipped for r=%.3e h=%.3e u=%.3e\n", w, r, h, u);
+        FEEDBACK_PRINT("[Feedback WARNING] Kernel weight w=%.3e clipped for r=%.3e h=%.3e u=%.3e\n", w, r, h, u);
         w = 0.0;
     }
     return w;
@@ -232,7 +232,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  */
  double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr) {
     if (ThisTask == 0)
-    printf("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", feedback_type);
+    FEEDBACK_PRINT("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", feedback_type);
 
     int TARGET_NEIGHBORS;
     if (feedback_type == FEEDBACK_SNII)
@@ -279,7 +279,7 @@ inline double kernel_weight_cubic_dimless(double u) {
             if (sqrt(r2) < h) neighbors_found++;
         }
 
-        printf("[Feedback Adaptive h] Neighbors found=%d!\n", neighbors_found);
+        FEEDBACK_PRINT("[Feedback Adaptive h] Neighbors found=%d!\n", neighbors_found);
         *neighbors_ptr = neighbors_found;
 
         if (neighbors_found < TARGET_NEIGHBORS)
@@ -294,13 +294,13 @@ inline double kernel_weight_cubic_dimless(double u) {
 
     if (neighbors_found == 0) {
         if (ThisTask == 0) {
-            printf("[Feedback Adaptive h] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
+            FEEDBACK_PRINT("[Feedback Adaptive h] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
         }
         return -1.0;
     }
 
     if (ThisTask == 0) {
-        printf("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
+        FEEDBACK_PRINT("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
                h, attempt, feedback_type, neighbors_found);
     }
 
@@ -388,12 +388,12 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
     double max_u = 1e10;
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
-        printf("[FEEDBACK WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
         return u_before;
     }
 
     if (u_after > max_u) {
-        printf("[FEEDBACK WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
         return max_u;
     }
 
@@ -417,7 +417,7 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
      // Check if the star is too young
-     printf("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
+     FEEDBACK_PRINT("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
         i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
 
      // Check if this feedback type has already been applied
@@ -425,11 +425,11 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
          return 0; // Already processed
      }
  
-     printf("[Feedback Debug] Did we get past feedback flag? =%d\n",Sp->P[i].FeedbackFlag);
+     FEEDBACK_PRINT("[Feedback Debug] Did we get past feedback flag? =%d\n",Sp->P[i].FeedbackFlag);
  
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
-         printf("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
+         FEEDBACK_PRINT("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
          // Type II SNe happen promptly after star formation
          return (age_physical > SNII_DELAY_TIME_PHYSICAL) ? 1 : 0;
      } 
@@ -461,7 +461,7 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
          // Store the number of events for later use
          Sp->P[i].SNIaEvents = n_events;
  
-         printf("[Feedback Debug] Star %d is active for SNIa feedback type %d\n", i, fw->feedback_type);
+         FEEDBACK_PRINT("[Feedback Debug] Star %d is active for SNIa feedback type %d\n", i, fw->feedback_type);
          return (n_events > 0) ? 1 : 0;
      }
  
@@ -484,7 +484,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
-    //printf("[Feedback] Processing gas particle ID=%d\n", j);
+    //FEEDBACK_PRINT("[Feedback] Processing gas particle ID=%d\n", j);
 
     // Radial vector from feedback source to this gas particle
     double gasPos[3];
@@ -500,7 +500,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2) + 1e-10;
 
-    //printf("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
+    //FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
     // Distribute energy equally among neighbors (for SNII)
     double E_total = in->Energy;
@@ -512,10 +512,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     double delta_u = E_therm_j * erg_to_code / gas_mass;
     if (!isfinite(delta_u) || delta_u < 0) {
-        printf("[FEEDBACK WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
         return;
     }
-    printf("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
+    FEEDBACK_PRINT("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
 
     // Update thermal energy
     // added clamp_feedback_energy() because occasionally a gas particle might go nuts
@@ -524,36 +524,36 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     Sp->set_entropy_from_utherm(utherm_after, j);
 
-    printf("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
+    FEEDBACK_PRINT("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
 
     // Apply radial kinetic kick
     double v_kick = sqrt(2.0 * E_kin_j * erg_to_code / gas_mass);
     if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
-        printf("[FEEDBACK WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
         return;
     }
     for (int k = 0; k < 3; k++)
         Sp->P[j].Vel[k] += v_kick * dx[k] / r;
 
-    printf("[Feedback] Applied radial kick v_kick=%.3e km/s\n", v_kick);
+    FEEDBACK_PRINT("[Feedback] Applied radial kick v_kick=%.3e km/s\n", v_kick);
 
     // Mass return
     double mass_return = in->MassReturn / (double)in->NeighborCount;
     Sp->P[j].setMass(gas_mass + mass_return);
 
-    printf("[Feedback] Mass return: %.3e -> New mass: %.3e\n", mass_return, Sp->P[j].getMass());
+    FEEDBACK_PRINT("[Feedback] Mass return: %.3e -> New mass: %.3e\n", mass_return, Sp->P[j].getMass());
 
     // Metal enrichment
     for (int k = 0; k < 4; k++) {
         double metal_add = in->Yield[k] / (double)in->NeighborCount / gas_mass;
         Sp->SphP[j].Metals[k] += metal_add;
-        //printf("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
+        //FEEDBACK_PRINT("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
     }
 
     // FINAL debug check to catch extremely small or large thermal states
     double final_u = Sp->get_utherm_from_entropy(j);
     if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
-        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%llu): u=%.3e\n", j, (unsigned long long) Sp->P[j].ID.get(), final_u);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%llu): u=%.3e\n", j, (unsigned long long) Sp->P[j].ID.get(), final_u);
     }
 }
 
@@ -571,7 +571,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
-        printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
+        FEEDBACK_PRINT("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
         printed_erg_code = 1;
     }
 
@@ -596,7 +596,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.h = h_feedback;
         in.NeighborCount = n_neighbors;
 
-        printf("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
+        FEEDBACK_PRINT("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
                i, in.NeighborCount, in.h);
 
         // Apply feedback only to close neighbors
@@ -709,12 +709,12 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
      // Report closest gas particle
      if (closest_gas >= 0) {
          double closest_dist = sqrt(min_dist);
-         printf("[Feedback Diagnostics] Closest gas particle %d at distance %.3f (radius is %.3f)\n", 
+         FEEDBACK_PRINT("[Feedback Diagnostics] Closest gas particle %d at distance %.3f (radius is %.3f)\n", 
                 closest_gas, closest_dist, in->h);
          
          // If closest gas is too far, print its position for comparison
          if (closest_dist > in->h) {
-             printf("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
+             FEEDBACK_PRINT("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
                 intpos_to_kpc( Sp->P[closest_gas].IntPos[0] ),
                 intpos_to_kpc( Sp->P[closest_gas].IntPos[1] ),
                 intpos_to_kpc( Sp->P[closest_gas].IntPos[2] ) );
@@ -723,21 +723,21 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
      
      // Report distance statistics
      double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
-     printf("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
-     printf("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
+     FEEDBACK_PRINT("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
+     FEEDBACK_PRINT("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
             in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
      
-     printf("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
+     FEEDBACK_PRINT("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
             i, in->FeedbackType, neighbor_count, in->h);
  
      if (neighbor_count == 0) {
-         printf("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
-         printf("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f).\n", in->h);
+         FEEDBACK_PRINT("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
+         FEEDBACK_PRINT("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f).\n", in->h);
          
          // If there's gas in wider radius, suggest adjustment
          if (gas_within_5h > 0) {
              double suggested_radius = sqrt(min_dist) * 1.1; // 10% larger than closest gas
-             printf("[Feedback SUGGESTION] Try increasing radius to at least %.3f\n", suggested_radius);
+             FEEDBACK_PRINT("[Feedback SUGGESTION] Try increasing radius to at least %.3f\n", suggested_radius);
          }
          
          return;
@@ -785,7 +785,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
                 double temp_after = energy_after / m;
                 double energy_ratio = energy_to_add / energy_before;
  
-                printf("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
+                FEEDBACK_PRINT("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
                         j, m, temp, temp_after, energy_before, energy_after, energy_ratio);
  
                 gas_mass_total += m;
@@ -797,9 +797,9 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
  
      if (neighbors_sampled > 0) {
          avg_gas_temp /= neighbors_sampled;
-         printf("[Feedback Summary] Star %d: Avg Gas Temp: %.3e, Total Gas Mass: %.3e\n",
+         FEEDBACK_PRINT("[Feedback Summary] Star %d: Avg Gas Temp: %.3e, Total Gas Mass: %.3e\n",
                 i, avg_gas_temp, gas_mass_total);
-         printf("[Feedback Summary] Available Energy: %.3e, Energy per Gas Mass: %.3e\n",
+         FEEDBACK_PRINT("[Feedback Summary] Available Energy: %.3e, Energy per Gas Mass: %.3e\n",
                 in->Energy, in->Energy / gas_mass_total);
      }
  }
@@ -860,10 +860,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
      if (ThisTask == 0 && (ThisStepEnergy_SNII > 0 ||
         ThisStepEnergy_SNIa > 0 ||
         ThisStepEnergy_AGB > 0)) {
-         printf("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
+         FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                 ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
-         printf("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
-         printf("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
+         FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
+         FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
                 ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
      }
  }

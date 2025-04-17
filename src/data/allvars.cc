@@ -182,6 +182,8 @@ void global_data_all_processes::register_parameters(void)
   add_param("TempSupernova", &TempSupernova, PARAM_DOUBLE, PARAM_FIXED);
   add_param("TempClouds", &TempClouds, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MaxSfrTimescale", &MaxSfrTimescale, PARAM_DOUBLE, PARAM_FIXED);
+
+  add_param("FeedbackDebug", &FeedbackDebug, PARAM_INT, PARAM_CHANGEABLE);
 #endif
 
 #ifdef NGENIC
