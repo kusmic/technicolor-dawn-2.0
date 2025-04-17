@@ -522,7 +522,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // Update thermal energy
     // added clamp_feedback_energy() because occasionally a gas particle might go nuts
     double utherm_before = Sp->get_utherm_from_entropy(j);
-    double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID);
+    double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, (int)Sp->P[j].ID);
     Sp->set_entropy_from_utherm(utherm_after, j);
 
     printf("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
@@ -554,7 +554,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // FINAL debug check to catch extremely small or large thermal states
     double final_u = Sp->get_utherm_from_entropy(j);
     if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
-        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%d): u=%.3e\n", j, Sp->P[j].ID, final_u);
+        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%llu): u=%.3e\n", j, (unsigned long long)Sp->P[j].ID, final_u);
     }
 }
 
