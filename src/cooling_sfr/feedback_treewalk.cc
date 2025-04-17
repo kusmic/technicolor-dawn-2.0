@@ -133,7 +133,7 @@
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
  // In case we have ergs and needs to get it to internal units
- const double erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+ double erg_to_code;
 
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
@@ -454,6 +454,8 @@ inline double kernel_weight_cubic_dimless(double u) {
 void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
 
+    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
+
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
@@ -520,12 +522,14 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
  */
 void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
     
+    
     FeedbackInput in;
     FeedbackResult out;
     FeedbackWalk fw;
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
 
+    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
         printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n",
