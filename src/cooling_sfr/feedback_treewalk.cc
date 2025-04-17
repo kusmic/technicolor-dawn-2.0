@@ -453,7 +453,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  */
 void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
-    if (r > in->h) return;  // Skip if it is outside the feedback radius
+    //if (r > in->h) return;  // Skip if it is outside the feedback radius
 
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
 
