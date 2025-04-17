@@ -453,13 +453,14 @@ inline double kernel_weight_cubic_dimless(double u) {
  */
 void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
+    if (r > in->h) return;  // Skip if it is outside the feedback radius
 
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
 
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
-    printf("[Feedback] Processing gas particle ID=%d\n", j);
+    //printf("[Feedback] Processing gas particle ID=%d\n", j);
 
     // Radial vector from feedback source to this gas particle
     double gasPos[3];
@@ -475,7 +476,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2) + 1e-10;
 
-    printf("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
+    //printf("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
     // Distribute energy equally among neighbors (for SNII)
     double E_total = in->Energy;
@@ -513,61 +514,95 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     for (int k = 0; k < 4; k++) {
         double metal_add = in->Yield[k] / (double)in->NeighborCount / gas_mass;
         Sp->SphP[j].Metals[k] += metal_add;
-        printf("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
+        //printf("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
     }
 }
 
 /**
  * Loop over star particles and apply feedback to their neighbors
  */
-void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
-    
-    
+ void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
     FeedbackInput in;
     FeedbackResult out;
     FeedbackWalk fw;
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
 
+    // Convert erg to code units
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs / All.HubbleParam);
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
-        printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n",
-            erg_to_code, All.UnitEnergy_in_cgs);
+        printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
         printed_erg_code = 1;
     }
 
-    //printf("[Feedback] run_feedback() started...\n");
-
     for (int i = 0; i < Sp->NumPart; i++) {
         if (Sp->P[i].getType() != 4) continue;  // Star particles only
-
         if (!feedback_isactive(i, &fw, Sp)) continue;
 
-        //apply_feedback_to_star(i, &fw, Sp);
-
-        // Set up feedback input for neighbors
+        // Set up input for this star
         in.Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
         in.Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
         in.Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
-        in.FeedbackType = FEEDBACK_SNII;
+        in.FeedbackType = feedback_type;
         in.Energy = SNII_ENERGY;
         in.MassReturn = 0.1 * Sp->P[i].getMass();
+        in.h = 1.0;  // Set search radius (1 kpc)
         in.NeighborCount = 0;
 
-        // First count neighbors
-        for (int j = 0; j < Sp->NumPart; j++)
-            if (Sp->P[j].getType() == 0) in.NeighborCount++;
-
-        printf("[Feedback] Star ID=%d will deposit feedback to %d neighbors\n", i, in.NeighborCount);
-
-        // Then apply feedback to them
+        // Count nearby gas neighbors
         for (int j = 0; j < Sp->NumPart; j++) {
-            if (Sp->P[j].getType() == 0)
+            if (Sp->P[j].getType() != 0) continue;
+
+            double gasPos[3] = {
+                intpos_to_kpc(Sp->P[j].IntPos[0]),
+                intpos_to_kpc(Sp->P[j].IntPos[1]),
+                intpos_to_kpc(Sp->P[j].IntPos[2])
+            };
+
+            double dx[3] = {
+                NEAREST_X(gasPos[0] - in.Pos[0]),
+                NEAREST_Y(gasPos[1] - in.Pos[1]),
+                NEAREST_Z(gasPos[2] - in.Pos[2])
+            };
+
+            double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+            double r = sqrt(r2);
+
+            if (r < in.h)
+                in.NeighborCount++;
+        }
+
+        if (in.NeighborCount == 0) continue;
+
+        printf("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
+               i, in.NeighborCount, in.h);
+
+        // Apply feedback only to close neighbors
+        for (int j = 0; j < Sp->NumPart; j++) {
+            if (Sp->P[j].getType() != 0) continue;
+
+            double gasPos[3] = {
+                intpos_to_kpc(Sp->P[j].IntPos[0]),
+                intpos_to_kpc(Sp->P[j].IntPos[1]),
+                intpos_to_kpc(Sp->P[j].IntPos[2])
+            };
+
+            double dx[3] = {
+                NEAREST_X(gasPos[0] - in.Pos[0]),
+                NEAREST_Y(gasPos[1] - in.Pos[1]),
+                NEAREST_Z(gasPos[2] - in.Pos[2])
+            };
+
+            double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+            double r = sqrt(r2);
+
+            if (r < in.h)
                 feedback_ngb(&in, &out, j, &fw, Sp);
         }
     }
 }
+
 
 
 
