@@ -383,20 +383,18 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Clamp total internal energy (utherm) to prevent entropy exploding...
  * Returns safe u_after for input particle.
  */
- double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDStorage gas_id);
+double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
     double u_after = u_before + delta_u;
+    double max_u = 1e10;
 
-    // Skip unphysical or dangerous values
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
-        printf("[FEEDBACK WARNING] Unusable delta_u = %.3e on gas ID=%d (index %d), skipping.\n", delta_u, gas_id, gas_index);
-        return u_before;  // Do not apply energy
+        printf("[FEEDBACK WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
+        return u_before;
     }
 
-    // Clamp utherm to a max cap to prevent divergence
-    double max_u = 1e4;  // You can raise/lower based on your setup
     if (u_after > max_u) {
-        printf("[FEEDBACK WARNING] Clamping utherm on gas %d (ID=%d) from %.3e to %.3e\n", gas_index, gas_id, u_after, max_u);
-        u_after = max_u;
+        printf("[FEEDBACK WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
+        return max_u;
     }
 
     return u_after;
@@ -554,7 +552,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // FINAL debug check to catch extremely small or large thermal states
     double final_u = Sp->get_utherm_from_entropy(j);
     if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
-        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%d): u=%.3e\n", j, Sp->P[j].ID, final_u);
+        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%llu): u=%.3e\n", j, (unsigned long long) Sp->P[j].ID, final_u);
     }
 }
 
