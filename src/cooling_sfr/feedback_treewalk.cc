@@ -101,6 +101,12 @@
  
  #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
  
+// Make a nice function to output printf statements, but only if 
+// FeedbackDebug = 1 in the param.txt
+//static int FeedbackDebug;
+#define FEEDBACK_PRINT(...) \
+    do { if (All.FeedbackDebug) printf(__VA_ARGS__); } while (0)
+
  // Physical constants and conversion factors
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  

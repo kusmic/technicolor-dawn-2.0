@@ -1,12 +1,6 @@
 #ifndef FEEDBACK_TREEWALK_H
 #define FEEDBACK_TREEWALK_H
 
-// Make a nice function to output printf statements, but only if 
-// FeedbackDebug = 1 in the param.txt
-extern int FeedbackDebug;
-#define FEEDBACK_PRINT(...) \
-    do { if (FeedbackDebug) printf(__VA_ARGS__); } while (0)
-
 // ------------------------
 // Global feedback tracking
 // ------------------------
