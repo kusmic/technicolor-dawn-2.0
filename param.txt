@@ -1,6 +1,6 @@
 
 %----  Relevant files 
-InitCondFile         ICs/ics_from_music_16       % we will here create the ICs upon startup
+InitCondFile         ICs/ics_from_music_16
 OutputDir            ./output
 SnapshotFileBase     snapshot
 OutputListFilename   empty.txt
@@ -24,10 +24,10 @@ TimeMax	                  1.0        % End of the simulation,   z = 0
 ComovingIntegrationOn     1 
 
 %---- Cosmological parameters
-Omega0	                  0.308
-OmegaLambda               0.692
-OmegaBaryon               0.0482
-HubbleParam               0.678
+Omega0	                  0.3089
+OmegaLambda               0.6911
+OmegaBaryon               0.0486
+HubbleParam               0.6774
 Hubble                    100
 BoxSize                   10.0
 
