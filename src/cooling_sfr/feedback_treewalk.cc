@@ -526,6 +526,13 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
 
+    static int printed_erg_code = 0;
+    if (!printed_erg_code && ThisTask == 0) {
+        printf("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n",
+            erg_to_code, All.UnitEnergy_in_cgs);
+        printed_erg_code = 1;
+    }
+
     //printf("[Feedback] run_feedback() started...\n");
 
     for (int i = 0; i < Sp->NumPart; i++) {
