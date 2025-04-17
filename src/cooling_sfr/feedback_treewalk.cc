@@ -379,6 +379,30 @@ inline double kernel_weight_cubic_dimless(double u) {
      const char* ev_label;
  };
  
+/**
+ * Clamp total internal energy (utherm) to prevent entropy exploding...
+ * Returns safe u_after for input particle.
+ */
+ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, int gas_id) {
+    double u_after = u_before + delta_u;
+
+    // Skip unphysical or dangerous values
+    if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
+        printf("[FEEDBACK WARNING] Unusable delta_u = %.3e on gas ID=%d (index %d), skipping.\n", delta_u, gas_id, gas_index);
+        return u_before;  // Do not apply energy
+    }
+
+    // Clamp utherm to a max cap to prevent divergence
+    double max_u = 1e4;  // You can raise/lower based on your setup
+    if (u_after > max_u) {
+        printf("[FEEDBACK WARNING] Clamping utherm on gas %d (ID=%d) from %.3e to %.3e\n", gas_index, gas_id, u_after, max_u);
+        u_after = max_u;
+    }
+
+    return u_after;
+}
+
+
  /**
   * Determine if a star particle is eligible for feedback
   */
@@ -496,8 +520,9 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     printf("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
 
     // Update thermal energy
+    // added clamp_feedback_energy() because occasionally a gas particle might go nuts
     double utherm_before = Sp->get_utherm_from_entropy(j);
-    double utherm_after = utherm_before + delta_u;
+    double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID);
     Sp->set_entropy_from_utherm(utherm_after, j);
 
     printf("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
@@ -562,33 +587,15 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.FeedbackType = feedback_type;
         in.Energy = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
-        in.h = 0.1;  // Set search radius (100 pc)
-        in.NeighborCount = 0;
 
-        // Count nearby gas neighbors
-        for (int j = 0; j < Sp->NumPart; j++) {
-            if (Sp->P[j].getType() != 0) continue;
+        // 🔁 Adaptively find a good feedback radius
+        // Can we cache neighbor indices instead of recomputing distances twice (once in adaptive_feedback_radius, once in loop)?
+        int n_neighbors = 0;
+        double h_feedback = adaptive_feedback_radius(in.Pos, feedback_type, Sp, &n_neighbors);
+        if (h_feedback < 0.0) continue;  // skip if no neighbors found
 
-            double gasPos[3] = {
-                intpos_to_kpc(Sp->P[j].IntPos[0]),
-                intpos_to_kpc(Sp->P[j].IntPos[1]),
-                intpos_to_kpc(Sp->P[j].IntPos[2])
-            };
-
-            double dx[3] = {
-                NEAREST_X(gasPos[0] - in.Pos[0]),
-                NEAREST_Y(gasPos[1] - in.Pos[1]),
-                NEAREST_Z(gasPos[2] - in.Pos[2])
-            };
-
-            double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-            double r = sqrt(r2);
-
-            if (r < in.h)
-                in.NeighborCount++;
-        }
-
-        if (in.NeighborCount == 0) continue;
+        in.h = h_feedback;
+        in.NeighborCount = n_neighbors;
 
         printf("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
                i, in.NeighborCount, in.h);
