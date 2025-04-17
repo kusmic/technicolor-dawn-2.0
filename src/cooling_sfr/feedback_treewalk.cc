@@ -525,6 +525,12 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         Sp->SphP[j].Metals[k] += metal_add;
         //printf("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
     }
+
+    // FINAL debug check to catch extremely small or large thermal states
+    double final_u = Sp->get_utherm_from_entropy(j);
+    if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
+        printf("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%d): u=%.3e\n", j, Sp->P[j].ID, final_u);
+    }
 }
 
 /**
