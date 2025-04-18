@@ -390,7 +390,7 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Returns safe u_after for input particle.
  */
 double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
-    double u_after = u_before + delta_u;
+    u_after = u_before + delta_u;
     double max_u = 1e10;
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
@@ -487,8 +487,6 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
-    //FEEDBACK_PRINT("[Feedback] Processing gas particle ID=%d\n", j);
-
     // Radial vector from feedback source to this gas particle
     double gasPos[3];
     gasPos[0] = intpos_to_kpc(Sp->P[j].IntPos[0]);
@@ -503,7 +501,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2) + 1e-10;
 
-    //FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
+    FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
     // Distribute energy equally among neighbors (for SNII)
     double E_total = in->Energy;
