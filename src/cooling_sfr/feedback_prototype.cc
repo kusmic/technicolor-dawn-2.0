@@ -1,16 +1,25 @@
-// feedback_treewalk.cc
-// Feedback implementation using a brute-force neighbor loop with radial kinetic kicks
-
 #include "gadgetconfig.h"
-#include "feedback_treewalk.h"
-#include "density.h"
-#include "hydra.h"
-#include "slotsmanager.h"
-#include "timestep.h"
-#include "blackhole.h"
+ 
+#ifdef FEEDBACK
+
+#include <assert.h>
 #include <math.h>
-#include <stdlib.h>
+#include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <random>
+
+#include "../cooling_sfr/feedback_treewalk.h"
+#include "../cooling_sfr/cooling.h"
+#include "../sph/kernel.h"
+#include "../data/allvars.h"
+#include "../data/dtypes.h"
+#include "../data/mymalloc.h"
+#include "../logs/logs.h"
+#include "../logs/timer.h"
+#include "../system/system.h"
+#include "../time_integration/timestep.h"
 
 #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
 
@@ -209,3 +218,5 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
                    ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
         }
     }
+
+#endif
