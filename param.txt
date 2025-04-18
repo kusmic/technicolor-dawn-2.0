@@ -14,7 +14,7 @@ TimeLimitCPU              86400   % 24h, in seconds
 CpuTimeBetRestartFile     7200    % 2h,  in seconds
 
 %----- Memory allocation
-MaxMemSize                700    % in MByte
+MaxMemSize                2000    % in MByte
 
 %---- Characteristics of run
 TimeBegin                 0.015625   % Begin of the simulation, z = 63
@@ -112,7 +112,7 @@ CritPhysDensity     0           % critical physical density for star formation (
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
+FeedbackDebug       1     % 1 = prints all feedback-related activity; 0 = off
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust
