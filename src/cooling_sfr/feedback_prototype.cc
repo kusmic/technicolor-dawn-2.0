@@ -20,6 +20,7 @@
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
+#include "../tree/tree.h"
 
 #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
 
@@ -27,8 +28,6 @@
 double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
 
 extern int FeedbackDebug; // declared elsewhere
-
-#include "tree.h"
 
 extern int treewalk_run(TreeWalk * tw, simparticles * Sp);  // Ensure linkage
 
