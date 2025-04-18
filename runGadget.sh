@@ -7,10 +7,10 @@ git pull origin
 
 # build
 make clean
-make -j7
+make -j4
 
 # run Gadget
-mpirun -np 8 ./Gadget4 param.txt | tee output.log
+mpirun -np 4 ./Gadget4 param.txt | tee output.log
 
 # make output animations
 python3 plotOutputAnimation.py
