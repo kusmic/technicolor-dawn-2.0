@@ -514,12 +514,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     double delta_u = E_therm_j * erg_to_code / gas_mass;
 
-    double rel_increase = delta_u / (utherm_before + 1e-10);
-    if (rel_increase > 10.0) {
-        FEEDBACK_PRINT("[Feedback WARNING] delta_u (%.3e) is too large (%.1fx u_before=%.3e) for gas ID=%d\n", 
-                delta_u, rel_increase, utherm_before, Sp->P[j].ID.get());
-        return;
-    }
+
 
     if (!isfinite(delta_u) || delta_u < 0) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
@@ -532,6 +527,13 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double utherm_before = Sp->get_utherm_from_entropy(j);
     double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID.get());
 
+    double rel_increase = delta_u / (utherm_before + 1e-10);
+    if (rel_increase > 10.0) {
+        FEEDBACK_PRINT("[Feedback WARNING] delta_u (%.3e) is too large (%.1fx u_before=%.3e) for gas ID=%d\n", 
+                delta_u, rel_increase, utherm_before, Sp->P[j].ID.get());
+        return;
+    }
+    
     Sp->set_entropy_from_utherm(utherm_after, j);
 
     FEEDBACK_PRINT("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
