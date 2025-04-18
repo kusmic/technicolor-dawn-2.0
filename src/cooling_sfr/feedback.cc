@@ -111,7 +111,7 @@
  const double HUBBLE_TIME = 13.8e9;              // Hubble time in years (approx)
  
  // Feedback energy/mass return constants
- const double SNII_ENERGY_PER_MASS = 1.0e51;     // erg / Msun  Should return to ~1.0e51 erg, but in tiny test volumes, 
+ const double SNII_ENERGY_PER_MASS = 1.0e50;     // erg / Msun  Should return to ~1.0e51 erg, but in tiny test volumes, 
                                                  // where the mass of gas particles is especially large, raise it higher so the effect can be seen
  const double SNKickFraction = 0.3;  // 30% kinetic, 70% thermal
  const double SNIa_ENERGY_PER_EVENT = 1.0e51;    // erg per event
@@ -237,12 +237,10 @@ inline double kernel_weight_cubic_dimless(double u) {
  * so that it finds ~TARGET_NEIGHBORS gas neighbors.
  */
  double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr) {
-    if (ThisTask == 0)
-    FEEDBACK_PRINT("[Adaptive h] Entering adaptive_feedback_radius() for feedback_type=%d\n", feedback_type);
 
     int TARGET_NEIGHBORS;
     if (feedback_type == FEEDBACK_SNII)
-        TARGET_NEIGHBORS = 16;
+        TARGET_NEIGHBORS = 10;   // probably increase later with bigger run!
     else if (feedback_type == FEEDBACK_SNIa)
         TARGET_NEIGHBORS = 64;
     else if (feedback_type == FEEDBACK_AGB)
@@ -254,7 +252,7 @@ inline double kernel_weight_cubic_dimless(double u) {
     const double H_MAX = 3.0;   // kpc
     const int MAX_ATTEMPTS = 10;
 
-    double h = 0.3;  // initial guess
+    double h = 0.7;  // initial guess
     int attempt = 0;
     int neighbors_found = 0;
 
@@ -300,7 +298,7 @@ inline double kernel_weight_cubic_dimless(double u) {
 
     if (neighbors_found == 0) {
         if (ThisTask == 0) {
-            FEEDBACK_PRINT("[Feedback Adaptive h] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
+            FEEDBACK_PRINT("[Feedback WARNING] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
         }
         return -1.0;
     }
@@ -398,8 +396,8 @@ inline double kernel_weight_cubic_dimless(double u) {
         return u_before;
     }
 
-    if (u_after > max_u) {
-        FEEDBACK_PRINT("[Feedback WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
+    if (u_after > max_u && u_after != max_u) {
+        FEEDBACK_PRINT("[Feedback WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, gas_id);
         return max_u;
     }
 
@@ -427,9 +425,7 @@ inline double kernel_weight_cubic_dimless(double u) {
      if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0) {
          return 0; // Already processed
      }
- 
-     FEEDBACK_PRINT("[Feedback Debug] Did we get past feedback flag? =%d\n",Sp->P[i].FeedbackFlag);
- 
+
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
          FEEDBACK_PRINT("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
@@ -533,7 +529,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
                 delta_u, rel_increase, utherm_before, Sp->P[j].ID.get());
         return;
     }
-    
+
     Sp->set_entropy_from_utherm(utherm_after, j);
 
     FEEDBACK_PRINT("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);

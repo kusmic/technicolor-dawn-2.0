@@ -34,8 +34,8 @@ echo "[runGadget] Gadget run took $((end - start)) seconds."
 # make output animations
 echo "[runGadget] Generating output animations..."
 start=$(date +%s)
-python3 plotOutputAnimation.py
-python3 plotFeedbackMap.py
+#python3 plotOutputAnimation.py
+#python3 plotFeedbackMap.py
 end=$(date +%s)
 echo "[runGadget] Animation scripts took $((end - start)) seconds."
 
