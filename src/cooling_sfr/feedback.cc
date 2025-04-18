@@ -407,7 +407,6 @@ inline double kernel_weight_cubic_dimless(double u) {
 }
 
 
-
  /**
   * Determine if a star particle is eligible for feedback
   */
