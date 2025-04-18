@@ -391,15 +391,15 @@ inline double kernel_weight_cubic_dimless(double u) {
  */
  double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
     double u_after = u_before + delta_u;
-    double max_u = 1e10;
+    double max_u = 1e5;
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
+        FEEDBACK_PRINT("[Feedback WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
         return u_before;
     }
 
     if (u_after > max_u) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
+        FEEDBACK_PRINT("[Feedback WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
         return max_u;
     }
 
@@ -509,12 +509,21 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double E_kin = E_total * SNKickFraction;
     double E_therm = E_total * (1.0 - SNKickFraction);
 
-    double E_kin_j = E_kin / (double)in->NeighborCount;
-    double E_therm_j = E_therm / (double)in->NeighborCount;
+    double invertNeighborCount = 1.0 / in->NeighborCount; // multiplying by 1/N is faster than dividing by N
+    double E_kin_j = E_kin * invertNeighborCount;
+    double E_therm_j = E_therm * invertNeighborCount;
 
     double delta_u = E_therm_j * erg_to_code / gas_mass;
+
+    double rel_increase = delta_u / (utherm_before + 1e-10);
+    if (rel_increase > 10.0) {
+        FEEDBACK_PRINT("[Feedback WARNING] delta_u (%.3e) is too large (%.1fx u_before=%.3e) for gas ID=%d\n", 
+                delta_u, rel_increase, utherm_before, Sp->P[j].ID.get());
+        return;
+    }
+
     if (!isfinite(delta_u) || delta_u < 0) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
+        FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
         return;
     }
     FEEDBACK_PRINT("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
@@ -531,7 +540,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // Apply radial kinetic kick
     double v_kick = sqrt(2.0 * E_kin_j * erg_to_code / gas_mass);
     if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
+        FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
         return;
     }
     for (int k = 0; k < 3; k++)
@@ -540,14 +549,14 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     FEEDBACK_PRINT("[Feedback] Applied radial kick v_kick=%.3e km/s\n", v_kick);
 
     // Mass return
-    double mass_return = in->MassReturn / (double)in->NeighborCount;
+    double mass_return = in->MassReturn * invertNeighborCount;
     Sp->P[j].setMass(gas_mass + mass_return);
 
     FEEDBACK_PRINT("[Feedback] Mass return: %.3e -> New mass: %.3e\n", mass_return, Sp->P[j].getMass());
 
     // Metal enrichment
     for (int k = 0; k < 4; k++) {
-        double metal_add = in->Yield[k] / (double)in->NeighborCount / gas_mass;
+        double metal_add = (in->Yield[k] * invertNeighborCount) / gas_mass;
         Sp->SphP[j].Metals[k] += metal_add;
         //FEEDBACK_PRINT("[Feedback] Metal[%d] += %.3e\n", k, metal_add);
     }
@@ -555,7 +564,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // FINAL debug check to catch extremely small or large thermal states
     double final_u = Sp->get_utherm_from_entropy(j);
     if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Bad final entropy on gas %d: u=%.3e\n", j, final_u);
+        FEEDBACK_PRINT("[Feedback WARNING] Bad final entropy on gas %d: u=%.3e\n", j, final_u);
     }
 }
 
@@ -573,7 +582,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
-        FEEDBACK_PRINT("[Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
+        FEEDBACK_PRINT("[Feedback Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
         printed_erg_code = 1;
     }
 
