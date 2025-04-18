@@ -389,8 +389,8 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Clamp total internal energy (utherm) to prevent entropy exploding...
  * Returns safe u_after for input particle.
  */
-double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
-    u_after = u_before + delta_u;
+ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
+    double u_after = u_before + delta_u;
     double max_u = 1e10;
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
@@ -405,6 +405,7 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
 
     return u_after;
 }
+
 
 
  /**
@@ -554,7 +555,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     // FINAL debug check to catch extremely small or large thermal states
     double final_u = Sp->get_utherm_from_entropy(j);
     if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
-        FEEDBACK_PRINT("[FEEDBACK WARNING] Bad final entropy on gas %d (ID=%llu): u=%.3e\n", j, (unsigned long long) Sp->P[j].ID.get(), final_u);
+        FEEDBACK_PRINT("[FEEDBACK WARNING] Bad final entropy on gas %d: u=%.3e\n", j, final_u);
     }
 }
 
