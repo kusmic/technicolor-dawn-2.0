@@ -112,7 +112,7 @@ CritPhysDensity     0           % critical physical density for star formation (
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       1
+FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust
