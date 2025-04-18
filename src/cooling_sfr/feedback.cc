@@ -597,6 +597,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
         in.h = h_feedback;
         in.NeighborCount = n_neighbors;
+        double h2 = in.h * in.h;  // will use for quicker distance checks
 
         FEEDBACK_PRINT("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
                i, in.NeighborCount, in.h);
@@ -618,9 +619,9 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
             };
 
             double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-            double r = sqrt(r2);
 
-            if (r < in.h)
+            // If within feedback radius, apply feedback!
+            if (r2 < h2)
                 feedback_ngb(&in, &out, j, &fw, Sp);
         }
     }
