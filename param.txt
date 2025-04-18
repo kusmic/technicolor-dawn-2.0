@@ -114,7 +114,6 @@ TreecoolFile        data/TREECOOL
 %----- Debugging
 FeedbackDebug       1
 
-
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust
 #DustGrowthTimescale 1e7       # Growth timescale in years

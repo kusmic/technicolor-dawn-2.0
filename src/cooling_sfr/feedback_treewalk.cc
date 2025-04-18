@@ -413,10 +413,7 @@ double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyI
  static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
      if (Sp->P[i].getType() != 4) // needs to be a star
          return 0;
- 
-     // In feedback_isactive
-     printf("[Feedback Debug] feedback_isactive() - Checking star %d, type=%d, age=%e\n", i, Sp->P[i].getType(), fw->current_time - Sp->P[i].StellarAge);
- 
+
      //printf("Star %d | current_time (a)=%.6f | StellarAge=%.6f\n", i, fw->current_time, Sp->P[i].StellarAge);
 
      // Convert from scale factor to physical time
