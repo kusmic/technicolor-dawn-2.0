@@ -436,7 +436,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
     }
 
     if (u_after > max_u && u_after != max_u) {
-        FEEDBACK_PRINT("[Feedback WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, gas_id);
+        FEEDBACK_PRINT("[Feedback WARNING] Clamping u from %.3e to %.3e for gas ID=%llu\n", u_after, max_u, (unsigned long long) gas_id);
         return max_u;
     }
 
@@ -640,6 +640,21 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.Energy = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
 
+        // Track diagnostics per type
+        if (feedback_type == FEEDBACK_SNII) {
+            ThisStepEnergy_SNII += in.Energy;
+            TotalEnergyInjected_SNII += in.Energy;
+        } else if (feedback_type == FEEDBACK_SNIa) {
+            ThisStepEnergy_SNIa += in.Energy;
+            TotalEnergyInjected_SNIa += in.Energy;
+        } else if (feedback_type == FEEDBACK_AGB) {
+            ThisStepEnergy_AGB += in.Energy;
+            TotalEnergyInjected_AGB += in.Energy;
+        }
+
+        ThisStepMassReturned += in.MassReturn;
+        TotalMassReturned += in.MassReturn;
+
         // Adaptively find a good feedback radius
         // Can we cache neighbor indices instead of recomputing distances twice (once in adaptive_feedback_radius, once in loop)?
         int n_neighbors = 0;
@@ -728,6 +743,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
          FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
          FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
                 ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
+         FEEDBACK_PRINT("[Feedback Summary] Total SNII energy distributed: %.3e\n", TotalEnergyInjected_SNII);
      }
  }
 
