@@ -724,13 +724,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
      //apply_feedback_treewalk(current_time, FEEDBACK_SNII, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_AGB, Sp);
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
- 
-     // Accumulate totals
-     TotalEnergyInjected_SNII += in.Energy;
-     ThisStepEnergy_SNII += in.Energy;
-     //TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
-     //TotalEnergyInjected_AGB  += ThisStepEnergy_AGB;
-     //TotalMassReturned += ThisStepMassReturned;
+
      for (int k = 0; k < 4; k++)
          TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
  
