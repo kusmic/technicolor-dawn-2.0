@@ -235,6 +235,8 @@ inline double kernel_weight_cubic_dimless(double u) {
  * Adaptive feedback radius based on local gas density
  * Dynamically determines a suitable radius h for a given star
  * so that it finds ~TARGET_NEIGHBORS gas neighbors.
+
+ WHAT IF we could modify adaptive_feedback_radius() to return an array of valid gas indices to avoid the second scan?
  */
  double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr) {
 
@@ -383,6 +385,43 @@ inline double kernel_weight_cubic_dimless(double u) {
      const char* ev_label;
  };
  
+// File-scope static caches
+static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
+static int *gas_index = NULL;
+static int gas_count = 0;
+
+/**
+ * Cache positions of all gas particles (Type 0) in physical units (kpc), 
+ * along with their corresponding indices in Sp->P[].
+ *
+ * @param Sp            Pointer to simulation particles
+ * @param return_count  Optional pointer to store how many gas particles were cached
+ */
+void cache_gas_positions(simparticles *Sp, int *return_count) {
+    if (!gas_x) {
+        gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_index = (int *) malloc(Sp->NumPart * sizeof(int));
+    }
+
+    gas_count = 0;
+    for (int j = 0; j < Sp->NumPart; j++) {
+        if (Sp->P[j].getType() != 0)
+            continue;
+
+        gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
+        gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
+        gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
+        gas_index[gas_count] = j;  // Store index into Sp->P
+        gas_count++;
+    }
+
+    if (return_count)
+        *return_count = gas_count;
+}
+
+ 
 /**
  * Clamp total internal energy (utherm) to prevent entropy exploding...
  * Returns safe u_after for input particle.
@@ -523,6 +562,8 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double utherm_before = Sp->get_utherm_from_entropy(j);
     double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID.get());
 
+
+
     double rel_increase = delta_u / (utherm_before + 1e-10);
     if (rel_increase > 10.0) {
         FEEDBACK_PRINT("[Feedback WARNING] delta_u (%.3e) is too large (%.1fx u_before=%.3e) for gas ID=%d\n", 
@@ -575,6 +616,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
 
+    // Cache gas positions once per timestep (gas_x, gas_y, gas_z)
+    int n_gas = 0;
+    cache_gas_positions(Sp, &n_gas);
+
     // Convert erg to code units
     erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
     static int printed_erg_code = 0;
@@ -595,7 +640,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.Energy = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
 
-        // 🔁 Adaptively find a good feedback radius
+        // Adaptively find a good feedback radius
         // Can we cache neighbor indices instead of recomputing distances twice (once in adaptive_feedback_radius, once in loop)?
         int n_neighbors = 0;
         double h_feedback = adaptive_feedback_radius(in.Pos, feedback_type, Sp, &n_neighbors);
@@ -612,19 +657,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         for (int j = 0; j < Sp->NumPart; j++) {
             if (Sp->P[j].getType() != 0) continue;
 
-            double gasPos[3] = {
-                intpos_to_kpc(Sp->P[j].IntPos[0]),
-                intpos_to_kpc(Sp->P[j].IntPos[1]),
-                intpos_to_kpc(Sp->P[j].IntPos[2])
-            };
-
-            double dx[3] = {
-                NEAREST_X(gasPos[0] - in.Pos[0]),
-                NEAREST_Y(gasPos[1] - in.Pos[1]),
-                NEAREST_Z(gasPos[2] - in.Pos[2])
-            };
-
-            double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+            double dx = NEAREST_X(gas_x[j] - in.Pos[0]);
+            double dy = NEAREST_Y(gas_y[j] - in.Pos[1]);
+            double dz = NEAREST_Z(gas_z[j] - in.Pos[2]);
+            double r2 = dx*dx + dy*dy + dz*dz;
 
             // If within feedback radius, apply feedback!
             if (r2 < h2)
@@ -634,194 +670,11 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 }
 
 
-
-
- 
- /*
-  * Add detailed diagnostics for a feedback event
-  */
-  void debug_feedback_diagnostics(int i, FeedbackInput *in, FeedbackWalk *fw, simparticles *Sp) {
-     // Count neighbors and track energy distribution
-     int neighbor_count = 0;
-     //double total_energy_distributed = 0.0;
-     double total_kernel_weight = 0.0;
-     double max_gas_temp_before = 0.0;
-
-     // First pass - count neighbors and calculate total kernel weight
-     printf("[Feedback Diagnostics] Starting neighbor check for star %d at Position: [%.3f, %.3f, %.3f]\n", i, in->Pos[0], in->Pos[1], in->Pos[2]);
-     
-     // Find closest gas particle and distance statistics
-     double min_dist = 1e10;
-     double dist_sum = 0;
-     int closest_gas = -1;
-     int gas_count = 0;
-     int gas_within_2h = 0;
-     int gas_within_5h = 0;
-     int gas_within_10h = 0;
-     
-     // First pass - count neighbors and find closest
-     for (int j = 0; j < Sp->NumPart; j++) {
-         if (Sp->P[j].getType() != 0) continue;  // Skip non-gas particles
- 
-         gas_count++;
-         
-         double gasPos[3] = {
-            intpos_to_kpc( Sp->P[j].IntPos[0] ),
-            intpos_to_kpc( Sp->P[j].IntPos[1] ),
-            intpos_to_kpc( Sp->P[j].IntPos[2] )
-        };
-        
-        double dx[3] = {
-            NEAREST_X(gasPos[0] - in->Pos[0]),
-            NEAREST_Y(gasPos[1] - in->Pos[1]),
-            NEAREST_Z(gasPos[2] - in->Pos[2])
-        };
-
-         double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-         double r = sqrt(r2);
- 
-         // Track distance statistics
-         dist_sum += r;
-         
-         // Count gas at different distances
-         if (r < 2.0 * in->h) gas_within_2h++;
-         if (r < 5.0 * in->h) gas_within_5h++;
-         if (r < 10.0 * in->h) gas_within_10h++;
-         
-         // Find closest gas
-         if (r2 < min_dist) {
-             min_dist = r2;
-             closest_gas = j;
-         }
-         
-         // Check if within feedback radius
-         if (r < in->h) {
-             double w = 0.0;
-             if (in->FeedbackType == FEEDBACK_SNII) {
-                 w = kernel_weight_tophat(r, in->h);
-             } else {
-                 w = kernel_weight_cubic(r, in->h);
-             }
- 
-             if (w > 0.0) {
-                 if (w > 1.0) w = 1.0; // prevent unusually high weights, probably wouldn't happen
-                 neighbor_count++;
-                 total_kernel_weight += w;
- 
-                 // Track maximum temperature
-                 double temp = Sp->get_utherm_from_entropy(j);
-                 if (temp > max_gas_temp_before) max_gas_temp_before = temp;
-             }
-         }
-     }
- 
-     // Report closest gas particle
-     if (closest_gas >= 0) {
-         double closest_dist = sqrt(min_dist);
-         FEEDBACK_PRINT("[Feedback Diagnostics] Closest gas particle %d at distance %.3f (radius is %.3f)\n", 
-                closest_gas, closest_dist, in->h);
-         
-         // If closest gas is too far, print its position for comparison
-         if (closest_dist > in->h) {
-             FEEDBACK_PRINT("[Feedback Diagnostics] Closest gas position: [%.3f, %.3f, %.3f]\n", 
-                intpos_to_kpc( Sp->P[closest_gas].IntPos[0] ),
-                intpos_to_kpc( Sp->P[closest_gas].IntPos[1] ),
-                intpos_to_kpc( Sp->P[closest_gas].IntPos[2] ) );
-         }
-     }
-     
-     // Report distance statistics
-     double mean_dist = (gas_count > 0) ? dist_sum / gas_count : 0;
-     FEEDBACK_PRINT("[Feedback Diagnostics] Gas statistics: total=%d, mean_distance=%.3f\n", gas_count, mean_dist);
-     FEEDBACK_PRINT("[Feedback Diagnostics] Gas within 2h(%.3f)=%d, 5h(%.3f)=%d, 10h(%.3f)=%d\n", 
-            in->h*2, gas_within_2h, in->h*5, gas_within_5h, in->h*10, gas_within_10h);
-     
-     FEEDBACK_PRINT("[Feedback Diagnostics] Star %d (Type=%d): Found %d gas neighbors within radius %.3f\n", 
-            i, in->FeedbackType, neighbor_count, in->h);
- 
-     if (neighbor_count == 0) {
-         FEEDBACK_PRINT("[Feedback WARNING] Star %d has NO gas neighbors! No feedback will be applied.\n", i);
-         FEEDBACK_PRINT("[Feedback WARNING] Consider increasing the feedback radius (currently %.3f).\n", in->h);
-         
-         // If there's gas in wider radius, suggest adjustment
-         if (gas_within_5h > 0) {
-             double suggested_radius = sqrt(min_dist) * 1.1; // 10% larger than closest gas
-             FEEDBACK_PRINT("[Feedback SUGGESTION] Try increasing radius to at least %.3f\n", suggested_radius);
-         }
-         
-         return;
-     }
- 
-     // Check potential energy impact
-     double gas_mass_total = 0.0;
-     double avg_gas_temp = 0.0;
-     int neighbors_sampled = 0;
- 
-     // Sample some neighbors to estimate energy impact
-     for (int j = 0; j < Sp->NumPart && neighbors_sampled < 5; j++) {
-         if (Sp->P[j].getType() != 0) continue;
- 
-         double gasPos[3] = {
-            intpos_to_kpc( Sp->P[j].IntPos[0] ),
-            intpos_to_kpc( Sp->P[j].IntPos[1] ),
-            intpos_to_kpc( Sp->P[j].IntPos[2] )
-        };
-
-        double dx[3] = {
-            NEAREST_X(gasPos[0] - in->Pos[0]),
-            NEAREST_Y(gasPos[1] - in->Pos[1]),
-            NEAREST_Z(gasPos[2] - in->Pos[2])
-        };
-         double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-         double r = sqrt(r2);
- 
-         if (r < in->h) {
-             double w = 0.0;
-             if (in->FeedbackType == FEEDBACK_SNII) {
-                 w = kernel_weight_tophat(r, in->h);
-             } else {
-                 w = kernel_weight_cubic(r, in->h);
-             }
- 
-             if (w > 0.0) {
-                if (w > 1.0) w = 1.0; // prevent unusually high weights, probably wouldn't happen
-
-                double m = Sp->P[j].getMass();
-                double temp = Sp->get_utherm_from_entropy(j);
-                double energy_before = temp * m;
-                double energy_to_add = in->Energy * w * erg_to_code;
-                double energy_after = energy_before + energy_to_add;
-                double temp_after = energy_after / m;
-                double energy_ratio = energy_to_add / energy_before;
- 
-                FEEDBACK_PRINT("[Feedback Energy] Gas %d: Mass: %.3e Temp: %.3e → %.3e, Energy: %.3e → %.3e, Ratio: %.3e\n",
-                        j, m, temp, temp_after, energy_before, energy_after, energy_ratio);
- 
-                gas_mass_total += m;
-                avg_gas_temp += temp;
-                neighbors_sampled++;
-             }
-         }
-     }
- 
-     if (neighbors_sampled > 0) {
-         avg_gas_temp /= neighbors_sampled;
-         FEEDBACK_PRINT("[Feedback Summary] Star %d: Avg Gas Temp: %.3e, Total Gas Mass: %.3e\n",
-                i, avg_gas_temp, gas_mass_total);
-         FEEDBACK_PRINT("[Feedback Summary] Available Energy: %.3e, Energy per Gas Mass: %.3e\n",
-                in->Energy, in->Energy / gas_mass_total);
-     }
- }
- 
- 
-
  /**
   * Main feedback function called each timestep
   */
  void apply_stellar_feedback(double current_time, simparticles* Sp) {
  
- 
-    
  /* -----TEMPORARY DIAGNOSTIC: Print TIME RESOLUTION-----
      static double last_time = 0;
      double timestep = current_time - last_time;
@@ -858,10 +711,11 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
      //apply_feedback_treewalk(current_time, FEEDBACK_SNIa, Sp);
  
      // Accumulate totals
-     TotalEnergyInjected_SNII += ThisStepEnergy_SNII;
-     TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
-     TotalEnergyInjected_AGB  += ThisStepEnergy_AGB;
-     TotalMassReturned += ThisStepMassReturned;
+     TotalEnergyInjected_SNII += in.Energy;
+     ThisStepEnergy_SNII += in.Energy;
+     //TotalEnergyInjected_SNIa += ThisStepEnergy_SNIa;
+     //TotalEnergyInjected_AGB  += ThisStepEnergy_AGB;
+     //TotalMassReturned += ThisStepMassReturned;
      for (int k = 0; k < 4; k++)
          TotalMetalsInjected[k] += ThisStepMetalsInjected[k];
  
