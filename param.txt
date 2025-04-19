@@ -14,7 +14,7 @@ TimeLimitCPU              86400   % 24h, in seconds
 CpuTimeBetRestartFile     7200    % 2h,  in seconds
 
 %----- Memory allocation
-MaxMemSize                1500    % in MByte
+MaxMemSize                1000    % in MByte
 
 %---- Characteristics of run
 TimeBegin                 0.015625   % Begin of the simulation, z = 63
@@ -102,17 +102,17 @@ ViscosityAlphaMin            0.01  ; minimum viscosity coefficient
 
 %----- Star formation
 
-MaxSfrTimescale     1.5         % usually 1.5; Gas consumption timescale (multi-phase model)
-FactorSN            0.1         % beta, mass fraction of massive stars (multi-phase model)
+MaxSfrTimescale     3.0         % usually 1.5; Gas consumption timescale (multi-phase model)
+FactorSN            0.05         % beta, mass fraction of massive stars (multi-phase model)
 FactorEVP           1000        % A_0, evaporation parameter (multi-phase model)
 TempSupernova       1e+08       % T_SN, effective "supernova temperature",sets feedback energy (multi-phase model)
 TempClouds          1000        % temperature of cold clouds (multi-phase model)
-CritOverDensity     30          % overdensity threshold value for cosmological sims; lower value means conditions easier to reach for SF
+CritOverDensity     60          % overdensity threshold value for cosmological sims; lower value means conditions easier to reach for SF
 CritPhysDensity     0           % critical physical density for star formation (in cm^(-3))
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       1     % 1 = prints all feedback-related activity; 0 = off
+FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust
