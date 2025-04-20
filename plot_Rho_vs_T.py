@@ -12,9 +12,10 @@ mu = 0.6               # Mean molecular weight for fully ionized gas
 gamma = 5.0 / 3.0      # Adiabatic index for monoatomic gas
 
 # Simulation unit for internal energy
-UnitEnergy_in_cgs = 1.989e53  # erg/g
-# Since Gadget stores u as specific internal energy (i.e., energy per unit mass), we do:
-UnitEnergy_in_cgs = 2.774e20  # derived from your simulation units
+UnitEnergy_in_cgs = 1.989e53  # erg/g; this value has been seen other places, but seems WAY too big?
+# Since Gadget stores u as specific internal energy (i.e., energy per unit mass), we do
+# UnitVelocity_in_cm_per_s ** 2 ?   That would be:
+# UnitEnergy_in_cgs = 1.0e10  # derived from your simulation units
 
 # Gather snapshot files
 snapshots = sorted(glob.glob("output/snapshot_*.hdf5"))

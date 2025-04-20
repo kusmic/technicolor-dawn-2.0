@@ -140,8 +140,9 @@
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
  // In case we have ergs and needs to get it to internal units
- // If we set this here, it doesn't get set via the 
  double erg_to_code;
+ // Convert erg/g → Gadget code units
+ double erg_per_mass_to_code;
 
  // Conversion from fixed-point integer positions to physical units (kpc)
  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
@@ -432,7 +433,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
  */
  double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
     double u_after = u_before + delta_u;
-    double max_u = 1e3; // Maximum allowed utherm in internal units
+    double max_u = 1e4; // Maximum allowed utherm in internal units
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
@@ -461,7 +462,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
      // Check if the star is too young
-     FEEDBACK_PRINT("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
+     //FEEDBACK_PRINT("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
         i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
 
      // Check if this feedback type has already been applied
@@ -471,7 +472,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
 
      // Different criteria for different feedback types
      if (fw->feedback_type == FEEDBACK_SNII) {
-         FEEDBACK_PRINT("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
+         //FEEDBACK_PRINT("[Feedback Debug] Star %d is active for SNII feedback type %d\n", i, fw->feedback_type);
          // Type II SNe happen promptly after star formation
          return (age_physical > SNII_DELAY_TIME_PHYSICAL) ? 1 : 0;
      } 
@@ -521,7 +522,8 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
     //if (r > in->h) return;  // Skip if it is outside the feedback radius
 
-    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
+    //erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
+    //erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
 
     double gas_mass = Sp->P[j].getMass();
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
@@ -540,7 +542,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     double r = sqrt(r2) + 1e-10;
 
-    FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
+    //FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
     // Distribute energy equally among neighbors (for SNII)
     double E_total = in->Energy;
@@ -551,22 +553,20 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double E_kin_j = E_kin * invertNeighborCount;
     double E_therm_j = E_therm * invertNeighborCount;
 
-    double delta_u = E_therm_j * erg_to_code / gas_mass;
-
+    //double delta_u = E_therm_j * erg_to_code / gas_mass;
+    double delta_u = E_therm_j * erg_per_mass_to_code / gas_mass;
 
 
     if (!isfinite(delta_u) || delta_u < 0) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
         return;
     }
-    FEEDBACK_PRINT("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
+    //FEEDBACK_PRINT("[Feedback] E_therm_j=%.3e erg, delta_u=%.3e (internal units)\n", E_therm_j, delta_u);
 
     // Update thermal energy
     // added clamp_feedback_energy() because occasionally a gas particle might go nuts
     double utherm_before = Sp->get_utherm_from_entropy(j);
     double utherm_after = clamp_feedback_energy(utherm_before, delta_u, j, Sp->P[j].ID.get());
-
-
 
     double rel_increase = delta_u / (utherm_before + 1e-10);
     if (rel_increase > 10.0) {
@@ -577,10 +577,10 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     Sp->set_entropy_from_utherm(utherm_after, j);
 
-    FEEDBACK_PRINT("[Feedback] u_before=%.3e, u_after=%.3e\n", utherm_before, utherm_after);
+    FEEDBACK_PRINT("[Feedback] u_before=%.5e, u_after=%.5e, delta_u=%.3e (internal units)\n", utherm_before, utherm_after, delta_u);
 
     // Apply radial kinetic kick
-    double v_kick = sqrt(2.0 * E_kin_j * erg_to_code / gas_mass);
+    double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code / gas_mass);
     if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
         return;
@@ -625,10 +625,12 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     cache_gas_positions(Sp, &n_gas);
 
     // Convert erg to code units
-    erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
+    //erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
+    erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
+
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
-        FEEDBACK_PRINT("[Feedback Init] erg_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_to_code, All.UnitEnergy_in_cgs);
+        FEEDBACK_PRINT("[Feedback Init] erg_per_mass_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_per_mass_to_code, All.UnitEnergy_in_cgs);
         printed_erg_code = 1;
     }
 

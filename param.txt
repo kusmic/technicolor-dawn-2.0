@@ -59,7 +59,7 @@ DesNumNgb                        20   ; should be 33 or higher with a bigger vol
 MaxNumNgbDeviation               1 
 
 %---- System of units
-UnitLength_in_cm         3.085678e24        ;  Mpc / h
+UnitLength_in_cm         3.085678e21        ;  Mpc / h is 3.085678e24; 1.0 kpc / h is 3.085678e21
 UnitMass_in_g            1.989e43           ;  1.0e10 Msun / h
 UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
 GravityConstantInternal  0
@@ -112,7 +112,7 @@ CritPhysDensity     0           % critical physical density for star formation (
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
+FeedbackDebug       1     % 1 = prints all feedback-related activity; 0 = off
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust
