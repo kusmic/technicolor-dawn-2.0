@@ -28,7 +28,7 @@ Omega0	                  0.3089
 OmegaLambda               0.6911
 OmegaBaryon               0.0486
 HubbleParam               0.6774
-Hubble                    0.1
+Hubble                    100
 BoxSize                   10.0
 
 %---- Output frequency and output paramaters
@@ -59,7 +59,7 @@ DesNumNgb                        20   ; should be 33 or higher with a bigger vol
 MaxNumNgbDeviation               1 
 
 %---- System of units
-UnitLength_in_cm         3.085678e21        ;  Mpc / h is 3.085678e24; 1.0 kpc / h is 3.085678e21
+UnitLength_in_cm         3.085678e24        ;  Mpc / h is 3.085678e24; 1.0 kpc / h is 3.085678e21
 UnitMass_in_g            1.989e43           ;  1.0e10 Msun / h
 UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
 GravityConstantInternal  0
