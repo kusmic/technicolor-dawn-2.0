@@ -423,12 +423,16 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
 
  
 /**
- * Clamp total internal energy (utherm) to prevent entropy exploding...
- * Returns safe u_after for input particle.
+ * Clamp total internal energy (utherm) to prevent extremely small timesteps
+ * from too high thermal energy.
+ * Let's think about what max utherms would make sense:
+ * 10^6 K -- Warm-hot IGM / CGM -- utherm make should be: ~2e3
+ * 10^7 k -- Typical SN/AGN-heated ISM gas -- utherm make should be: ~2e4
+ * 10^8 K -- Hot bubbles, extreme feedback -- utherm make should be: ~2e5
  */
  double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
     double u_after = u_before + delta_u;
-    double max_u = 1e4;
+    double max_u = 1e3; // Maximum allowed utherm in internal units
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
