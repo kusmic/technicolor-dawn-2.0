@@ -552,8 +552,8 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double E_kin_j = E_kin * invertNeighborCount;
     double E_therm_j = E_therm * invertNeighborCount;
 
-    printf("[Feedback DEBUG] StarID=%d GasID=%d | E_therm_j=%.3e erg | gas_mass=%.3e g | erg_per_mass_to_code=%.3e | delta_u=%.3e (u_before=%.3e)\n",
-        Sp->P[i].ID.get(), Sp->P[j].ID.get(),
+    printf("[Feedback DEBUG] GasID=%d | E_therm_j=%.3e erg | gas_mass=%.3e g | erg_per_mass_to_code=%.3e | delta_u=%.3e (u_before=%.3e)\n",
+        Sp->P[j].ID.get(),
         E_therm_j, gas_mass, erg_per_mass_to_code, delta_u, Sp->get_utherm_from_entropy(j));
  
     
