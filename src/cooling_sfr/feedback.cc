@@ -584,7 +584,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     FEEDBACK_PRINT("[Feedback] u_before=%.5e, u_after=%.5e, delta_u=%.3e (internal units)\n", utherm_before, utherm_after, delta_u);
 
     // Apply radial kinetic kick
-    double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code / gas_mass);
+    double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code / gas_mass_cgs);
     if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
         return;
