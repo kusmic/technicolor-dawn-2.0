@@ -27,8 +27,8 @@ echo "[runGadget] Build took $((end - start)) seconds."
 # run Gadget
 echo "[runGadget] Running Gadget..."
 start=$(date +%s)
-#mpirun -np 4 ./Gadget4 param.txt | tee output.log
-mpirun -np 4 ./Gadget4 param.txt
+mpirun -np 4 ./Gadget4 param.txt | tee output.log
+#mpirun -np 4 ./Gadget4 param.txt
 end=$(date +%s)
 echo "[runGadget] Gadget run took $((end - start)) seconds."
 
