@@ -462,8 +462,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
      double age_physical = scale_factor_to_physical_time(fw->current_time - Sp->P[i].StellarAge);
  
      // Check if the star is too young
-     //FEEDBACK_PRINT("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",
-        i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
+     //FEEDBACK_PRINT("[Feedback] Considering star %d | age=%.2e yr | type=%d | flag=%d ------------------\n",i, age_physical, fw->feedback_type, Sp->P[i].FeedbackFlag);
 
      // Check if this feedback type has already been applied
      if ((Sp->P[i].FeedbackFlag & fw->feedback_type) != 0) {
