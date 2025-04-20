@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-with h5py.File("snapshot_040.hdf5", "r") as f:
+with h5py.File("output/snapshot_040.hdf5", "r") as f:
     u = f["PartType0"]["InternalEnergy"][:]
     plt.hist(u, bins=np.logspace(-2, 6, 100))
     plt.xscale("log")
