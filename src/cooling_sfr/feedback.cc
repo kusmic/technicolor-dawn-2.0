@@ -552,14 +552,13 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     double E_kin_j = E_kin * invertNeighborCount;
     double E_therm_j = E_therm * invertNeighborCount;
 
-    printf("[Feedback DEBUG] GasID=%d | E_therm_j=%.3e erg | gas_mass=%.3e g | erg_per_mass_to_code=%.3e | delta_u=%.3e (u_before=%.3e)\n",
-        Sp->P[j].ID.get(),
-        E_therm_j, gas_mass, erg_per_mass_to_code, delta_u, Sp->get_utherm_from_entropy(j));
- 
-    
+
     //double delta_u = E_therm_j * erg_to_code / gas_mass;
     double delta_u = E_therm_j * erg_per_mass_to_code / gas_mass;
 
+    printf("[Feedback DEBUG] GasID=%d | E_therm_j=%.3e erg | gas_mass=%.3e g | erg_per_mass_to_code=%.3e | delta_u=%.3e (u_before=%.3e)\n",
+        Sp->P[j].ID.get(),
+        E_therm_j, gas_mass, erg_per_mass_to_code, delta_u, Sp->get_utherm_from_entropy(j));
 
     if (!isfinite(delta_u) || delta_u < 0) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
