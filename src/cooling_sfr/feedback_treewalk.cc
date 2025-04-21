@@ -605,113 +605,109 @@
  /**
   * Main feedback function using a direct tree implementation
   */
- void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
-     // Reset diagnostic counters
-     ThisStepEnergy_SNII = 0;
-     ThisStepEnergy_SNIa = 0;
-     ThisStepEnergy_AGB = 0;
-     ThisStepMassReturned = 0;
-     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
-     
-     // Initialize unit conversions
-     erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
-     
-     // Create feedback tree walker
-     FeedbackTreeWalk walker(Sp);
-     
-     // Process each feedback type
-     for (int feedback_type = FEEDBACK_SNII; feedback_type <= FEEDBACK_SNIa; feedback_type *= 2) {
-         walker.SetFeedbackType(feedback_type);
-         
-         const char* feedback_name = (feedback_type == FEEDBACK_SNII) ? "SNII" : 
-                                    ((feedback_type == FEEDBACK_SNIa) ? "SNIa" : "AGB");
-         
-         if (ThisTask == 0 && All.FeedbackDebug) {
-             FEEDBACK_PRINT("[Feedback] Processing %s feedback\n", feedback_name);
-         }
-         
-         // Count eligible stars
-         int n_sources = 0;
-         for (int i = 0; i < Sp->NumPart; i++) {
-             if (is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
-                 n_sources++;
-         }
-         
-         if (n_sources == 0) {
-             if (ThisTask == 0 && All.FeedbackDebug) {
-                 FEEDBACK_PRINT("[Feedback] No eligible sources for %s feedback\n", feedback_name);
-             }
-             continue;
-         }
-         
-         if (ThisTask == 0 && All.FeedbackDebug) {
-             FEEDBACK_PRINT("[Feedback] Found %d eligible sources for %s feedback\n", n_sources, feedback_name);
-         }
-         
-         // Process each eligible star
-         for (int i = 0; i < Sp->NumPart; i++) {
-             if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
-                 continue;
-                 
-             // Convert position to physical coordinates
-             double pos[3];
-             pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
-             pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
-             pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
-             
-             // Get star properties
-             double stellar_mass = Sp->P[i].getMass();
-             double metallicity = Sp->SphP[i].Metallicity;
-             int snia_events = Sp->P[i].SNIaEvents;
-             
-             // Find appropriate search radius
-             double h = find_adaptive_radius(pos, feedback_type, Sp, &walker);
-             
-             // Apply feedback
-             walker.FindNeighborsWithinRadius(pos, h, i);
-             
-             if (walker.TargetCount == 0) {
-                 if (ThisTask == 0 && All.FeedbackDebug) {
-                     FEEDBACK_PRINT("[Feedback WARNING] No targets found for star %d within h=%.2f for %s feedback\n", 
-                                   i, h, feedback_name);
-                 }
-                 continue;
-             }
-             
-             walker.ApplyFeedback(stellar_mass, metallicity, snia_events);
-         }
-     }
-     
-     // Print summary (on master process only)
-     if (ThisTask == 0 && All.FeedbackDebug && 
-        (ThisStepEnergy_SNII > 0 || ThisStepEnergy_SNIa > 0 || ThisStepEnergy_AGB > 0)) {
-         FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
-                       ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
-         FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
-         FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
-                       ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
-                       ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
-     }
- }
- 
- /**
-  * Main interface function for feedback
-  */
-  void apply_stellar_feedback(double current_time, simparticles* Sp) {
-    static int first_call = 1;
+  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
+    // Reset diagnostic counters
+    ThisStepEnergy_SNII = 0;
+    ThisStepEnergy_SNIa = 0;
+    ThisStepEnergy_AGB = 0;
+    ThisStepMassReturned = 0;
+    std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
     
-    // Initialize unit conversions on first call
-    if (first_call) {
-        erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
-        if (ThisTask == 0 && All.FeedbackDebug) {
-            printf("[Feedback Init] erg_per_mass_to_code = %.3e (UnitVelocity = %.3e cm/s)\n",
-                  erg_per_mass_to_code, All.UnitVelocity_in_cm_per_s);
-        }
-        first_call = 0;
+    // Initialize unit conversions
+    erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
+    
+    // Create feedback tree walker
+    FeedbackTreeWalk walker(Sp);
+    
+    // Process each feedback type (if enabled)
+    // Type II supernovae
+    if (All.FeedbackSNII) {
+        process_feedback_type(FEEDBACK_SNII, current_time, Sp, &walker);
     }
     
-    // Always use the optimized implementation
-    apply_stellar_feedback_treewalk(current_time, Sp);
+    // AGB stellar winds
+    if (All.FeedbackAGB) {
+        process_feedback_type(FEEDBACK_AGB, current_time, Sp, &walker);
+    }
+    
+    // Type Ia supernovae
+    if (All.FeedbackSNIa) {
+        process_feedback_type(FEEDBACK_SNIa, current_time, Sp, &walker);
+    }
+    
+    // Print summary (on master process only)
+    if (ThisTask == 0 && All.FeedbackDebug && 
+       (ThisStepEnergy_SNII > 0 || ThisStepEnergy_SNIa > 0 || ThisStepEnergy_AGB > 0)) {
+        FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
+                      ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
+        FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
+        FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
+                      ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
+                      ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
+    }
+}
+
+// Helper function to process each feedback type
+void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker) {
+    walker->SetFeedbackType(feedback_type);
+    
+    const char* feedback_name = (feedback_type == FEEDBACK_SNII) ? "SNII" : 
+                               ((feedback_type == FEEDBACK_SNIa) ? "SNIa" : "AGB");
+    
+    if (ThisTask == 0 && All.FeedbackDebug) {
+        FEEDBACK_PRINT("[Feedback] Processing %s feedback\n", feedback_name);
+    }
+    
+    // Count eligible stars
+    int n_sources = 0;
+    for (int i = 0; i < Sp->NumPart; i++) {
+        if (is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
+            n_sources++;
+    }
+    
+    if (n_sources == 0) {
+        if (ThisTask == 0 && All.FeedbackDebug) {
+            FEEDBACK_PRINT("[Feedback] No eligible sources for %s feedback\n", feedback_name);
+        }
+        return;
+    }
+    
+    if (ThisTask == 0 && All.FeedbackDebug) {
+        FEEDBACK_PRINT("[Feedback] Found %d eligible sources for %s feedback\n", n_sources, feedback_name);
+    }
+    
+    // Process each eligible star
+    for (int i = 0; i < Sp->NumPart; i++) {
+        if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
+            continue;
+            
+        // Convert position to physical coordinates
+        double pos[3];
+        pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+        pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+        pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
+        
+        // Get star properties
+        double stellar_mass = Sp->P[i].getMass();
+        double metallicity = Sp->SphP[i].Metallicity;
+        int snia_events = Sp->P[i].SNIaEvents;
+        
+        // Find appropriate search radius
+        double h = find_adaptive_radius(pos, feedback_type, Sp, walker);
+        
+        // Apply feedback
+        walker->FindNeighborsWithinRadius(pos, h, i);
+        
+        if (walker->TargetCount == 0) {
+            if (ThisTask == 0 && All.FeedbackDebug) {
+                FEEDBACK_PRINT("[Feedback WARNING] No targets found for star %d within h=%.2f for %s feedback\n", 
+                              i, h, feedback_name);
+            }
+            continue;
+        }
+        
+        walker->ApplyFeedback(stellar_mass, metallicity, snia_events);
+    }
 }
  
  /**

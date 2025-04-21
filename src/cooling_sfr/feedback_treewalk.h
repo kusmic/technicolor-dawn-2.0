@@ -23,4 +23,7 @@
  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp);
  void apply_stellar_feedback_bruteforce(double current_time, simparticles* Sp);
  
+ // Helper function for processing a specific feedback type
+void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker);
+
  #endif // FEEDBACK_TREEWALK_H
