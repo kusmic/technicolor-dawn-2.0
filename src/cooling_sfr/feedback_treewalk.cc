@@ -96,11 +96,6 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
 
-// TreeWalk Query and Result Structures
-
-extern simparticles SimParticles;
-extern gravtree<simparticles> GravTree;
-
 typedef struct {
     MyDouble Pos[3];       // star position
     MyIDType ID;           // star ID

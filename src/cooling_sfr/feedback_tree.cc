@@ -21,6 +21,10 @@
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
+
+extern gravtree<simparticles> GravTree;
+#define NODE_IS_LEAF(n) ((n)->first_child < 0)
+
 int feedback_tree_evaluate(int target, int mode, int threadid)
 {
     simparticles *Sp = &SimParticles;
@@ -48,9 +52,9 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
     in.MassReturn = 0.1 * Sp->P[target].getMass();
     in.NeighborCount = n_neighbors;
 
-    int no = MaxPart;
+    int no = GravTree.MaxPart;
     while (no >= 0) {
-        NODE *nop = &Nodes[no];
+        gravnode *nop = &GravTree.Nodes[no];
 
         double dx = NEAREST_X(nop->center[0] - starPos[0]);
         double dy = NEAREST_Y(nop->center[1] - starPos[1]);
@@ -62,8 +66,8 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
             continue;
         }
 
-        if (nop->u.d.bitflags & 1) {
-            int p = nop->u.d.nextnode;
+        if (NODE_IS_LEAF(nop)) {
+            int p = nop->nextnode;
             while (p >= 0) {
                 if (Sp->P[p].getType() == 0) {
                     double gx = intpos_to_kpc(Sp->P[p].IntPos[0]);
@@ -79,11 +83,11 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
                         feedback_to_gas_neighbor(&in, &out, p, &fw, Sp);
                     }
                 }
-                p = Nextnode[p];
+                p = GravTree.Nextnode[p];
             }
             no = nop->sibling;
         } else {
-            no = nop->u.d.nextnode;
+            no = nop->nextnode;
         }
     }
 
