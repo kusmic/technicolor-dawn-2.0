@@ -158,7 +158,7 @@
  *
  * Returns the final smoothing length `h`, or -1.0 if no neighbors found.
  */
- double adaptive_feedback_radius(MyDouble Pos[3], int feedback_type,
+ double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type,
     simparticles *Sp, int *neighbors_ptr,
     void *unused1, int max_neighbors) {
 
