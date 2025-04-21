@@ -64,7 +64,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
         double dist = sqrt(dx*dx + dy*dy + dz*dz);
 
         // Estimate node extent using radius from center to corner (if available)
-        double node_extent = 0.5 * pow(GravTree.BoxSize, 1.0/3.0);  // fallback if no len available
+        double node_extent = 1.0;  // fallback fixed node size if no len member available  // fallback if no len available
         if (dist - node_extent > h_feedback) {
             no = nop->sibling;
             continue;

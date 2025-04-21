@@ -189,3 +189,5 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
 
     free(Active);
 }
+
+#endif // FEEDBACK
