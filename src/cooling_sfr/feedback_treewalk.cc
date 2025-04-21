@@ -295,52 +295,25 @@ static int feedback_visit_ngb_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult
     return 0;
 }
 
-TreeWalk TreeWalk_Feedback = {
-    .Name = "FEEDBACK",
-    .QueryType = sizeof(TreeWalkQuery_Feedback),
-    .ResultType = sizeof(TreeWalkResult_Feedback),
-    .haswork = (TreeWalkHasWorkFunc) feedback_haswork_feedback,
-    .ngbiter = (TreeWalkNgbIterFunc) feedback_ngbiter_feedback,
-    .visit = (TreeWalkVisitNgbFunc) feedback_visit_ngb_feedback,
-    .priv = NULL,
-};
 
-void run_feedback(double current_time, int feedback_type, simparticles *Sp)
-{
-    FeedbackWalk feedback_walk;
-    feedback_walk.current_time = current_time;
-    feedback_walk.feedback_type = feedback_type;
-
-    ActiveParticles Act;
-    Act.NumActiveParticle = 0;
-    Act.ActiveParticle = (int *) malloc(sizeof(int) * Sp->NumPart);
+vvoid run_feedback(double current_time, int feedback_type, simparticles *Sp) {
+    int *Active = (int *) malloc(sizeof(int) * Sp->NumPart);
+    int NumActive = 0;
 
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() != 4) continue;
-        if (feedback_isactive(i, &feedback_walk, Sp)) {
-            Act.ActiveParticle[Act.NumActiveParticle++] = i;
+        if (Sp->P[i].getType() == 4 && feedback_isactive(i, NULL, Sp)) {
+            Active[NumActive++] = i;
         }
     }
 
-    if (Act.NumActiveParticle == 0) {
-        if (ThisTask == 0)
-            printf("[Feedback TreeWalk] No active star particles this step!\n");
-        free(Act.ActiveParticle);
-        return;
+    if (NumActive > 0) {
+        printf("[Feedback] Running feedback for %d stars.\n", NumActive);
+        feedback_tree(Active, NumActive);
     }
 
-    if (ThisTask == 0)
-        printf("[Feedback TreeWalk] Running feedback on %d active star particles...\n", Act.NumActiveParticle);
-
-    TreeWalk_Feedback.priv = &feedback_walk;
-    TreeWalk_Feedback.Sp   = Sp;
-
-    //feedback_tree(Act.ActiveParticle, Act.NumActiveParticle);
-    feedback_tree(Active, NumActive);
-
-
-    free(Act.ActiveParticle);
+    free(Active);
 }
+
 
 // Evaluate feedback for one star explicitly
 int feedback_tree_evaluate(int target, int mode, int threadid)

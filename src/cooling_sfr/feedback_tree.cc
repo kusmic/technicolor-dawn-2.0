@@ -21,13 +21,11 @@
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
-// Apply feedback from a single star to nearby gas neighbors
 int feedback_tree_evaluate(int target, int mode, int threadid)
 {
     simparticles *Sp = &SimParticles;
 
-    if (Sp->P[target].getType() != 4)
-        return 0;  // Only star particles
+    if (Sp->P[target].getType() != 4) return 0;
 
     MyDouble starPos[3];
     starPos[0] = intpos_to_kpc(Sp->P[target].IntPos[0]);
@@ -36,9 +34,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
 
     int n_neighbors;
     double h_feedback = adaptive_feedback_radius(starPos, FEEDBACK_SNII, Sp, &n_neighbors, NULL, 0);
-
-    if (h_feedback < 0)
-        return 0;  // No neighbors found
+    if (h_feedback < 0) return 0;
 
     FeedbackWalk fw;
     fw.current_time = All.Time;
@@ -46,23 +42,20 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
 
     FeedbackInput in;
     FeedbackResult out;
-
-    in.Pos[0] = starPos[0];
-    in.Pos[1] = starPos[1];
-    in.Pos[2] = starPos[2];
+    in.Pos[0] = starPos[0]; in.Pos[1] = starPos[1]; in.Pos[2] = starPos[2];
     in.FeedbackType = FEEDBACK_SNII;
     in.Energy = SNII_ENERGY_PER_MASS * Sp->P[target].getMass();
     in.MassReturn = 0.1 * Sp->P[target].getMass();
     in.NeighborCount = n_neighbors;
 
-    int no = MaxPart;  // Start at root node
+    int no = MaxPart;
     while (no >= 0) {
         NODE *nop = &Nodes[no];
 
         double dx = NEAREST_X(nop->center[0] - starPos[0]);
         double dy = NEAREST_Y(nop->center[1] - starPos[1]);
         double dz = NEAREST_Z(nop->center[2] - starPos[2]);
-        double dist = sqrt(dx * dx + dy * dy + dz * dz);
+        double dist = sqrt(dx*dx + dy*dy + dz*dz);
 
         if (dist - 0.5 * nop->len > h_feedback) {
             no = nop->sibling;
@@ -70,7 +63,6 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
         }
 
         if (nop->u.d.bitflags & 1) {
-            // Leaf node: visit particles
             int p = nop->u.d.nextnode;
             while (p >= 0) {
                 if (Sp->P[p].getType() == 0) {
@@ -78,11 +70,11 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
                     double gy = intpos_to_kpc(Sp->P[p].IntPos[1]);
                     double gz = intpos_to_kpc(Sp->P[p].IntPos[2]);
 
-                    double dx = NEAREST_X(gx - starPos[0]);
-                    double dy = NEAREST_Y(gy - starPos[1]);
-                    double dz = NEAREST_Z(gz - starPos[2]);
+                    double ddx = NEAREST_X(gx - starPos[0]);
+                    double ddy = NEAREST_Y(gy - starPos[1]);
+                    double ddz = NEAREST_Z(gz - starPos[2]);
+                    double r2 = ddx * ddx + ddy * ddy + ddz * ddz;
 
-                    double r2 = dx * dx + dy * dy + dz * dz;
                     if (sqrt(r2) <= h_feedback) {
                         feedback_to_gas_neighbor(&in, &out, p, &fw, Sp);
                     }
@@ -98,7 +90,6 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
     return 0;
 }
 
-// Run feedback for a list of active stars
 void feedback_tree(int *active_list, int num_active)
 {
     for (int i = 0; i < num_active; i++)
