@@ -54,8 +54,23 @@ typedef struct {
     int feedback_type;
 } FeedbackWalk;
 
+typedef struct {
+    MyDouble Pos[3];
+    int FeedbackType;
+    double Energy;
+    double MassReturn;
+    int NeighborCount;
+} FeedbackInput;
+
+typedef struct {
+    // you can leave this empty unless you need return values
+} FeedbackResult;
+
+void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp);
+
 int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp);
 double intpos_to_kpc(MyIntPosType ipos);
+double adaptive_feedback_radius(MyDouble Pos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr, void *unused1, int unused2);
 
 // ------------------------
 // Function Declarations
