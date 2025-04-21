@@ -123,8 +123,8 @@
  }
  
  // Convert IntPos to physical coordinates in kpc
- inline double intpos_to_kpc(MyIntPosType ipos) {
-     return ((double)ipos) * All.BoxSize / (((double)INTEGERPOS_MAX) + 1.0);
+ inline double intpos_to_kpc(uint32_t ipos) {
+    return (double) ipos * All.BoxSize / 4294967296.0;
  }
  
  // Dimensionless cubic spline kernel (Monaghan 1992) for 3D
