@@ -119,6 +119,16 @@ typedef struct {
     TreeWalk *tw;
 } LocalTreeWalk;
 
+// Define dummy placeholder struct to satisfy compiler
+typedef struct {
+    double Hsml;
+    int other;  // index of neighbor particle
+} TreeWalkNgbIterBase;
+
+typedef struct {
+    TreeWalk *tw;
+} LocalTreeWalk;
+
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
  #define NEAREST_X(x) NEAREST(x, All.BoxSize)
@@ -325,7 +335,8 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp)
     TreeWalk_Feedback.priv = &feedback_walk;
     TreeWalk_Feedback.Sp   = Sp;
 
-    feedback_tree(Act.ActiveParticle, Act.NumActiveParticle);
+    //feedback_tree(Act.ActiveParticle, Act.NumActiveParticle);
+    feedback_tree(Active, NumActive);
 
 
     free(Act.ActiveParticle);
