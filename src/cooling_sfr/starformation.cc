@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fstream>
+#include <cmath>
 
 #include "../cooling_sfr/cooling.h"
 #include "../data/allvars.h"
@@ -33,13 +34,19 @@
 // Get a random star mass based on an IMF-weighted probability.
 // This inverse‑CDF step simply transforms a uniform random number
 // into that strongly declining distribution, so small masses dominate.
-double sample_IMF_mass() {
-  // example for a Salpeter dN/dm ∝ m⁻²·³⁵ between m_min and m_max
-  const double alpha = 2.35, m_min = 0.1, m_max = 100;
-  double u = get_random_number();
-  double norm = (pow(m_max,1-alpha) - pow(m_min,1-alpha)) / (1-alpha);
-  double m = pow( pow(m_min,1-alpha) + u * (pow(m_max,1-alpha)-pow(m_min,1-alpha)), 1/(1-alpha) );
-  return m;  // in M⊙
+static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, double m_max = 100.0) {
+  // 1) draw uniform variate
+  double u = get_random_number();  // ∈ [0,1)
+
+  // 2) prepare exponent and bracket terms
+  const double exp1   = 1.0 - alpha;             // exponent for integration
+  const double lower  = std::pow(m_min, exp1);   // m_min^(1‑alpha)
+  const double upper  = std::pow(m_max, exp1);   // m_max^(1‑alpha)
+
+  // 3) invert the CDF:  m = [ lower + u*(upper‑lower) ]^(1/exp1)
+  double mass = std::pow(lower + u * (upper - lower), 1.0 / exp1);
+
+  return mass;
 }
 
 /** \brief This routine creates star/wind particles according to their respective rates.
