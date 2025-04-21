@@ -79,6 +79,10 @@ double intpos_to_kpc(MyIntPosType ipos);
 void feedback_tree(int *active_list, int num_active);
 int feedback_tree_evaluate(int target, int mode, int threadid);
 
+inline double intpos_to_kpc(uint32_t ipos) {
+    return (double) ipos * All.BoxSize / 4294967296.0;
+}
+
 double adaptive_feedback_radius(MyDouble Pos[3], int feedback_type, simparticles *Sp,
     int *neighbors_ptr, void *unused1, int unused2);
 

@@ -96,6 +96,9 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
 
+ gravtree<simparticles> GravTree;
+ simparticles SimParticles;
+ 
  /**
   * Convert cosmological scale factor to physical time in years
   * Note: This is a simple approximation - you might want to use a more accurate
@@ -116,15 +119,6 @@
   double erg_to_code;
   // Convert erg/g → Gadget code units
   double erg_per_mass_to_code;
- 
-  // Conversion from fixed-point integer positions to physical units (kpc)
-  // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
-  //const double NUM_INT_STEPS = 4294967296.0;        // 2^32
-  //const double conversionFactor = All.BoxSize / NUM_INT_STEPS;
- 
-  inline double intpos_to_kpc(uint32_t ipos) {
-     return (double) ipos * All.BoxSize / 4294967296.0;
-  }
  
   const double WIND_VELOCITY = 500.0;             // km/s
   
