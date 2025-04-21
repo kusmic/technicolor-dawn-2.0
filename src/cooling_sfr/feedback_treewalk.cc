@@ -532,64 +532,6 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
     }
 }
 
-
-// Check if the star particle should trigger feedback
-static int feedback_haswork_feedback(TreeWalkQuery_Feedback *I, const int i, TreeWalk *tw)
-{
-    simparticles *Sp = tw->Sp;
-    FeedbackWalk *fw = (FeedbackWalk *) tw->priv;
-
-    if (Sp->P[i].getType() != 4) return 0;
-    if (!feedback_isactive(i, fw, Sp)) return 0;
-
-    I->Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
-    I->Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
-    I->Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
-    I->ID     = Sp->P[i].ID.get();
-    I->FeedbackType = fw->feedback_type;
-    I->Energy       = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
-    I->MassReturn   = 0.1 * Sp->P[i].getMass();
-
-    return 1;
-}
-
-// Set neighbor search radius per star
-static void feedback_ngbiter_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult_Feedback *O,
-                                      TreeWalkNgbIterBase *iter, LocalTreeWalk *lv)
-{
-    simparticles *Sp = lv->tw->Sp;
-    int dummy_neighbors;
-
-    double h = adaptive_feedback_radius(I->Pos, I->FeedbackType, Sp, &dummy_neighbors, NULL, 0);
-    iter->Hsml = h;
-}
-
-// Visit neighbor and apply feedback
-static int feedback_visit_ngb_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult_Feedback *O,
-                                       TreeWalkNgbIterBase *iter, LocalTreeWalk *lv)
-{
-    simparticles *Sp = lv->tw->Sp;
-    FeedbackWalk *fw = (FeedbackWalk *) lv->tw->priv;
-    int j = iter->other;
-
-    if (Sp->P[j].getType() != 0) return 0;  // only apply to gas
-
-    FeedbackInput in;
-    FeedbackResult out;
-
-    in.Pos[0] = I->Pos[0];
-    in.Pos[1] = I->Pos[1];
-    in.Pos[2] = I->Pos[2];
-    in.FeedbackType = I->FeedbackType;
-    in.Energy       = I->Energy;
-    in.MassReturn   = I->MassReturn;
-    in.NeighborCount = 0;  // unused for now
-
-    feedback_to_gas_neighbor(&in, &out, j, fw, Sp);
-    return 0;
-}
-
-
 void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
     int *Active = (int *) malloc(sizeof(int) * Sp->NumPart);
     int NumActive = 0;
