@@ -528,32 +528,43 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
 
 
 extern gravtree<simparticles> GravTree;
-extern domain<simparticles> Domain;   // declare the global
 
 void run_feedback(double current_time, int feedback_type, simparticles *Sp)
 {
-    // — Initialize the tree for feedback —
-    GravTree.Tp = Sp;           // tell the tree which particles to index
-    GravTree.D  = &Domain;      // point it at the global domain structure
-    GravTree.set_softenings();  // load per‐particle softenings
-    GravTree.gravity_exchange_forces();  // builds Nodes/Nextnode/MaxPart
+    // ————————————————————————————————
+    // Build a local domain & tree for feedback
+    // ————————————————————————————————
+    domain<simparticles> localDomain(MPI_COMM_WORLD, Sp);  // fully initializes D and Tp
+    GravTree.D  = &localDomain;    // point at our new domain
+    GravTree.Tp = Sp;              // point at the same particle set
+    GravTree.set_softenings();     // load softenings
+    GravTree.gravity_exchange_forces(); // builds Nodes[], Nextnode[], MaxPart
 
-    // sanity-check
+    // Sanity check
     if (GravTree.MaxPart == 0 || GravTree.Nodes == nullptr) {
-        fprintf(stderr, "[Feedback ERROR] GravTree not built!\n");
+        std::fprintf(stderr, "[Feedback ERROR] GravTree not built!\n");
         return;
     }
 
-    // — now collect active stars and do your neighbor walk —
-    std::vector<int> Active; Active.reserve(Sp->NumPart);
-    FeedbackWalk fw { current_time, feedback_type };
+    // ————————————————————————————————
+    // Collect active stars
+    // ————————————————————————————————
+    std::vector<int> Active;
+    Active.reserve(Sp->NumPart);
 
-    for (int i = 0; i < Sp->NumPart; i++) {
+    FeedbackWalk fw{ current_time, feedback_type };
+    for (int i = 0; i < Sp->NumPart; ++i) {
         if (Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp))
             Active.push_back(i);
     }
-    if (!Active.empty())
+
+    // ————————————————————————————————
+    // Run the neighbor‐walk feedback
+    // ————————————————————————————————
+    if (!Active.empty()) {
+        std::printf("[Feedback] Running feedback for %zu stars.\n", Active.size());
         feedback_tree(Active.data(), Active.size(), Sp);
+    }
 }
 
 
