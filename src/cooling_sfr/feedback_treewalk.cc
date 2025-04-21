@@ -88,12 +88,6 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
 
- /* === feedback_treewalk.cc: TreeWalk-based Feedback Module for Gadget-4 === */
-
-#include "allvars.h"
-#include "proto.h"
-#include "feedback.h"
-
 // TreeWalk Query and Result Structures
 
 typedef struct {
