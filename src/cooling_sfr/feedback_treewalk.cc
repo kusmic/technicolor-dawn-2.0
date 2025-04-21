@@ -536,7 +536,7 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp)
     // ————————————————————————————————
     GravTree.Tp = Sp;               // tell the tree which particles to index
     GravTree.set_softenings();      // load per‐particle softenings from All.ForceSoftening[]
-    GravTree.gravity_exchange_forces();  // builds & exchanges the tree: fills Nodes[], Nextnode[], MaxPart, etc.
+    //GravTree.gravity_exchange_forces();  // builds & exchanges the tree: fills Nodes[], Nextnode[], MaxPart, etc.
 
     // ————————————————————————————————
     // 2) Find which stars are "active" this step
