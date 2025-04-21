@@ -526,16 +526,25 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
     }
 }
 
-void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
-    int *Active = (int *) malloc(sizeof(int) * Sp->NumPart);
-    int NumActive = 0;
 
+void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
+    // 1) Prepare the walk context
+    FeedbackWalk fw;
+    fw.current_time  = current_time;
+    fw.feedback_type = feedback_type;
+
+    // 2) Build list of active star indices
+    int *Active    = (int *) malloc(sizeof(int) * Sp->NumPart);
+    int  NumActive = 0;
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() == 4 && feedback_isactive(i, NULL, Sp)) {
+        if (Sp->P[i].getType() == 4 &&
+            feedback_isactive(i, &fw, Sp))        // ← pass &fw, not NULL
+        {
             Active[NumActive++] = i;
         }
     }
 
+    // 3) Run the tree‐based feedback on those stars
     if (NumActive > 0) {
         printf("[Feedback] Running feedback for %d stars.\n", NumActive);
         feedback_tree(Active, NumActive, Sp);
@@ -543,5 +552,6 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
 
     free(Active);
 }
+
 
 #endif // FEEDBACK
