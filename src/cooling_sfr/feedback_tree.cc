@@ -20,10 +20,11 @@
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
+ #include "../domain/domain.h"
 
-
-extern gravtree<simparticles> GravTree;
-#define NODE_IS_LEAF(n) ((n)->first_child < 0)
+ extern gravtree<simparticles> GravTree;
+ extern simparticles SimParticles;
+ #define NODE_IS_LEAF(n) ((n)->first_child < 0)
 
 int feedback_tree_evaluate(int target, int mode, int threadid)
 {
