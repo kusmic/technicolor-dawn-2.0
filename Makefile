@@ -228,7 +228,7 @@ INCL    += data/allvars.h data/dtypes.h data/mymalloc.h data/idstorage.h data/sy
 
 SUBDIRS += domain
 OBJS    += domain/domain.o domain/domain_balance.o domain/domain_box.o \
-           domain/domain_exchange.o domain/domain_toplevel.o
+           domain/domain_exchange.o domain/domain_toplevel.o domain/domain_feedback.cc
 INCL    += domain/domain.h
 
 
