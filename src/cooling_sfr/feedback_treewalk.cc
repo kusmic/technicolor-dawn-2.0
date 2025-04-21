@@ -77,7 +77,7 @@
  #include <string.h>
  #include <random>
  
- #include "../cooling_sfr/feedback_treewalk.h"
+ #include "../cooling_sfr/feedback.h"
  #include "../cooling_sfr/cooling.h"
  #include "../sph/kernel.h"
  #include "../data/allvars.h"
