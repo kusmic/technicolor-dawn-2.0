@@ -98,7 +98,7 @@
 
  gravtree<simparticles> GravTree;
  simparticles SimParticles;
- 
+
  /**
   * Convert cosmological scale factor to physical time in years
   * Note: This is a simple approximation - you might want to use a more accurate
@@ -538,7 +538,7 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
 
     if (NumActive > 0) {
         printf("[Feedback] Running feedback for %d stars.\n", NumActive);
-        feedback_tree(Active, NumActive);
+        feedback_tree(Active, NumActive, Sp);
     }
 
     free(Active);

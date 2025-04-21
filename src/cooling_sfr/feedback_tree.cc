@@ -24,12 +24,12 @@
 
 
 extern gravtree<simparticles> GravTree;
-extern simparticles SimParticles;
+
 #define NODE_IS_LEAF(n) ((n)->nextnode >= GravTree.MaxPart)  // fallback leaf condition
 
-int feedback_tree_evaluate(int target, int mode, int threadid)
+int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
 {
-    simparticles *Sp = &SimParticles;
+    //simparticles *Sp = &SimParticles;
 
     if (Sp->P[target].getType() != 4) return 0;
 
@@ -98,8 +98,8 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
     return 0;
 }
 
-void feedback_tree(int *active_list, int num_active)
+void feedback_tree(int *active_list, int num_active, simparticles *Sp)
 {
     for (int i = 0; i < num_active; i++)
-        feedback_tree_evaluate(active_list[i], 0, 0);
+        feedback_tree_evaluate(active_list[i], 0, 0, Sp);
 }

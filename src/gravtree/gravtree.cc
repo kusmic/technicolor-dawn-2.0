@@ -217,3 +217,4 @@ void gravtree<partset>::gravity_exchange_forces(void)
 /* make sure that we instantiate the template */
 #include "../data/simparticles.h"
 template class gravtree<simparticles>;
+gravtree<simparticles> GravTree(MPI_COMM_WORLD);   // <<< this is JUST for the feedback tree walker
