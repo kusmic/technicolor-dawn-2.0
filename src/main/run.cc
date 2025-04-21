@@ -39,10 +39,6 @@
 #include "../sort/parallel_sort.h"
 #include "../system/system.h"
 
-#ifdef FEEDBACK
-#include "feedback.h"
-#endif
-
 /*!
  * Main driver routine for advancing the simulation forward in time.
  * The loop terminates when the cpu-time limit is reached, when a `stop' file
