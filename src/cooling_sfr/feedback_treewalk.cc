@@ -40,6 +40,17 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
  
+ // ─── DIAGNOSTIC STORAGE ───
+// per‐neighbor
+static std::vector<double> g_delta_u;
+static std::vector<double> g_rel_increase;
+static std::vector<double> g_radial_r;
+
+// per‐star
+static std::vector<int>    g_neighbors_per_star;
+static std::vector<double> g_h_per_star;
+static std::vector<double> g_energy_ratio;
+
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
  #define NEAREST_X(x) NEAREST(x, All.BoxSize)
@@ -108,16 +119,12 @@
      double Z, C, O, Fe;
  };
  
- /**
-  * Convert cosmological scale factor to physical time in years
-  */
+ //Convert cosmological scale factor to physical time in years
  double scale_factor_to_physical_time(double a) {
      return HUBBLE_TIME * pow(a, 3.0/2.0); // Simple matter-dominated universe approximation
  }
- 
- /**
-  * Convert physical time in years to cosmological scale factor
-  */
+  
+ // Convert physical time in years to cosmological scale factor
  double physical_time_to_scale_factor(double time_physical) {
      return pow(time_physical / HUBBLE_TIME, 2.0/3.0);
  }
@@ -219,7 +226,7 @@
   */
  double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
      double u_after = u_before + delta_u;
-     double max_u = 5e3; // Maximum allowed utherm in internal units
+     double max_u = 1e4; // Maximum allowed utherm in internal units
  
      if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
          FEEDBACK_PRINT("[Feedback WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
@@ -423,6 +430,9 @@
              TotalEnergyInjected_AGB += E_total;
          }
  
+         double E_input = E_total;                    // ← total energy budget for this star
+         double sum_applied = 0.0;                    // ← will accumulate what we actually give out
+
          // Update mass return diagnostics
          ThisStepMassReturned += mass_return;
          TotalMassReturned += mass_return;
@@ -467,6 +477,15 @@
              double E_therm_j = E_therm * norm_weight;
              double delta_u = E_therm_j * erg_per_mass_to_code * inv_mass_cgs;
              
+             // ─── DIAG: per‐neighbor record ───
+             double rel_inc = delta_u / (Sp->get_utherm_from_entropy(j) + 1e-10);
+             g_delta_u    .push_back(delta_u);
+             g_rel_increase.push_back(rel_inc);
+             g_radial_r   .push_back(Targets[i].dist);
+
+                // accumulate for per‐star energy‐conservation check
+                sum_applied += E_therm_j;
+
              // Check for valid energy increment
              if (!isfinite(delta_u) || delta_u < 0) {
                  FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
@@ -499,6 +518,8 @@
              for (int k = 0; k < 3; k++)
                  Sp->P[j].Vel[k] += v_kick * Targets[i].dir[k];
                  
+             sum_applied += E_kin_j;  // for diagnostics
+
              // Mass return
              double mass_add = mass_return * norm_weight;
              Sp->P[j].setMass(gas_mass + mass_add);
@@ -523,6 +544,11 @@
              }
          }
          
+            // ─── DIAG: per‐star record ───
+            g_neighbors_per_star.push_back(TargetCount);
+            g_h_per_star         .push_back(SearchRadius);
+            g_energy_ratio      .push_back(sum_applied / E_input);
+
          // Mark this star as having received this type of feedback
          Sp->P[StellarIndex].FeedbackFlag |= FeedbackType;
      }
@@ -556,10 +582,6 @@
  /**
   * Find an appropriate feedback radius for a star
   */
-/**
- * Modified find_adaptive_radius function
- * Replace the existing implementation with this version
- */
  double find_adaptive_radius(double pos[3], int feedback_type, simparticles *Sp, FeedbackTreeWalk *walker) {
     // Initial parameters
     double h = get_initial_feedback_radius(feedback_type);
@@ -609,9 +631,6 @@
  /**
   * Main feedback function using a direct tree implementation
   */
-/**
- * Final version of apply_stellar_feedback_treewalk function with parameter checks
- */
  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
     // Reset diagnostic counters
     ThisStepEnergy_SNII = 0;
@@ -720,63 +739,27 @@
     }
 }
  
- /**
-  * Brute-force implementation (from your original code)
-  * This is kept for backward compatibility and validation.
-  */
- void apply_stellar_feedback_bruteforce(double current_time, simparticles* Sp) {
-     // Reset diagnostic counters
-     ThisStepEnergy_SNII = 0;
-     ThisStepEnergy_SNIa = 0;
-     ThisStepEnergy_AGB = 0;
-     ThisStepMassReturned = 0;
-     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
-     
-     // Process each star
-     for (int i = 0; i < Sp->NumPart; i++) {
-         if (Sp->P[i].getType() != 4) 
-             continue;  // Only star particles
-             
-         // Check eligibility for each feedback type
-         for (int feedback_type = FEEDBACK_SNII; feedback_type <= FEEDBACK_SNIa; feedback_type *= 2) {
-             if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
-                 continue;
-                 
-             // Convert position to physical coordinates
-             double pos[3];
-             pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
-             pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
-             pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
-             
-             // Get star properties
-             double stellar_mass = Sp->P[i].getMass();
-             double metallicity = Sp->SphP[i].Metallicity;
-             int snia_events = Sp->P[i].SNIaEvents;
-             
-             // Apply feedback using direct search
-             FeedbackTreeWalk walker(Sp);
-             walker.SetFeedbackType(feedback_type);
-             
-             // Find appropriate search radius
-             double h = get_initial_feedback_radius(feedback_type);
-             walker.FindNeighborsWithinRadius(pos, h, i);
-             
-             if (walker.TargetCount > 0) {
-                 walker.ApplyFeedback(stellar_mass, metallicity, snia_events);
-             }
-         }
-     }
-     
-     // Print summary (on master process only)
-     if (ThisTask == 0 && All.FeedbackDebug && 
-        (ThisStepEnergy_SNII > 0 || ThisStepEnergy_SNIa > 0 || ThisStepEnergy_AGB > 0)) {
-         FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
-                       ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
-         FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
-         FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
-                       ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
-                       ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
-     }
- }
+// OUTPUT Feedback Diagnostics to a CSV for plotting
+// with plot_Feedback_diagnostics.py
+if (ThisTask == 0) {
+    std::ofstream out("feedback_diagnostics.csv");
+    out << "#delta_u,rel_inc,r,n_ngb,h_star,E_ratio\n";
+    // first all the neighbor‐lines
+    for (size_t k = 0; k < g_delta_u.size(); ++k) {
+        out 
+          << g_delta_u[k]      << ","
+          << g_rel_increase[k] << ","
+          << g_radial_r[k]     << ",,,\n";
+    }
+    // then the star‐lines
+    for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
+        out 
+          << ",,,"
+          << g_neighbors_per_star[k] << ","
+          << g_h_per_star[k]         << ","
+          << g_energy_ratio[k]       << "\n";
+    }
+    out.close();
+}
  
  #endif // FEEDBACK

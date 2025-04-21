@@ -1,6 +1,6 @@
 
 %----  Relevant files 
-InitCondFile         ICs/ics_from_music_32
+InitCondFile         ICs/ics_from_music_16
 OutputDir            ./output
 SnapshotFileBase     snapshot
 OutputListFilename   empty.txt
@@ -112,7 +112,11 @@ CritPhysDensity     0           % critical physical density for star formation (
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
+FeedbackDebug       1     % Prints all feedback-related activity (0=off, 1=on)
+FeedbackSNII        1     % Enable Type II supernova feedback (0=off, 1=on)
+FeedbackSNIa        0     % Enable Type Ia supernova feedback (0=off, 1=on)
+FeedbackAGB         0     % Enable AGB stellar winds feedback (0=off, 1=on)
+
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust

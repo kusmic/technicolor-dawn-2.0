@@ -128,7 +128,8 @@
  
    if(tot_stars_spawned > 0 || tot_stars_converted > 0)
      {
-       printf("A STAR IS BORN! SFR: spawned %d stars, converted %d gas particles into stars\n", tot_stars_spawned, tot_stars_converted);
+      mpi_printf("A STAR IS BORN! z=%.3f  SFR: spawned %d stars, converted %d gas particles into stars\n",
+        1.0/All.Time - 1.0, tot_stars_spawned, tot_stars_converted);
      }
  
    tot_altogether_spawned = tot_stars_spawned;
