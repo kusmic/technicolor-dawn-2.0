@@ -158,89 +158,92 @@
  *
  * Returns the final smoothing length `h`, or -1.0 if no neighbors found.
  */
- double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp,
-    int *neighbors_ptr, int *neighbor_list, int max_neighbors)
-{
-// Target neighbor counts per feedback type
-int TARGET_NEIGHBORS;
-if (feedback_type == FEEDBACK_SNII)
-TARGET_NEIGHBORS = 10;
-else if (feedback_type == FEEDBACK_SNIa)
-TARGET_NEIGHBORS = 64;
-else if (feedback_type == FEEDBACK_AGB)
-TARGET_NEIGHBORS = 32;
-else
-TARGET_NEIGHBORS = 48;
+ double adaptive_feedback_radius(MyDouble Pos[3], int feedback_type,
+    simparticles *Sp, int *neighbors_ptr,
+    void *unused1, int max_neighbors) {
 
-const double H_MIN = 0.05;  // kpc
-const double H_MAX = 3.0;   // kpc
-const int MAX_ATTEMPTS = 10;
+    int *neighbor_list = static_cast<int*>(unused1);
 
-double h = 0.7;  // Initial guess
-int attempt = 0;
+    // Target neighbor counts per feedback type
+    int TARGET_NEIGHBORS;
+    if (feedback_type == FEEDBACK_SNII)
+    TARGET_NEIGHBORS = 10;
+    else if (feedback_type == FEEDBACK_SNIa)
+    TARGET_NEIGHBORS = 64;
+    else if (feedback_type == FEEDBACK_AGB)
+    TARGET_NEIGHBORS = 32;
+    else
+    TARGET_NEIGHBORS = 48;
 
-// Cache gas positions on first call
-static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
-static int gas_count = 0;
-if (!gas_x) {
-gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
-gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
-gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
-}
+    const double H_MIN = 0.05;  // kpc
+    const double H_MAX = 3.0;   // kpc
+    const int MAX_ATTEMPTS = 10;
 
-gas_count = 0;
-for (int j = 0; j < Sp->NumPart; j++) {
-if (Sp->P[j].getType() != 0) continue;
-gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
-gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
-gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
-gas_count++;
-}
+    double h = 0.7;  // Initial guess
+    int attempt = 0;
 
-int neighbors_found = 0;
+    // Cache gas positions on first call
+    static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
+    static int gas_count = 0;
+    if (!gas_x) {
+        gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
+        gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
+    }
 
-do {
-neighbors_found = 0;
+    gas_count = 0;
+    for (int j = 0; j < Sp->NumPart; j++) {
+    if (Sp->P[j].getType() != 0) continue;
+        gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
+        gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
+        gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
+        gas_count++;
+    }
 
-for (int j = 0; j < gas_count; j++) {
-double dx = NEAREST_X(gas_x[j] - starPos[0]);
-double dy = NEAREST_Y(gas_y[j] - starPos[1]);
-double dz = NEAREST_Z(gas_z[j] - starPos[2]);
-double r2 = dx*dx + dy*dy + dz*dz;
+    int neighbors_found = 0;
 
-if (sqrt(r2) < h) {
-if (neighbors_found < max_neighbors)
-neighbor_list[neighbors_found] = j;
-neighbors_found++;
-}
-}
+    do {
+    neighbors_found = 0;
 
-*neighbors_ptr = neighbors_found;
+    for (int j = 0; j < gas_count; j++) {
+        double dx = NEAREST_X(gas_x[j] - starPos[0]);
+        double dy = NEAREST_Y(gas_y[j] - starPos[1]);
+        double dz = NEAREST_Z(gas_z[j] - starPos[2]);
+        double r2 = dx*dx + dy*dy + dz*dz;
 
-if (neighbors_found < TARGET_NEIGHBORS)
-h *= 1.25;
-else if (neighbors_found > TARGET_NEIGHBORS * 1.5)
-h *= 0.8;
+        if (sqrt(r2) < h) {
+            if (neighbors_found < max_neighbors)
+            neighbor_list[neighbors_found] = j;
+            neighbors_found++;
+        }
+    }
 
-h = fmax(fmin(h, H_MAX), H_MIN);
-attempt++;
+    *neighbors_ptr = neighbors_found;
 
-} while ((neighbors_found < TARGET_NEIGHBORS || neighbors_found > TARGET_NEIGHBORS * 2) &&
-attempt < MAX_ATTEMPTS);
+    if (neighbors_found < TARGET_NEIGHBORS)
+    h *= 1.25;
+    else if (neighbors_found > TARGET_NEIGHBORS * 1.5)
+    h *= 0.8;
 
-if (neighbors_found == 0) {
-if (ThisTask == 0) {
-FEEDBACK_PRINT("[Feedback WARNING] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
-}
-return -1.0;
-}
+    h = fmax(fmin(h, H_MAX), H_MIN);
+    attempt++;
 
-if (ThisTask == 0) {
-FEEDBACK_PRINT("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
-h, attempt, feedback_type, neighbors_found);
-}
+    } while ((neighbors_found < TARGET_NEIGHBORS || neighbors_found > TARGET_NEIGHBORS * 2) &&
+    attempt < MAX_ATTEMPTS);
 
-return h;
+    if (neighbors_found == 0) {
+    if (ThisTask == 0) {
+    FEEDBACK_PRINT("[Feedback WARNING] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
+    }
+    return -1.0;
+    }
+
+    if (ThisTask == 0) {
+    FEEDBACK_PRINT("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
+    h, attempt, feedback_type, neighbors_found);
+    }
+
+    return h;
 }
 
 
