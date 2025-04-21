@@ -330,9 +330,9 @@
                  continue;
  
              double pos_i[3];
-             pos_i[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos_i[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos_i[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos_i[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+             pos_i[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+             pos_i[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
  
              double dx = StellarPos[0] - pos_i[0];
              double dy = StellarPos[1] - pos_i[1];
@@ -655,9 +655,9 @@
                  
              // Convert position to physical coordinates
              double pos[3];
-             pos[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+             pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+             pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
              
              // Get star properties
              double stellar_mass = Sp->P[i].getMass();
@@ -745,9 +745,9 @@
                  
              // Convert position to physical coordinates
              double pos[3];
-             pos[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
-             pos[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+             pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+             pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
              
              // Get star properties
              double stellar_mass = Sp->P[i].getMass();
