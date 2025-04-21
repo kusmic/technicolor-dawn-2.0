@@ -99,6 +99,7 @@
 // TreeWalk Query and Result Structures
 
 extern simparticles SimParticles;
+extern gravtree<simparticles> GravTree;
 
 typedef struct {
     MyDouble Pos[3];       // star position
@@ -331,10 +332,10 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
     double h_feedback = adaptive_feedback_radius(starPos, FEEDBACK_SNII, Sp, &n_neighbors, NULL, 0);
 
     // Start Gadget-4 style tree traversal explicitly
-    int no = MaxPart;  // start with the root node
+    int no = GravTree.MaxPart;  // start with the root node
     while(no >= 0)
     {
-        NODE *nop = &Nodes[no];
+        gravnode *nop = &GravTree.Nodes[no];
         double dist = sqrt(pow(NEAREST_X(nop->center[0] - starPos[0]), 2) +
                            pow(NEAREST_Y(nop->center[1] - starPos[1]), 2) +
                            pow(NEAREST_Z(nop->center[2] - starPos[2]), 2));
@@ -373,7 +374,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
                         feedback_to_gas_neighbor(&in, &out, p, &fw, Sp);
                     }
                 }
-                p = Nextnode[p];
+                p = GravTree.Nextnode[p];
             }
             no = nop->sibling;
         }
