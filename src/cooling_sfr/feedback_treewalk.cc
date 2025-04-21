@@ -530,53 +530,71 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
 extern gravtree<simparticles> GravTree;
 extern domain<simparticles>  Domain;
 
+
+
+// Maximum we’ll ever allow for a feedback neighbor list
+#define MAX_FEEDBACK_NEIGHBORS 1024
+
 void run_feedback(double current_time, int feedback_type, simparticles *Sp)
 {
-    // --------------------------------------------
-    // 1) Do exactly what "gravtree_build.cc" does:
-    //    a) domain‐decompose, top‐level, exchange
-    Domain.setDomain(MPI_COMM_WORLD,
-                     Sp->NumPart,
-                     /*positions*/   Sp->P->IntPos,
-                     /*type flags*/  &Sp->P->Type[0]);
-    Domain.decomposeDomain();
-    Domain.create_topLevelTree(Sp->NumPart,
-                               Sp->P->IntPos,
-                               &Sp->P->Type[0]);
-    Domain.exchange_topLevelLeaves();
+    FeedbackWalk fw;
+    fw.current_time  = current_time;
+    fw.feedback_type = feedback_type;
 
-    //    b) hook up the GravTree object
-    GravTree.Tp = Sp;
-    GravTree.D  = &Domain;
+    // Temporary container for neighbor‐indices
+    int neighbor_list[MAX_FEEDBACK_NEIGHBORS];
+    int n_neighbors;
 
-    //    c) build the full local tree, exchange leaves, do force‐exchange
-    GravTree.set_softenings();
-    GravTree.build_tree();
-    GravTree.exchange_topleafdata();
-    GravTree.gravity_exchange_forces();
-    // now GravTree.MaxPart, Nodes[], Nextnode[], Recv_count[], etc. are all valid
+    FeedbackInput  in;
+    FeedbackResult out;
 
-    // --------------------------------------------
-    // 2) collect all *active* stars into a small vector
-    FeedbackWalk fw = { current_time, feedback_type };
-    std::vector<int> activeStars;
-    activeStars.reserve(64);
+    // Loop over *all* particles, pick out the stars whose feedback is active
+    for (int i = 0; i < Sp->NumPart; i++)
+    {
+        if (Sp->P[i].getType() != 4)           continue;  // only stars
+        if (!feedback_isactive(i, &fw, Sp))    continue;  // only active ones
 
-    for(int i = 0; i < Sp->NumPart; i++) {
-        if(Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp)) {
-            activeStars.push_back(i);
+        // Convert the star’s position into kpc (your helper)
+        MyDouble starPos[3] = {
+            intpos_to_kpc(Sp->P[i].IntPos[0]),
+            intpos_to_kpc(Sp->P[i].IntPos[1]),
+            intpos_to_kpc(Sp->P[i].IntPos[2])
+        };
+
+        // Fill in the FeedbackInput for this star
+        in.Pos[0]        = starPos[0];
+        in.Pos[1]        = starPos[1];
+        in.Pos[2]        = starPos[2];
+        in.FeedbackType  = feedback_type;
+        in.Energy        = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
+        in.MassReturn    = 0.1 * Sp->P[i].getMass();
+
+        // Find a good smoothing radius & get a neighbor list
+        n_neighbors = 0;
+        double h = adaptive_feedback_radius(
+            starPos,
+            feedback_type,
+            Sp,
+            &n_neighbors,
+            neighbor_list,
+            MAX_FEEDBACK_NEIGHBORS
+        );
+        if (h < 0 || n_neighbors == 0)     // no neighbors found
+            continue;
+
+        // Tell the rest of the code how many and what h to use
+        in.h             = h;
+        in.NeighborCount = n_neighbors;
+
+        // Finally apply feedback to each neighbor
+        for (int k = 0; k < n_neighbors; k++)
+        {
+            int j = neighbor_list[k];  // gas‐particle index
+            feedback_to_gas_neighbor(&in, &out, j, &fw, Sp);
         }
     }
-    if(activeStars.empty()) {
-        return;  // nothing to do this timestep
-    }
-
-    // --------------------------------------------
-    // 3) loop over each star and do the feedback‐tree walk
-    for(int idx : activeStars) {
-        feedback_tree_evaluate(idx, /*mode=*/0, /*threadid=*/0);
-    }
 }
+
 
 
 #endif // FEEDBACK
