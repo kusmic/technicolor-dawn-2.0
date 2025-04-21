@@ -102,6 +102,23 @@ typedef struct {
     // optionally accumulate data per star here
 } TreeWalkResult_Feedback;
 
+typedef struct simparticles simparticles;
+
+typedef struct {
+    size_t QueryType;
+    size_t ResultType;
+    const char *Name;
+    void *priv;
+    simparticles *Sp;
+    int (*haswork)(void *query, int i, void *tw);
+    void (*ngbiter)(void *query, void *result, void *iter, void *lv);
+    int (*visit)(void *query, void *result, void *iter, void *lv);
+} TreeWalk;
+
+typedef struct {
+    TreeWalk *tw;
+} LocalTreeWalk;
+
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
  #define NEAREST_X(x) NEAREST(x, All.BoxSize)
@@ -308,9 +325,86 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp)
     TreeWalk_Feedback.priv = &feedback_walk;
     TreeWalk_Feedback.Sp   = Sp;
 
-    TreeWalk_run(&TreeWalk_Feedback, &Act);
+    feedback_tree(Act.ActiveParticle, Act.NumActiveParticle);
+
 
     free(Act.ActiveParticle);
+}
+
+// Evaluate feedback for one star explicitly
+int feedback_tree_evaluate(int target, int mode, int threadid)
+{
+    simparticles *Sp = &SimParticles;
+
+    MyDouble starPos[3];
+    starPos[0] = intpos_to_kpc(Sp->P[target].IntPos[0]);
+    starPos[1] = intpos_to_kpc(Sp->P[target].IntPos[1]);
+    starPos[2] = intpos_to_kpc(Sp->P[target].IntPos[2]);
+
+    int n_neighbors;
+    double h_feedback = adaptive_feedback_radius(starPos, FEEDBACK_SNII, Sp, &n_neighbors, NULL, 0);
+
+    // Start Gadget-4 style tree traversal explicitly
+    int no = MaxPart;  // start with the root node
+    while(no >= 0)
+    {
+        NODE *nop = &Nodes[no];
+        double dist = sqrt(pow(NEAREST_X(nop->center[0] - starPos[0]), 2) +
+                           pow(NEAREST_Y(nop->center[1] - starPos[1]), 2) +
+                           pow(NEAREST_Z(nop->center[2] - starPos[2]), 2));
+
+        if(dist - nop->len > h_feedback) {
+            no = nop->sibling;
+            continue;
+        }
+
+        // If leaf node, check individual gas particles explicitly
+        if(nop->u.d.bitflags & 1)
+        {
+            int p = nop->u.d.nextnode;
+            while(p >= 0)
+            {
+                if(Sp->P[p].getType() == 0) {
+                    double dx = NEAREST_X(intpos_to_kpc(Sp->P[p].IntPos[0]) - starPos[0]);
+                    double dy = NEAREST_Y(intpos_to_kpc(Sp->P[p].IntPos[1]) - starPos[1]);
+                    double dz = NEAREST_Z(intpos_to_kpc(Sp->P[p].IntPos[2]) - starPos[2]);
+
+                    double r2 = dx*dx + dy*dy + dz*dz;
+                    if(sqrt(r2) <= h_feedback) {
+                        // explicitly apply feedback to neighbor particle p
+                        FeedbackInput in;
+                        FeedbackResult out;
+                        FeedbackWalk fw;
+                        fw.current_time = All.Time;
+                        fw.feedback_type = FEEDBACK_SNII;
+
+                        in.Pos[0] = starPos[0];
+                        in.Pos[1] = starPos[1];
+                        in.Pos[2] = starPos[2];
+                        in.Energy = SNII_ENERGY_PER_MASS * Sp->P[target].getMass();
+                        in.MassReturn = 0.1 * Sp->P[target].getMass();
+
+                        feedback_to_gas_neighbor(&in, &out, p, &fw, Sp);
+                    }
+                }
+                p = Nextnode[p];
+            }
+            no = nop->sibling;
+        }
+        else
+        {
+            no = nop->u.d.nextnode;
+        }
+    }
+
+    return 0;
+}
+
+// Run feedback on active star particles explicitly
+void feedback_tree(int *active_list, int num_active)
+{
+    for(int i = 0; i < num_active; i++)
+        feedback_tree_evaluate(active_list[i], 0, 0);
 }
 
 
