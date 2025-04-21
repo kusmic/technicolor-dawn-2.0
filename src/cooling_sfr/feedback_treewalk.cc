@@ -88,82 +88,98 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
 
-// Check if the particle is a star eligible for feedback at the current timestep
-static int feedback_haswork(TreeWalkQueryBase *I, const int i, TreeWalk *tw)
+ /* === feedback_treewalk.cc: TreeWalk-based Feedback Module for Gadget-4 === */
+
+#include "allvars.h"
+#include "proto.h"
+#include "feedback.h"
+
+// TreeWalk Query and Result Structures
+
+typedef struct {
+    MyDouble Pos[3];       // star position
+    MyIDType ID;           // star ID
+    int FeedbackType;      // SNII, SNIa, AGB, etc.
+    double Energy;         // total feedback energy
+    double MassReturn;     // returned mass to ISM
+} TreeWalkQuery_Feedback;
+
+typedef struct {
+    // optionally accumulate data per star here
+} TreeWalkResult_Feedback;
+
+// Check if the star particle should trigger feedback
+static int feedback_haswork_feedback(TreeWalkQuery_Feedback *I, const int i, TreeWalk *tw)
 {
     simparticles *Sp = tw->Sp;
-    return (Sp->P[i].getType() == 4 && feedback_isactive(i, tw->priv, Sp));
+    FeedbackWalk *fw = (FeedbackWalk *) tw->priv;
+
+    if (Sp->P[i].getType() != 4) return 0;
+    if (!feedback_isactive(i, fw, Sp)) return 0;
+
+    I->Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
+    I->Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
+    I->Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
+    I->ID     = Sp->P[i].ID.get();
+    I->FeedbackType = fw->feedback_type;
+    I->Energy       = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
+    I->MassReturn   = 0.1 * Sp->P[i].getMass();
+
+    return 1;
 }
 
-// Determine feedback radius adaptively for each star particle
-static void feedback_ngbiter(TreeWalkQueryNgbIter *iter, TreeWalk *tw)
+// Set neighbor search radius per star
+static void feedback_ngbiter_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult_Feedback *O,
+                                      TreeWalkNgbIterBase *iter, LocalTreeWalk *lv)
 {
-    FeedbackWalk *fw = (FeedbackWalk *) tw->priv;
-    simparticles *Sp = tw->Sp;
-
-    double starPos[3] = {
-        intpos_to_kpc(iter->base.IntPos[0]),
-        intpos_to_kpc(iter->base.IntPos[1]),
-        intpos_to_kpc(iter->base.IntPos[2])
-    };
-
+    simparticles *Sp = lv->tw->Sp;
     int dummy_neighbors;
-    double h = adaptive_feedback_radius(starPos, fw->feedback_type, Sp, &dummy_neighbors, NULL, 0);
 
+    double h = adaptive_feedback_radius(I->Pos, I->FeedbackType, Sp, &dummy_neighbors, NULL, 0);
     iter->Hsml = h;
 }
 
-// Visit each gas neighbor and apply feedback explicitly
-static int feedback_visit_ngb(TreeWalkQueryBase *I, TreeWalkResultBase *O,
-                              TreeWalkNgbIterBase *iter, LocalTreeWalk *lv)
+// Visit neighbor and apply feedback
+static int feedback_visit_ngb_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult_Feedback *O,
+                                       TreeWalkNgbIterBase *iter, LocalTreeWalk *lv)
 {
-    FeedbackWalk *fw = (FeedbackWalk *) lv->tw->priv;
     simparticles *Sp = lv->tw->Sp;
+    FeedbackWalk *fw = (FeedbackWalk *) lv->tw->priv;
+    int j = iter->other;
 
-    int gas_index = iter->other;
-
-    // Skip non-gas particles
-    if (Sp->P[gas_index].getType() != 0) return 0;
+    if (Sp->P[j].getType() != 0) return 0;  // only apply to gas
 
     FeedbackInput in;
     FeedbackResult out;
 
-    in.Pos[0] = intpos_to_kpc(I->IntPos[0]);
-    in.Pos[1] = intpos_to_kpc(I->IntPos[1]);
-    in.Pos[2] = intpos_to_kpc(I->IntPos[2]);
-    in.FeedbackType = fw->feedback_type;
-    in.Energy = SNII_ENERGY_PER_MASS * Sp->P[I->ID].getMass();
-    in.MassReturn = 0.1 * Sp->P[I->ID].getMass();
+    in.Pos[0] = I->Pos[0];
+    in.Pos[1] = I->Pos[1];
+    in.Pos[2] = I->Pos[2];
+    in.FeedbackType = I->FeedbackType;
+    in.Energy       = I->Energy;
+    in.MassReturn   = I->MassReturn;
+    in.NeighborCount = 0;  // unused for now
 
-    // Directly apply feedback to this gas neighbor
-    feedback_to_gas_neighbor(&in, &out, gas_index, fw, Sp);
-
+    feedback_to_gas_neighbor(&in, &out, j, fw, Sp);
     return 0;
 }
 
-// Define your Feedback TreeWalk
 TreeWalk TreeWalk_Feedback = {
-    "FEEDBACK",
-    sizeof(TreeWalkQueryBase),
-    sizeof(TreeWalkResultBase),
-    feedback_haswork,
-    NULL,               // No special primary action
-    NULL,               // No special secondary action
-    NULL,               // No reduce
-    feedback_ngbiter,   // Neighbor search radius
-    feedback_visit_ngb, // Apply feedback directly to neighbors
-    NULL,
-    NULL
+    .Name = "FEEDBACK",
+    .QueryType = sizeof(TreeWalkQuery_Feedback),
+    .ResultType = sizeof(TreeWalkResult_Feedback),
+    .haswork = (TreeWalkHasWorkFunc) feedback_haswork_feedback,
+    .ngbiter = (TreeWalkNgbIterFunc) feedback_ngbiter_feedback,
+    .visit = (TreeWalkVisitNgbFunc) feedback_visit_ngb_feedback,
+    .priv = NULL,
 };
 
-// Properly run the Feedback TreeWalk
 void run_feedback(double current_time, int feedback_type, simparticles *Sp)
 {
     FeedbackWalk feedback_walk;
     feedback_walk.current_time = current_time;
     feedback_walk.feedback_type = feedback_type;
 
-    // Prepare ActiveParticles explicitly
     ActiveParticles Act;
     Act.NumActiveParticle = 0;
     Act.ActiveParticle = (int *) malloc(sizeof(int) * Sp->NumPart);
@@ -182,16 +198,16 @@ void run_feedback(double current_time, int feedback_type, simparticles *Sp)
         return;
     }
 
-    // Run the TreeWalk feedback mechanism
     if (ThisTask == 0)
         printf("[Feedback TreeWalk] Running feedback on %d active star particles...\n", Act.NumActiveParticle);
 
-    TreeWalk_Feedback.priv = &feedback_walk;  // pass feedback_walk as private data
-    TreeWalk_Feedback.Sp = Sp;                // attach particle data explicitly
+    TreeWalk_Feedback.priv = &feedback_walk;
+    TreeWalk_Feedback.Sp   = Sp;
 
     TreeWalk_run(&TreeWalk_Feedback, &Act);
 
     free(Act.ActiveParticle);
 }
+
 
 #endif // FEEDBACK
