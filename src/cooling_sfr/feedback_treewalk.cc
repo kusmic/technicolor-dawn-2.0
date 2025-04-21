@@ -737,29 +737,33 @@ static std::vector<double> g_energy_ratio;
         
         walker->ApplyFeedback(stellar_mass, metallicity, snia_events);
     }
+
+    OutputFeedbackDiagnostics();  // Output diagnostics after processing this feedback type
 }
  
 // OUTPUT Feedback Diagnostics to a CSV for plotting
 // with plot_Feedback_diagnostics.py
-if (ThisTask == 0) {
-    std::ofstream out("feedback_diagnostics.csv");
-    out << "#delta_u,rel_inc,r,n_ngb,h_star,E_ratio\n";
-    // first all the neighbor‐lines
-    for (size_t k = 0; k < g_delta_u.size(); ++k) {
-        out 
-          << g_delta_u[k]      << ","
-          << g_rel_increase[k] << ","
-          << g_radial_r[k]     << ",,,\n";
+void OutputFeedbackDiagnostics() {
+    if (ThisTask == 0) {
+        std::ofstream out("feedback_diagnostics.csv");
+        out << "#delta_u,rel_inc,r,n_ngb,h_star,E_ratio\n";
+        // first all the neighbor‐lines
+        for (size_t k = 0; k < g_delta_u.size(); ++k) {
+            out 
+            << g_delta_u[k]      << ","
+            << g_rel_increase[k] << ","
+            << g_radial_r[k]     << ",,,\n";
+        }
+        // then the star‐lines
+        for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
+            out 
+            << ",,,"
+            << g_neighbors_per_star[k] << ","
+            << g_h_per_star[k]         << ","
+            << g_energy_ratio[k]       << "\n";
+        }
+        out.close();
     }
-    // then the star‐lines
-    for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
-        out 
-          << ",,,"
-          << g_neighbors_per_star[k] << ","
-          << g_h_per_star[k]         << ","
-          << g_energy_ratio[k]       << "\n";
-    }
-    out.close();
 }
- 
+
  #endif // FEEDBACK
