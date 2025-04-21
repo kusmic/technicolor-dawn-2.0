@@ -556,56 +556,63 @@
  /**
   * Find an appropriate feedback radius for a star
   */
+/**
+ * Modified find_adaptive_radius function
+ * Replace the existing implementation with this version
+ */
  double find_adaptive_radius(double pos[3], int feedback_type, simparticles *Sp, FeedbackTreeWalk *walker) {
-     // Initial parameters
-     double h = get_initial_feedback_radius(feedback_type);
-     double h_min = 0.1;  // kpc
-     double h_max = 3.0;  // kpc
-     
-     // Target neighbor counts
-     int target_min = 0;
-     int target_max = 0;
-     
-     if (feedback_type == FEEDBACK_SNII) {
-         target_min = 8;
-         target_max = 32;
-     }
-     else if (feedback_type == FEEDBACK_SNIa) {
-         target_min = 32;
-         target_max = 128;
-     }
-     else {  // AGB
-         target_min = 16;
-         target_max = 64;
-     }
-     
-     // Try to find an appropriate radius
-     const int MAX_ITER = 5;
-     
-     for (int iter = 0; iter < MAX_ITER; iter++) {
-         // Dummy search to count neighbors
-         walker->FindNeighborsWithinRadius(pos, h, -1);
-         int count = walker->TargetCount;
-         
-         if (count >= target_min && count <= target_max)
-             break;  // Found good radius
-             
-         if (count < target_min)
-             h *= 1.3;  // Increase radius
-         else
-             h *= 0.8;  // Decrease radius
-             
-         // Enforce limits
-         h = fmax(fmin(h, h_max), h_min);
-     }
-     
-     return h;
- }
+    // Initial parameters
+    double h = get_initial_feedback_radius(feedback_type);
+    double h_min = 0.1;  // kpc
+    double h_max = 3.0;  // kpc
+    
+    // Target neighbor counts
+    int target_min = 0;
+    int target_max = 0;
+    
+    if (feedback_type == FEEDBACK_SNII) {
+        target_min = 8;
+        target_max = 32;
+    }
+    else if (feedback_type == FEEDBACK_SNIa) {
+        target_min = 32;
+        target_max = 128;
+    }
+    else {  // AGB
+        target_min = 16;
+        target_max = 64;
+    }
+    
+    // Try to find an appropriate radius
+    const int MAX_ITER = 5;
+    
+    for (int iter = 0; iter < MAX_ITER; iter++) {
+        // Dummy search to count neighbors
+        walker->FindNeighborsWithinRadius(pos, h, -1);
+        int count = walker->TargetCount;
+        
+        if (count >= target_min && count <= target_max)
+            break;  // Found good radius
+            
+        if (count < target_min)
+            h *= 1.3;  // Increase radius
+        else
+            h *= 0.8;  // Decrease radius
+            
+        // Enforce limits
+        h = fmax(fmin(h, h_max), h_min);
+    }
+    
+    return h;
+}
  
  /**
   * Main feedback function using a direct tree implementation
   */
-  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
+/**
+ * Final version of apply_stellar_feedback_treewalk function with parameter checks
+ */
+ void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
     // Reset diagnostic counters
     ThisStepEnergy_SNII = 0;
     ThisStepEnergy_SNIa = 0;
@@ -647,8 +654,11 @@
     }
 }
 
-// Helper function to process each feedback type
-void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker) {
+/**
+ * Helper function to process each feedback type
+ * Add this to your feedback_treewalk.cc file
+ */
+ void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker) {
     walker->SetFeedbackType(feedback_type);
     
     const char* feedback_name = (feedback_type == FEEDBACK_SNII) ? "SNII" : 

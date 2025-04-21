@@ -15,6 +15,9 @@
  
  #include "../data/simparticles.h"
  
+ // Forward declarations
+ class FeedbackTreeWalk;
+ 
  // External variables for energy conversion
  extern double erg_per_mass_to_code;
  
@@ -24,6 +27,9 @@
  void apply_stellar_feedback_bruteforce(double current_time, simparticles* Sp);
  
  // Helper function for processing a specific feedback type
-void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker);
-
+ void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker);
+ 
+ // Function called from simulation run loop
+ void run_feedback(double current_time, int feedback_type, simparticles* Sp);
+ 
  #endif // FEEDBACK_TREEWALK_H
