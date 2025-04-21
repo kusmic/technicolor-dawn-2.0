@@ -1,72 +1,4 @@
 /*
- ==========================================================================================
- FEEDBACK_TREEWALK.CC — Stellar Feedback Injection in Gadget-4
- ==========================================================================================
- 
- ❖ Purpose:
- This file implements a feedback algorithm for injecting stellar feedback (energy, mass,
- and metals) from stars into the surrounding interstellar medium (ISM) in cosmological
- simulations using Gadget-4.
- 
- ❖ What is "feedback"?
- In astrophysical simulations, feedback refers to the physical processes by which stars 
- influence their environment after they form — primarily through:
-    • Supernova explosions (Type II and Type Ia)
-    • Winds from dying stars (AGB stars)
- These processes return energy and enriched material to the surrounding gas, regulating
- galaxy formation and evolution.
- 
- ❖ What this file does:
-    • Loops over all active star particles (Type == 4)
-    • Checks if a star is ready to release feedback based on its age and other criteria
-    • Finds neighboring gas particles
-    • Injects feedback energy, mass, and metal yields using different approaches:
-       - Type II: Local direct deposition to neighboring gas particles
-       - Type Ia: Extended distribution using a kernel-weighted approach
-       - AGB: Similar to Type Ia but with different yields and timing
-    • Tracks energy and mass diagnostics for logging and analysis
- 
-     Type II Supernovae (SNII)
- 
-         Localized Energy Deposition: Uses a top-hat kernel with a smaller radius (0.3 kpc) for more concentrated feedback
-         Stronger Kinetic Feedback: Applies stronger radial velocity kicks to simulate the blast wave
-         Metallicity-Dependent Yields: Enhanced oxygen production at low metallicity
-         Quick Timescale: Activates after a short delay (~10 million years)
- 
-     Type Ia Supernovae (SNIa)
- 
-         Extended Distribution: Uses a cubic spline kernel with a larger radius (0.8 kpc) for a smoother, more extended energy distribution
-         Primarily Thermal Feedback: Emphasizes thermal energy over kinetic energy
-         Iron-Rich Yields: Produces much more iron than other elements
-         Stochastic Implementation: Uses a realistic delay-time distribution with t^-1.1 power law and Poisson sampling
-         Longer Timescales: Can occur billions of years after star formation
- 
- ❖ Key components:
-    - Constants defining feedback strength and timing
-    - Kernel weight function for distributing feedback to nearby gas (primarily for SNIa)
-    - Metal yield functions for each type of feedback
-    - Diagnostic accumulators to track what's been injected
- 
- ❖ Usage:
- This file is compiled and executed as part of the Gadget-4 simulation if the FEEDBACK
- flag is enabled in the build configuration.
- 
- NOTE! With bitwise operations, we track which feedback types have been applied to each star:
-    - 0: No feedback applied
-    - 1: SNII feedback applied
-    - 2: AGB feedback applied
-    - 4: SNIa feedback applied
-    - 3: (SNII + AGB) feedback applied
-    - 5: (SNII + SNIa) feedback applied
-    - 6: (AGB + SNIa) feedback applied
-    - 7: (SNII + AGB + SNIa) feedback applied
- This allows us to ensure that each star only contributes feedback once for each type.
- 
- ==========================================================================================
- */
- 
-
-/*
  =====================================================================================
  FEEDBACK_TREEWALK.CC — Stellar Feedback using Octree in Gadget-4
  =====================================================================================
@@ -81,12 +13,6 @@
     • Reuses existing tree infrastructure from Gadget-4
     • Better handling of adaptive search radii
     • Improved performance for large simulations (32³ particles and beyond)
- 
- ❖ Key components:
-    - Uses Gadget-4's existing tree traversal functions
-    - Applies appropriate kernel weighting for energy/mass/metal distribution
-    - Maintains the same physics as the original implementation
-    - Improves performance dramatically for larger simulations
  
  =====================================================================================
  */
@@ -103,7 +29,6 @@
  #include <random>
  
  #include "../gravtree/gravtree.h"
- #include "../gravtree/gwalk.h"
  #include "../cooling_sfr/feedback_treewalk.h"
  #include "../cooling_sfr/cooling.h"
  #include "../sph/kernel.h"
@@ -363,156 +288,141 @@
  }
  
  /**
-  * Structure for feedback application using Gadget-4's tree walk
+  * Custom tree walker class for stellar feedback
   */
- class FeedbackWalker : public GravityWalkerBase
- {
+ struct FeedbackTargetData {
+     int index;       // Index in Sp->P[]
+     double dist;     // Distance to source
+     double weight;   // Weight for feedback distribution
+     double dir[3];   // Unit direction vector
+ };
+ 
+ class FeedbackTreeWalk {
  public:
-     FeedbackWalker(simparticles *Sp_ptr, int feedback_type)
-         : Sp(Sp_ptr), CurrentFeedbackType(feedback_type)
-     {
-         MaxTargets = 1024;
+     FeedbackTreeWalk(simparticles *Sp_ptr) : Sp(Sp_ptr) {
+         MaxTargets = 1024;  // Initial capacity
          TargetCount = 0;
-         Targets = (target_data *)Mem.mymalloc("feedback_targets", MaxTargets * sizeof(struct target_data));
+         Targets = (FeedbackTargetData *)Mem.mymalloc("feedback_targets", MaxTargets * sizeof(FeedbackTargetData));
      }
  
-     ~FeedbackWalker()
-     {
-         Mem.myfree(Targets);
+     ~FeedbackTreeWalk() {
+         if (Targets)
+             Mem.myfree(Targets);
      }
-     
-     // Target data structure
-     struct target_data
-     {
-         int index;       // Index in Sp->P[]
-         double dist;     // Distance to source star
-         double weight;   // Weight for feedback distribution
-         MyFloat pos[3];  // Position (for unit vector calculation)
-     };
-     
-     // Apply feedback with a given radius
-     void FindNeighborsWithinRadius(double searchcenter[3], double hsml, double stellar_mass, 
-                                    double metallicity, int SNIaEvents, int stellar_index)
-     {
+ 
+     // Set current feedback properties
+     void SetFeedbackType(int type) {
+         FeedbackType = type;
+     }
+ 
+     // Find gas neighbors using direct search
+     void FindNeighborsWithinRadius(double pos[3], double hsml, int stellar_index) {
          TargetCount = 0;
+         StellarPos[0] = pos[0];
+         StellarPos[1] = pos[1];
+         StellarPos[2] = pos[2];
          SearchRadius = hsml;
-         SourceMass = stellar_mass;
-         StellarMetallicity = metallicity;
-         SNIaEvents = SNIaEvents;
-         
-         // Store source position
-         for(int k = 0; k < 3; k++)
-             SourcePos[k] = searchcenter[k];
-         
-         // Find gas neighbors using tree walk
-         BaseTree->treefind_variable_opening_radius(searchcenter, hsml, this);
-         
-         if(TargetCount > 0)
-             ApplyFeedbackToTargets(stellar_index);
-     }
-     
-     // Process a single candidate particle
-     bool evaluate(int target, int mode, int threadid, int numthreads) override
-     {
-         if(Sp->P[target].getType() != 0)  // Only gas particles
-             return false;
-             
-         double dx = SourcePos[0] - Sp->P[target].Pos[0];
-         double dy = SourcePos[1] - Sp->P[target].Pos[1];
-         double dz = SourcePos[2] - Sp->P[target].Pos[2];
-         
-         // Handle periodic boundary conditions
-         if(All.BoxSize > 0)
-         {
-             dx = NEAREST_X(dx);
-             dy = NEAREST_Y(dy);
-             dz = NEAREST_Z(dz);
+         StellarIndex = stellar_index;
+ 
+         // Direct search through all gas particles
+         for (int i = 0; i < Sp->NumPart; i++) {
+             if (Sp->P[i].getType() != 0)  // Only gas particles
+                 continue;
+ 
+             double pos_i[3];
+             pos_i[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos_i[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos_i[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+ 
+             double dx = StellarPos[0] - pos_i[0];
+             double dy = StellarPos[1] - pos_i[1];
+             double dz = StellarPos[2] - pos_i[2];
+ 
+             // Handle periodic boundary conditions
+             if (All.BoxSize > 0) {
+                 dx = NEAREST_X(dx);
+                 dy = NEAREST_Y(dy);
+                 dz = NEAREST_Z(dz);
+             }
+ 
+             double r2 = dx*dx + dy*dy + dz*dz;
+ 
+             if (r2 > SearchRadius * SearchRadius)
+                 continue;  // Outside search radius
+ 
+             double r = sqrt(r2);
+ 
+             // Skip particles too close (avoid numerical instabilities)
+             if (r < MIN_FEEDBACK_SEPARATION)
+                 continue;
+ 
+             // Calculate appropriate kernel weight
+             double weight;
+             if (FeedbackType == FEEDBACK_SNII)
+                 weight = kernel_weight_tophat(r, SearchRadius);
+             else
+                 weight = kernel_weight_cubic(r, SearchRadius);
+ 
+             if (weight <= 0)
+                 continue;
+ 
+             // Add to targets list
+             if (TargetCount >= MaxTargets) {
+                 MaxTargets *= 2;
+                 Targets = (FeedbackTargetData *)Mem.myrealloc_movable(Targets, MaxTargets * sizeof(FeedbackTargetData));
+             }
+ 
+             // Store normalized direction vector
+             double r_inv = 1.0 / r;
+             Targets[TargetCount].index = i;
+             Targets[TargetCount].dist = r;
+             Targets[TargetCount].weight = weight;
+             Targets[TargetCount].dir[0] = dx * r_inv;
+             Targets[TargetCount].dir[1] = dy * r_inv;
+             Targets[TargetCount].dir[2] = dz * r_inv;
+ 
+             TargetCount++;
          }
-         
-         double r2 = dx*dx + dy*dy + dz*dz;
-         
-         if(r2 > SearchRadius * SearchRadius)
-             return false;  // Outside search radius
-             
-         double r = sqrt(r2);
-         
-         // Skip particles too close (avoid numerical instabilities)
-         if(r < MIN_FEEDBACK_SEPARATION)
-             return false;
-             
-         // Calculate appropriate kernel weight
-         double weight;
-         if(CurrentFeedbackType == FEEDBACK_SNII)
-             weight = kernel_weight_tophat(r, SearchRadius);
-         else
-             weight = kernel_weight_cubic(r, SearchRadius);
-             
-         if(weight <= 0)
-             return false;
-             
-         // Add to targets list
-         if(TargetCount >= MaxTargets)
-         {
-             MaxTargets *= 2;
-             Targets = (target_data *)Mem.myrealloc_movable(Targets, MaxTargets * sizeof(struct target_data));
-         }
-         
-         Targets[TargetCount].index = target;
-         Targets[TargetCount].dist = r;
-         Targets[TargetCount].weight = weight;
-         
-         // Store unit vector components for velocity kicks
-         double r_inv = 1.0 / r;
-         Targets[TargetCount].pos[0] = dx * r_inv;
-         Targets[TargetCount].pos[1] = dy * r_inv;
-         Targets[TargetCount].pos[2] = dz * r_inv;
-         
-         TargetCount++;
-         return true;
      }
-     
+ 
      // Apply feedback to all found targets
-     void ApplyFeedbackToTargets(int stellar_index)
-     {
-         if(TargetCount == 0)
+     void ApplyFeedback(double stellar_mass, double metallicity, int snia_events) {
+         if (TargetCount == 0)
              return;
-             
+ 
          // Calculate feedback properties based on type
          double E_total = 0;
          double mass_return = 0;
          Yields yields = {0};
-         
-         if(CurrentFeedbackType == FEEDBACK_SNII)
-         {
-             E_total = SNII_ENERGY_PER_MASS * SourceMass;
-             mass_return = MASS_RETURN_SNII * SourceMass;
-             yields = get_SNII_yields(mass_return, StellarMetallicity);
+ 
+         if (FeedbackType == FEEDBACK_SNII) {
+             E_total = SNII_ENERGY_PER_MASS * stellar_mass;
+             mass_return = MASS_RETURN_SNII * stellar_mass;
+             yields = get_SNII_yields(mass_return, metallicity);
              
              // Update diagnostics
              ThisStepEnergy_SNII += E_total;
              TotalEnergyInjected_SNII += E_total;
          }
-         else if(CurrentFeedbackType == FEEDBACK_SNIa)
-         {
-             E_total = SNIa_ENERGY_PER_EVENT * SNIaEvents;
-             mass_return = 0.003 * SourceMass * SNIaEvents;  // Approximate mass per SNIa
-             yields = get_SNIa_yields(SNIaEvents);
+         else if (FeedbackType == FEEDBACK_SNIa) {
+             E_total = SNIa_ENERGY_PER_EVENT * snia_events;
+             mass_return = 0.003 * stellar_mass * snia_events;  // Approximate mass per SNIa
+             yields = get_SNIa_yields(snia_events);
              
              // Update diagnostics
              ThisStepEnergy_SNIa += E_total;
              TotalEnergyInjected_SNIa += E_total;
          }
-         else if(CurrentFeedbackType == FEEDBACK_AGB)
-         {
-             E_total = AGB_ENERGY_PER_MASS * SourceMass;
-             mass_return = MASS_RETURN_AGB * SourceMass;
-             yields = get_AGB_yields(mass_return, StellarMetallicity);
+         else if (FeedbackType == FEEDBACK_AGB) {
+             E_total = AGB_ENERGY_PER_MASS * stellar_mass;
+             mass_return = MASS_RETURN_AGB * stellar_mass;
+             yields = get_AGB_yields(mass_return, metallicity);
              
              // Update diagnostics
              ThisStepEnergy_AGB += E_total;
              TotalEnergyInjected_AGB += E_total;
          }
-         
+ 
          // Update mass return diagnostics
          ThisStepMassReturned += mass_return;
          TotalMassReturned += mass_return;
@@ -522,14 +432,13 @@
          ThisStepMetalsInjected[1] += yields.C;
          ThisStepMetalsInjected[2] += yields.O;
          ThisStepMetalsInjected[3] += yields.Fe;
-         
+ 
          // Calculate normalization factor
          double total_weight = 0;
-         for(int i = 0; i < TargetCount; i++)
+         for (int i = 0; i < TargetCount; i++)
              total_weight += Targets[i].weight;
              
-         if(total_weight <= 0)
-         {
+         if (total_weight <= 0) {
              FEEDBACK_PRINT("[Feedback WARNING] Total weight <= 0, skipping feedback application\n");
              return;
          }
@@ -541,12 +450,11 @@
          double E_therm = E_total * (1.0 - SNKickFraction);
          
          // Apply feedback to each target
-         for(int i = 0; i < TargetCount; i++)
-         {
+         for (int i = 0; i < TargetCount; i++) {
              int j = Targets[i].index;
              
              // Skip invalid particles
-             if(j < 0 || j >= Sp->NumPart || Sp->P[j].getType() != 0)
+             if (j < 0 || j >= Sp->NumPart || Sp->P[j].getType() != 0)
                  continue;
                  
              // Calculate normalized weight for this particle
@@ -560,8 +468,7 @@
              double delta_u = E_therm_j * erg_per_mass_to_code * inv_mass_cgs;
              
              // Check for valid energy increment
-             if(!isfinite(delta_u) || delta_u < 0)
-             {
+             if (!isfinite(delta_u) || delta_u < 0) {
                  FEEDBACK_PRINT("[Feedback WARNING] Non-finite delta_u = %.3e for gas %d\n", delta_u, j);
                  continue;
              }
@@ -570,8 +477,7 @@
              double utherm_before = Sp->get_utherm_from_entropy(j);
              double rel_increase = delta_u / (utherm_before + 1e-10);
              
-             if(rel_increase > 10.0)
-             {
+             if (rel_increase > 10.0) {
                  FEEDBACK_PRINT("[Feedback WARNING] delta_u (%.3e) is too large (%.1fx u_before=%.3e) for gas ID=%llu\n", 
                                delta_u, rel_increase, utherm_before, (unsigned long long)Sp->P[j].ID.get());
                  continue;
@@ -584,15 +490,14 @@
              double E_kin_j = E_kin * norm_weight;
              double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code * inv_mass_cgs);
              
-             if(!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5)
-             {
+             if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
                  FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
                  continue;
              }
              
              // Apply kick along the unit vector from star to gas
-             for(int k = 0; k < 3; k++)
-                 Sp->P[j].Vel[k] += v_kick * Targets[i].pos[k];
+             for (int k = 0; k < 3; k++)
+                 Sp->P[j].Vel[k] += v_kick * Targets[i].dir[k];
                  
              // Mass return
              double mass_add = mass_return * norm_weight;
@@ -606,38 +511,33 @@
                  yields.Fe * norm_weight
              };
              
-             for(int k = 0; k < 4; k++)
-             {
+             for (int k = 0; k < 4; k++) {
                  double metal_frac = metals_add[k] / gas_mass;
                  Sp->SphP[j].Metals[k] += metal_frac;
              }
              
              // Final check for numerical stability
              double final_u = Sp->get_utherm_from_entropy(j);
-             if(!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10)
-             {
+             if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
                  FEEDBACK_PRINT("[Feedback WARNING] Bad final entropy on gas %d: u=%.3e\n", j, final_u);
              }
          }
          
          // Mark this star as having received this type of feedback
-         Sp->P[stellar_index].FeedbackFlag |= CurrentFeedbackType;
+         Sp->P[StellarIndex].FeedbackFlag |= FeedbackType;
      }
-     
-     // Settings and parameters for the tree walk
-     int maxstack = 4000;  // Default number of nodes for tree walk
-     
+ 
+     // Public variables
+     int TargetCount;
+     double SearchRadius;
+ 
  private:
      simparticles *Sp;
-     int CurrentFeedbackType;
-     double SearchRadius;
-     double SourceMass;
-     double StellarMetallicity;
-     int SNIaEvents;
-     double SourcePos[3];
+     int FeedbackType;
+     int StellarIndex;
+     double StellarPos[3];
      
-     target_data *Targets;
-     int TargetCount;
+     FeedbackTargetData *Targets;
      int MaxTargets;
  };
  
@@ -645,9 +545,9 @@
   * Get appropriate feedback radius based on feedback type
   */
  double get_initial_feedback_radius(int feedback_type) {
-     if(feedback_type == FEEDBACK_SNII)
+     if (feedback_type == FEEDBACK_SNII)
          return 0.3;  // kpc
-     else if(feedback_type == FEEDBACK_SNIa)
+     else if (feedback_type == FEEDBACK_SNIa)
          return 0.8;  // kpc
      else
          return 0.5;  // kpc (AGB)
@@ -656,7 +556,7 @@
  /**
   * Find an appropriate feedback radius for a star
   */
- double find_adaptive_radius(double pos[3], int feedback_type, simparticles *Sp, gravtree<simparticles> *Tree, FeedbackWalker *walker) {
+ double find_adaptive_radius(double pos[3], int feedback_type, simparticles *Sp, FeedbackTreeWalk *walker) {
      // Initial parameters
      double h = get_initial_feedback_radius(feedback_type);
      double h_min = 0.1;  // kpc
@@ -666,11 +566,11 @@
      int target_min = 0;
      int target_max = 0;
      
-     if(feedback_type == FEEDBACK_SNII) {
+     if (feedback_type == FEEDBACK_SNII) {
          target_min = 8;
          target_max = 32;
      }
-     else if(feedback_type == FEEDBACK_SNIa) {
+     else if (feedback_type == FEEDBACK_SNIa) {
          target_min = 32;
          target_max = 128;
      }
@@ -682,15 +582,15 @@
      // Try to find an appropriate radius
      const int MAX_ITER = 5;
      
-     for(int iter = 0; iter < MAX_ITER; iter++) {
+     for (int iter = 0; iter < MAX_ITER; iter++) {
          // Dummy search to count neighbors
-         walker->FindNeighborsWithinRadius(pos, h, 0.0, 0.0, 0, -1);
+         walker->FindNeighborsWithinRadius(pos, h, -1);
          int count = walker->TargetCount;
          
-         if(count >= target_min && count <= target_max)
+         if (count >= target_min && count <= target_max)
              break;  // Found good radius
              
-         if(count < target_min)
+         if (count < target_min)
              h *= 1.3;  // Increase radius
          else
              h *= 0.8;  // Decrease radius
@@ -703,11 +603,9 @@
  }
  
  /**
-  * Main feedback function called each timestep
+  * Main feedback function using a direct tree implementation
   */
  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp) {
-     TIMER_START(CPU_FEEDBACK);
-     
      // Reset diagnostic counters
      ThisStepEnergy_SNII = 0;
      ThisStepEnergy_SNIa = 0;
@@ -718,70 +616,74 @@
      // Initialize unit conversions
      erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
      
-     // Create gravity tree for feedback
-     gravtree<simparticles> Tree(Sp, 0);
+     // Create feedback tree walker
+     FeedbackTreeWalk walker(Sp);
      
      // Process each feedback type
-     for(int feedback_type = FEEDBACK_SNII; feedback_type <= FEEDBACK_SNIa; feedback_type *= 2) {
-         // Create walker for this feedback type
-         FeedbackWalker walker(Sp, feedback_type);
-         walker.BaseTree = &Tree;
+     for (int feedback_type = FEEDBACK_SNII; feedback_type <= FEEDBACK_SNIa; feedback_type *= 2) {
+         walker.SetFeedbackType(feedback_type);
          
          const char* feedback_name = (feedback_type == FEEDBACK_SNII) ? "SNII" : 
                                     ((feedback_type == FEEDBACK_SNIa) ? "SNIa" : "AGB");
          
-         if(ThisTask == 0 && All.FeedbackDebug) {
+         if (ThisTask == 0 && All.FeedbackDebug) {
              FEEDBACK_PRINT("[Feedback] Processing %s feedback\n", feedback_name);
          }
          
          // Count eligible stars
          int n_sources = 0;
-         for(int i = 0; i < Sp->NumPart; i++) {
-             if(is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
+         for (int i = 0; i < Sp->NumPart; i++) {
+             if (is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
                  n_sources++;
          }
          
-         if(n_sources == 0) {
-             if(ThisTask == 0 && All.FeedbackDebug) {
+         if (n_sources == 0) {
+             if (ThisTask == 0 && All.FeedbackDebug) {
                  FEEDBACK_PRINT("[Feedback] No eligible sources for %s feedback\n", feedback_name);
              }
              continue;
          }
          
-         if(ThisTask == 0 && All.FeedbackDebug) {
+         if (ThisTask == 0 && All.FeedbackDebug) {
              FEEDBACK_PRINT("[Feedback] Found %d eligible sources for %s feedback\n", n_sources, feedback_name);
          }
          
          // Process each eligible star
-         for(int i = 0; i < Sp->NumPart; i++) {
-             if(!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
+         for (int i = 0; i < Sp->NumPart; i++) {
+             if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
                  continue;
                  
              // Convert position to physical coordinates
              double pos[3];
-             for(int k = 0; k < 3; k++)
-                 pos[k] = Sp->P[i].Pos[k];
-                 
+             pos[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             
              // Get star properties
              double stellar_mass = Sp->P[i].getMass();
              double metallicity = Sp->SphP[i].Metallicity;
              int snia_events = Sp->P[i].SNIaEvents;
              
              // Find appropriate search radius
-             double h = find_adaptive_radius(pos, feedback_type, Sp, &Tree, &walker);
+             double h = find_adaptive_radius(pos, feedback_type, Sp, &walker);
              
              // Apply feedback
-             walker.FindNeighborsWithinRadius(pos, h, stellar_mass, metallicity, snia_events, i);
+             walker.FindNeighborsWithinRadius(pos, h, i);
              
-             if(walker.TargetCount == 0 && ThisTask == 0 && All.FeedbackDebug) {
-                 FEEDBACK_PRINT("[Feedback WARNING] No targets found for star %d within h=%.2f for %s feedback\n", 
-                               i, h, feedback_name);
+             if (walker.TargetCount == 0) {
+                 if (ThisTask == 0 && All.FeedbackDebug) {
+                     FEEDBACK_PRINT("[Feedback WARNING] No targets found for star %d within h=%.2f for %s feedback\n", 
+                                   i, h, feedback_name);
+                 }
+                 continue;
              }
+             
+             walker.ApplyFeedback(stellar_mass, metallicity, snia_events);
          }
      }
      
      // Print summary (on master process only)
-     if(ThisTask == 0 && All.FeedbackDebug && 
+     if (ThisTask == 0 && All.FeedbackDebug && 
         (ThisStepEnergy_SNII > 0 || ThisStepEnergy_SNIa > 0 || ThisStepEnergy_AGB > 0)) {
          FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
                        ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
@@ -790,8 +692,92 @@
                        ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
                        ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
      }
+ }
+ 
+ /**
+  * Main interface function for feedback
+  */
+ void apply_stellar_feedback(double current_time, simparticles* Sp) {
+     static int first_call = 1;
      
-     TIMER_STOP(CPU_FEEDBACK);
+     // Initialize unit conversions on first call
+     if (first_call) {
+         erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
+         if (ThisTask == 0 && All.FeedbackDebug) {
+             printf("[Feedback Init] erg_per_mass_to_code = %.3e (UnitVelocity = %.3e cm/s)\n",
+                   erg_per_mass_to_code, All.UnitVelocity_in_cm_per_s);
+         }
+         first_call = 0;
+     }
+     
+     // For backward compatibility, if All.UseFeedbackTreewalk is not defined, use the direct implementation
+     if (!All.UseFeedbackTreewalk) {
+         // Call the original brute-force implementation 
+         // This enables comparison for debugging
+         apply_stellar_feedback_bruteforce(current_time, Sp);
+     } else {
+         // Call the new tree implementation
+         apply_stellar_feedback_treewalk(current_time, Sp);
+     }
+ }
+ 
+ /**
+  * Brute-force implementation (from your original code)
+  * This is kept for backward compatibility and validation.
+  */
+ void apply_stellar_feedback_bruteforce(double current_time, simparticles* Sp) {
+     // Reset diagnostic counters
+     ThisStepEnergy_SNII = 0;
+     ThisStepEnergy_SNIa = 0;
+     ThisStepEnergy_AGB = 0;
+     ThisStepMassReturned = 0;
+     std::memset(ThisStepMetalsInjected, 0, sizeof(ThisStepMetalsInjected));
+     
+     // Process each star
+     for (int i = 0; i < Sp->NumPart; i++) {
+         if (Sp->P[i].getType() != 4) 
+             continue;  // Only star particles
+             
+         // Check eligibility for each feedback type
+         for (int feedback_type = FEEDBACK_SNII; feedback_type <= FEEDBACK_SNIa; feedback_type *= 2) {
+             if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
+                 continue;
+                 
+             // Convert position to physical coordinates
+             double pos[3];
+             pos[0] = Sp->P[i].IntPos[0] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[1] = Sp->P[i].IntPos[1] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             pos[2] = Sp->P[i].IntPos[2] * All.BoxSize / ((double)INTEGERPOS_MAX + 1.0);
+             
+             // Get star properties
+             double stellar_mass = Sp->P[i].getMass();
+             double metallicity = Sp->SphP[i].Metallicity;
+             int snia_events = Sp->P[i].SNIaEvents;
+             
+             // Apply feedback using direct search
+             FeedbackTreeWalk walker(Sp);
+             walker.SetFeedbackType(feedback_type);
+             
+             // Find appropriate search radius
+             double h = get_initial_feedback_radius(feedback_type);
+             walker.FindNeighborsWithinRadius(pos, h, i);
+             
+             if (walker.TargetCount > 0) {
+                 walker.ApplyFeedback(stellar_mass, metallicity, snia_events);
+             }
+         }
+     }
+     
+     // Print summary (on master process only)
+     if (ThisTask == 0 && All.FeedbackDebug && 
+        (ThisStepEnergy_SNII > 0 || ThisStepEnergy_SNIa > 0 || ThisStepEnergy_AGB > 0)) {
+         FEEDBACK_PRINT("[Feedback Timestep Summary] E_SNII=%.3e erg, E_SNIa=%.3e erg, E_AGB=%.3e erg\n",
+                       ThisStepEnergy_SNII, ThisStepEnergy_SNIa, ThisStepEnergy_AGB);
+         FEEDBACK_PRINT("[Feedback Timestep Summary] Mass Returned=%.3e Msun\n", ThisStepMassReturned);
+         FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
+                       ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
+                       ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
+     }
  }
  
  #endif // FEEDBACK
