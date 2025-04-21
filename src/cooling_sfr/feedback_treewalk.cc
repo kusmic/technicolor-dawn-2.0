@@ -528,45 +528,55 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
 
 
 extern gravtree<simparticles> GravTree;
+extern domain<simparticles>  Domain;
 
 void run_feedback(double current_time, int feedback_type, simparticles *Sp)
 {
-    // ————————————————————————————————
-    // Build a local domain & tree for feedback
-    // ————————————————————————————————
-    domain<simparticles> localDomain(MPI_COMM_WORLD, Sp);  // fully initializes D and Tp
-    GravTree.D  = &localDomain;    // point at our new domain
-    GravTree.Tp = Sp;              // point at the same particle set
-    GravTree.set_softenings();     // load softenings
-    GravTree.gravity_exchange_forces(); // builds Nodes[], Nextnode[], MaxPart
+    // --------------------------------------------
+    // 1) Do exactly what "gravtree_build.cc" does:
+    //    a) domain‐decompose, top‐level, exchange
+    Domain.setDomain(MPI_COMM_WORLD,
+                     Sp->NumPart,
+                     /*positions*/   Sp->P->IntPos,
+                     /*type flags*/  &Sp->P->Type[0]);
+    Domain.decomposeDomain();
+    Domain.create_topLevelTree(Sp->NumPart,
+                               Sp->P->IntPos,
+                               &Sp->P->Type[0]);
+    Domain.exchange_topLevelLeaves();
 
-    // Sanity check
-    if (GravTree.MaxPart == 0 || GravTree.Nodes == nullptr) {
-        std::fprintf(stderr, "[Feedback ERROR] GravTree not built!\n");
-        return;
+    //    b) hook up the GravTree object
+    GravTree.Tp = Sp;
+    GravTree.D  = &Domain;
+
+    //    c) build the full local tree, exchange leaves, do force‐exchange
+    GravTree.set_softenings();
+    GravTree.build_tree();
+    GravTree.exchange_topleafdata();
+    GravTree.gravity_exchange_forces();
+    // now GravTree.MaxPart, Nodes[], Nextnode[], Recv_count[], etc. are all valid
+
+    // --------------------------------------------
+    // 2) collect all *active* stars into a small vector
+    FeedbackWalk fw = { current_time, feedback_type };
+    std::vector<int> activeStars;
+    activeStars.reserve(64);
+
+    for(int i = 0; i < Sp->NumPart; i++) {
+        if(Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp)) {
+            activeStars.push_back(i);
+        }
+    }
+    if(activeStars.empty()) {
+        return;  // nothing to do this timestep
     }
 
-    // ————————————————————————————————
-    // Collect active stars
-    // ————————————————————————————————
-    std::vector<int> Active;
-    Active.reserve(Sp->NumPart);
-
-    FeedbackWalk fw{ current_time, feedback_type };
-    for (int i = 0; i < Sp->NumPart; ++i) {
-        if (Sp->P[i].getType() == 4 && feedback_isactive(i, &fw, Sp))
-            Active.push_back(i);
-    }
-
-    // ————————————————————————————————
-    // Run the neighbor‐walk feedback
-    // ————————————————————————————————
-    if (!Active.empty()) {
-        std::printf("[Feedback] Running feedback for %zu stars.\n", Active.size());
-        feedback_tree(Active.data(), Active.size(), Sp);
+    // --------------------------------------------
+    // 3) loop over each star and do the feedback‐tree walk
+    for(int idx : activeStars) {
+        feedback_tree_evaluate(idx, /*mode=*/0, /*threadid=*/0);
     }
 }
-
 
 
 #endif // FEEDBACK
