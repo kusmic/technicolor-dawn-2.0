@@ -174,39 +174,7 @@ typedef struct {
  // feedback is too strong, and the timestep goes to zero.
  const double MIN_FEEDBACK_SEPARATION = 1e-2;  // kpc; adjust this as needed
 
- // In case we have ergs and needs to get it to internal units
- double erg_to_code;
- // Convert erg/g → Gadget code units
- double erg_per_mass_to_code;
 
- // Conversion from fixed-point integer positions to physical units (kpc)
- // Assuming IntPos are stored as 32-bit integers: there are 2^32 discrete positions.
- //const double NUM_INT_STEPS = 4294967296.0;        // 2^32
- //const double conversionFactor = All.BoxSize / NUM_INT_STEPS;
-
- inline double intpos_to_kpc(uint32_t ipos) {
-    return (double) ipos * All.BoxSize / 4294967296.0;
- }
-
- const double WIND_VELOCITY = 500.0;             // km/s
- 
- // Per-timestep diagnostics
- double ThisStepEnergy_SNII = 0;
- double ThisStepEnergy_SNIa = 0;
- double ThisStepEnergy_AGB = 0;
- double ThisStepMassReturned = 0;
- double ThisStepMetalsInjected[4] = {0};
- 
- // Cumulative totals
- double TotalEnergyInjected_SNII = 0;
- double TotalEnergyInjected_SNIa = 0;
- double TotalEnergyInjected_AGB = 0;
- double TotalMassReturned = 0;
- double TotalMetalsInjected[4] = {0};
- 
- struct Yields {
-     double Z, C, O, Fe;
- };
 
 
 #endif
