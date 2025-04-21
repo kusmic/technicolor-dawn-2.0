@@ -29,6 +29,18 @@
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
+// Get a random star mass based on an IMF-weighted probability.
+// This inverse‑CDF step simply transforms a uniform random number
+// into that strongly declining distribution, so small masses dominate.
+double sample_IMF_mass() {
+  // example for a Salpeter dN/dm ∝ m⁻²·³⁵ between m_min and m_max
+  const double alpha = 2.35, m_min = 0.1, m_max = 100;
+  double u = get_random_number();
+  double norm = (pow(m_max,1-alpha) - pow(m_min,1-alpha)) / (1-alpha);
+  double m = pow( pow(m_min,1-alpha) + u * (pow(m_max,1-alpha)-pow(m_min,1-alpha)), 1/(1-alpha) );
+  return m;  // in M⊙
+}
+
 /** \brief This routine creates star/wind particles according to their respective rates.
  *
  *  This function loops over all the active gas cells. If in a given cell the SFR is
@@ -90,7 +102,11 @@
                Sp->SphP[target].MassMetallicity = Sp->SphP[target].Metallicity * Sp->P[target].getMass();
                Sp->P[target].Metallicity        = Sp->SphP[target].Metallicity;
  
-               mass_of_star = Sp->P[target].getMass();
+               // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
+               // converted into a star of a constant mass. Let's try to make it smarter.
+               double mstar_phys = sample_IMF_mass();  
+               mass_of_star = mstar_phys * (All.UnitMass_in_g/SOLAR_MASS);
+               //mass_of_star = Sp->P[target].getMass();
  
                /* Calculate probability adjusted for mass */
                prob = Sp->P[target].getMass() / mass_of_star * (1 - exp(-pall));
