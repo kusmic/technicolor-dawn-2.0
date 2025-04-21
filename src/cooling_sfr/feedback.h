@@ -49,6 +49,14 @@ extern double TotalMetalsInjected[4];
 #define FEEDBACK_SNIa 2
 #define FEEDBACK_AGB  3
 
+typedef struct {
+    double current_time;
+    int feedback_type;
+} FeedbackWalk;
+
+int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp);
+double intpos_to_kpc(MyIntPosType ipos);
+
 // ------------------------
 // Function Declarations
 // ------------------------
