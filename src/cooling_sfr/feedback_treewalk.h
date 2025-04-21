@@ -29,6 +29,8 @@
  void process_feedback_type(int feedback_type, double current_time, simparticles* Sp, FeedbackTreeWalk* walker);
  
  // Function called from simulation run loop
- void run_feedback(double current_time, int feedback_type, simparticles* Sp);
+ // void run_feedback(double current_time, int feedback_type, simparticles* Sp);
  
+ void OutputFeedbackDiagnostics();
+
  #endif // FEEDBACK_TREEWALK_H
