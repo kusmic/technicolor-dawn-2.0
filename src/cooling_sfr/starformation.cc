@@ -67,16 +67,11 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
    double rate_in_msunperyear; // Star formation rate in solar masses per year
    double totsfrrate; // Total star formation rate across the simulation
    double w = 0; // Random number for metallicity update
-   double mstar_phys; // Physical mass of the star sampled from the IMF
 
    All.set_cosmo_factors_for_current_time(); // Update cosmological factors to current time
  
    stars_spawned = stars_converted = 0; // Counters for stars spawned and converted from gas
- 
    sum_sm = sum_mass_stars = 0; // Initialize sum variables
- 
-   /* Handle supernova feedback which affects surrounding gas */
-   //handle_supernovae(Sp);
  
    /* Loop over all active particles */
    for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
@@ -112,25 +107,20 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
  
                // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
                // converted into a star of a constant mass. Let's try to make it smarter.
-               mstar_phys = sample_IMF_mass();  
-               mass_of_star = mstar_phys * (All.UnitMass_in_g/SOLAR_MASS);
-               //mass_of_star = Sp->P[target].getMass();
- 
-               /* Calculate probability adjusted for mass */
-               prob = Sp->P[target].getMass() / mass_of_star * (1 - exp(-pall));
-             }
- 
-           // To prevent forming stars with negative or zero mass, we clamp the mass to the available gas mass:
-           double mass_of_star = std::min(mstar_phys, Sp->P[target].getMass());
-           if (mass_of_star <= 0)
-             continue;  // nothing left to form
+              double mstar_phys = sample_IMF_mass();  // sample a physical mass (in M⊙)
+              double ideal_code_mass = mstar_phys * (All.UnitMass_in_g / SOLAR_MASS);  // convert to code units
 
-           /* Skip if probability is zero */
-           if(prob == 0)
-             continue;
- 
-           if(prob < 0)
-             Terminate("prob < 0"); // Error handling for negative probability
+              mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
+
+              if (mass_of_star <= 0)
+                  continue;
+
+              // 5) recompute the probability for *this* packet mass
+              prob = (Sp->P[target].getMass() / mass_of_star) * (1 - exp(-pall));
+
+              if (prob <= 0)
+                  continue;
+             }
  
            /* Decide whether to form a star or kick gas to wind */
            p_decide = get_random_number();

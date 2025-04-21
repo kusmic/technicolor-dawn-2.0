@@ -28,7 +28,7 @@
  #include <string.h>
  #include <random>
  #include <fstream>
- 
+
  #include "../gravtree/gravtree.h"
  #include "../cooling_sfr/feedback_treewalk.h"
  #include "../cooling_sfr/cooling.h"
@@ -684,10 +684,6 @@ static std::vector<double> g_energy_ratio;
     const char* feedback_name = (feedback_type == FEEDBACK_SNII) ? "SNII" : 
                                ((feedback_type == FEEDBACK_SNIa) ? "SNIa" : "AGB");
     
-    if (ThisTask == 0 && All.FeedbackDebug) {
-        FEEDBACK_PRINT("[Feedback] Processing %s feedback\n", feedback_name);
-    }
-    
     // Count eligible stars
     int n_sources = 0;
     for (int i = 0; i < Sp->NumPart; i++) {
@@ -695,17 +691,15 @@ static std::vector<double> g_energy_ratio;
             n_sources++;
     }
     
-    if (n_sources == 0) {
-        if (ThisTask == 0 && All.FeedbackDebug) {
+    if (ThisTask == 0) {
+        if (n_sources == 0) {
             FEEDBACK_PRINT("[Feedback] No eligible sources for %s feedback\n", feedback_name);
+            return;
+        } else {
+            FEEDBACK_PRINT("[Feedback] Found %d eligible sources for %s feedback\n", n_sources, feedback_name);
         }
-        return;
     }
-    
-    if (ThisTask == 0 && All.FeedbackDebug) {
-        FEEDBACK_PRINT("[Feedback] Found %d eligible sources for %s feedback\n", n_sources, feedback_name);
-    }
-    
+
     // Process each eligible star
     for (int i = 0; i < Sp->NumPart; i++) {
         if (!is_star_eligible_for_feedback(i, feedback_type, current_time, Sp))
