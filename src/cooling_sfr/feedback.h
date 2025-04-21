@@ -207,11 +207,6 @@ typedef struct {
  struct Yields {
      double Z, C, O, Fe;
  };
- 
- // This random number generator will be used for stochastic SNIa events
- // Using a different name to avoid conflict with Gadget's existing random_generator
- std::mt19937 feedback_random_gen(std::random_device{}());
- 
 
- 
+
 #endif
