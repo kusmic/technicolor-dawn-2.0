@@ -146,6 +146,9 @@
       double Z, C, O, Fe;
   };
 
+ // This random number generator will be used for stochastic SNIa events
+ // Using a different name to avoid conflict with Gadget's existing random_generator
+ std::mt19937 feedback_random_gen(std::random_device{}());
 
 /*  FUNCTIONS ------------------------------------------------------------------------------------- */
 
@@ -301,26 +304,9 @@ return h;
      };
  }
  
- // Structure to pass around feedback data
- struct FeedbackInput {
-     MyDouble Pos[3];
-     MyFloat Energy;
-     MyFloat MassReturn;
-     MyFloat Yield[4];
-     int FeedbackType;
-     int NeighborCount;
-     double h;  // Smoothing length/radius for this feedback type
-     int SourceIndex; // Index of the source star particle for diagnostics
- };
+
  
- struct FeedbackResult {};
- 
- struct FeedbackWalk {
-     double current_time;
-     int feedback_type;
-     const char* ev_label;
- };
- 
+
 // File-scope static caches
 static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
 static int *gas_index = NULL;
@@ -387,7 +373,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
  /**
   * Determine if a star particle is eligible for feedback
   */
- static int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
+ int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp) {
      if (Sp->P[i].getType() != 4) // needs to be a star
          return 0;
 

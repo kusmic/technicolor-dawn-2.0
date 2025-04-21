@@ -54,17 +54,22 @@ typedef struct {
     int feedback_type;
 } FeedbackWalk;
 
-typedef struct {
+ // Structure to pass around feedback data
+ struct FeedbackInput {
     MyDouble Pos[3];
+    MyFloat Energy;
+    MyFloat MassReturn;
+    MyFloat Yield[4];
     int FeedbackType;
-    double Energy;
-    double MassReturn;
     int NeighborCount;
-} FeedbackInput;
+    double h;  // Smoothing length/radius for this feedback type
+    int SourceIndex; // Index of the source star particle for diagnostics
+};
 
 typedef struct {
     // you can leave this empty unless you need return values
 } FeedbackResult;
+
 
 void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp);
 
