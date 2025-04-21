@@ -1,58 +1,20 @@
-#ifndef FEEDBACK_TREEWALK_H
-#define FEEDBACK_TREEWALK_H
-
-// ------------------------
-// Global feedback tracking
-// ------------------------
-
-// These variables track feedback quantities applied during the **current timestep**:
-
-// Energy injected by Type II Supernovae (SNII) during the current timestep (in ergs)
-extern double ThisStepEnergy_SNII;
-
-// Energy injected by Type Ia Supernovae (SNIa) during the current timestep (in ergs)
-extern double ThisStepEnergy_SNIa;
-
-// Energy injected by Asymptotic Giant Branch (AGB) stars during the current timestep (in ergs)
-extern double ThisStepEnergy_AGB;
-
-// Total stellar mass returned to the gas reservoir during the current timestep (in solar masses)
-extern double ThisStepMassReturned;
-
-// Array storing the total mass of individual metal species injected during this timestep.
-// Indexing convention (example): [0] = C, [1] = O, [2] = Fe, [3] = other.
-extern double ThisStepMetalsInjected[4];
-
-
-// These variables accumulate total feedback quantities **over the full simulation runtime**:
-
-// Cumulative energy injected by SNII events
-extern double TotalEnergyInjected_SNII;
-
-// Cumulative energy injected by SNIa events
-extern double TotalEnergyInjected_SNIa;
-
-// Cumulative energy injected by AGB winds
-extern double TotalEnergyInjected_AGB;
-
-// Total stellar mass returned to the ISM over the full simulation
-extern double TotalMassReturned;
-
-// Cumulative mass of individual metal species injected across the full simulation
-extern double TotalMetalsInjected[4];
-
-
-// ------------------------
-// Function Declarations
-// ------------------------
-
-// Core feedback driver:
-// Applies stellar feedback at a given simulation time via a treewalk.
-// The `feedback_type` parameter is a bitmask (e.g. SNII, AGB, or SNIa) to determine which phase to process.
-void apply_feedback_treewalk(double current_time, int feedback_type);
-
-// High-level interface:
-// Invokes the appropriate feedback treewalk(s) for a given time and the full particle data.
-void apply_stellar_feedback(double current_time, struct simparticles* Sp);
-
-#endif
+/*
+ ==========================================================================================
+ FEEDBACK_TREEWALK.H — Stellar Feedback using Octree in Gadget-4 (Header)
+ ==========================================================================================
+ 
+ ❖ Purpose:
+ Header file for the treewalk-based stellar feedback implementation.
+ 
+ ==========================================================================================
+ */
+ 
+ #ifndef FEEDBACK_TREEWALK_H
+ #define FEEDBACK_TREEWALK_H
+ 
+ #include "../data/simparticles.h"
+ 
+ // Main entry point for treewalk-based feedback
+ void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp);
+ 
+ #endif // FEEDBACK_TREEWALK_H
