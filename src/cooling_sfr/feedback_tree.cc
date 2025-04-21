@@ -20,11 +20,12 @@
 #include "../logs/timer.h"
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
- #include "../domain/domain.h"
+#include "../domain/domain.h"
 
- extern gravtree<simparticles> GravTree;
- extern simparticles SimParticles;
- #define NODE_IS_LEAF(n) ((n)->first_child < 0)
+
+extern gravtree<simparticles> GravTree;
+extern simparticles SimParticles;
+#define NODE_IS_LEAF(n) ((n)->nextnode >= GravTree.MaxPart)  // fallback leaf condition
 
 int feedback_tree_evaluate(int target, int mode, int threadid)
 {
@@ -62,7 +63,9 @@ int feedback_tree_evaluate(int target, int mode, int threadid)
         double dz = NEAREST_Z(nop->center[2] - starPos[2]);
         double dist = sqrt(dx*dx + dy*dy + dz*dz);
 
-        if (dist - 0.5 * nop->len > h_feedback) {
+        // Estimate node extent using radius from center to corner (if available)
+        double node_extent = 0.5 * pow(GravTree.BoxSize, 1.0/3.0);  // fallback if no len available
+        if (dist - node_extent > h_feedback) {
             no = nop->sibling;
             continue;
         }
