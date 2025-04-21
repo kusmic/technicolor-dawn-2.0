@@ -697,29 +697,22 @@
  /**
   * Main interface function for feedback
   */
- void apply_stellar_feedback(double current_time, simparticles* Sp) {
-     static int first_call = 1;
-     
-     // Initialize unit conversions on first call
-     if (first_call) {
-         erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
-         if (ThisTask == 0 && All.FeedbackDebug) {
-             printf("[Feedback Init] erg_per_mass_to_code = %.3e (UnitVelocity = %.3e cm/s)\n",
-                   erg_per_mass_to_code, All.UnitVelocity_in_cm_per_s);
-         }
-         first_call = 0;
-     }
-     
-     // For backward compatibility, if All.UseFeedbackTreewalk is not defined, use the direct implementation
-     if (!All.UseFeedbackTreewalk) {
-         // Call the original brute-force implementation 
-         // This enables comparison for debugging
-         apply_stellar_feedback_bruteforce(current_time, Sp);
-     } else {
-         // Call the new tree implementation
-         apply_stellar_feedback_treewalk(current_time, Sp);
-     }
- }
+  void apply_stellar_feedback(double current_time, simparticles* Sp) {
+    static int first_call = 1;
+    
+    // Initialize unit conversions on first call
+    if (first_call) {
+        erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
+        if (ThisTask == 0 && All.FeedbackDebug) {
+            printf("[Feedback Init] erg_per_mass_to_code = %.3e (UnitVelocity = %.3e cm/s)\n",
+                  erg_per_mass_to_code, All.UnitVelocity_in_cm_per_s);
+        }
+        first_call = 0;
+    }
+    
+    // Always use the optimized implementation
+    apply_stellar_feedback_treewalk(current_time, Sp);
+}
  
  /**
   * Brute-force implementation (from your original code)
