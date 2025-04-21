@@ -77,6 +77,11 @@
  #include <string.h>
  #include <random>
  
+ #include "../data/simparticles.h"
+ #include "../data/symtensors.h"
+ #include "../domain/domain.h"
+ #include "../mpi_utils/mpi_utils.h"
+ #include "../tree/tree.h"
  #include "../cooling_sfr/feedback.h"
  #include "../cooling_sfr/cooling.h"
  #include "../sph/kernel.h"
@@ -89,6 +94,8 @@
  #include "../time_integration/timestep.h"
 
 // TreeWalk Query and Result Structures
+
+extern simparticles SimParticles;
 
 typedef struct {
     MyDouble Pos[3];       // star position
@@ -124,10 +131,6 @@ typedef struct {
     double Hsml;
     int other;  // index of neighbor particle
 } TreeWalkNgbIterBase;
-
-typedef struct {
-    TreeWalk *tw;
-} LocalTreeWalk;
 
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
@@ -296,7 +299,7 @@ static int feedback_visit_ngb_feedback(TreeWalkQuery_Feedback *I, TreeWalkResult
 }
 
 
-vvoid run_feedback(double current_time, int feedback_type, simparticles *Sp) {
+void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
     int *Active = (int *) malloc(sizeof(int) * Sp->NumPart);
     int NumActive = 0;
 
