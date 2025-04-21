@@ -44,7 +44,7 @@ MaxFilesWithConcurrentIO  1
 ErrTolIntAccuracy        0.02 
 CourantFac               0.3
 MaxSizeTimestep          0.05
-MinSizeTimestep          1e-5 
+MinSizeTimestep          0.0
 
 %---- Tree algorithm, force accuracy, domain update frequency
 TypeOfOpeningCriterion                1
