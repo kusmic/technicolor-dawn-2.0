@@ -39,6 +39,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
 
     int n_neighbors;
     double h_feedback = adaptive_feedback_radius(starPos, FEEDBACK_SNII, Sp, &n_neighbors, NULL, 0);
+   
     if (h_feedback < 0) return 0;
 
     FeedbackWalk fw;
