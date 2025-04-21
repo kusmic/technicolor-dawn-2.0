@@ -27,10 +27,9 @@ extern gravtree<simparticles> GravTree;
 
 #define NODE_IS_LEAF(n) ((n)->nextnode >= GravTree.MaxPart)  // fallback leaf condition
 
+// Evaluate feedback for a single star; Sp points to the simparticles structure
 int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
 {
-    //simparticles *Sp = &SimParticles;
-
     if (Sp->P[target].getType() != 4) return 0;
 
     MyDouble starPos[3];
@@ -54,6 +53,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
     in.MassReturn = 0.1 * Sp->P[target].getMass();
     in.NeighborCount = n_neighbors;
 
+    // Traverse Gtk-4 gravity tree
     int no = GravTree.MaxPart;
     while (no >= 0) {
         gravnode *nop = &GravTree.Nodes[no];
@@ -63,8 +63,8 @@ int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
         double dz = NEAREST_Z(nop->center[2] - starPos[2]);
         double dist = sqrt(dx*dx + dy*dy + dz*dz);
 
-        // Estimate node extent using radius from center to corner (if available)
-        double node_extent = 1.0;  // fallback fixed node size if no len member available  // fallback if no len available
+        // fallback node extent
+        double node_extent = 1.0;
         if (dist - node_extent > h_feedback) {
             no = nop->sibling;
             continue;
@@ -98,6 +98,7 @@ int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp)
     return 0;
 }
 
+// Run feedback on a list of active stars, passing in the simparticles pointer
 void feedback_tree(int *active_list, int num_active, simparticles *Sp)
 {
     for (int i = 0; i < num_active; i++)

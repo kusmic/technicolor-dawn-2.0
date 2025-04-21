@@ -96,9 +96,6 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
 
- gravtree<simparticles> GravTree;
- simparticles SimParticles;
-
  /**
   * Convert cosmological scale factor to physical time in years
   * Note: This is a simple approximation - you might want to use a more accurate
