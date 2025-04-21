@@ -77,7 +77,8 @@ int feedback_isactive(int i, FeedbackWalk *fw, simparticles *Sp);
 double intpos_to_kpc(MyIntPosType ipos);
 
 void feedback_tree(int *active_list, int num_active, simparticles *Sp);
-int feedback_tree_evaluate(int target, int mode, int threadid);
+int feedback_tree_evaluate(int target, int mode, int threadid, simparticles *Sp);
+
 
 inline double intpos_to_kpc(uint32_t ipos) {
     return (double) ipos * All.BoxSize / 4294967296.0;

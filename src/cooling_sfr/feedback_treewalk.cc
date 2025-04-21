@@ -527,31 +527,44 @@ void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, Fee
 }
 
 
-void run_feedback(double current_time, int feedback_type, simparticles *Sp) {
-    // 1) Prepare the walk context
+extern gravtree<simparticles> GravTree;
+
+void run_feedback(double current_time, int feedback_type, simparticles *Sp)
+{
+    // ————————————————————————————————
+    // 1) Build a local gravity‐tree snapshot for feedback
+    // ————————————————————————————————
+    GravTree.Tp = Sp;               // tell the tree which particles to index
+    GravTree.set_softenings();      // load per‐particle softenings from All.ForceSoftening[]
+    GravTree.gravity_exchange_forces();  // builds & exchanges the tree: fills Nodes[], Nextnode[], MaxPart, etc.
+
+    // ————————————————————————————————
+    // 2) Find which stars are "active" this step
+    // ————————————————————————————————
+    std::vector<int> Active;
+    Active.reserve(Sp->NumPart);
+
     FeedbackWalk fw;
     fw.current_time  = current_time;
     fw.feedback_type = feedback_type;
 
-    // 2) Build list of active star indices
-    int *Active    = (int *) malloc(sizeof(int) * Sp->NumPart);
-    int  NumActive = 0;
-    for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() == 4 &&
-            feedback_isactive(i, &fw, Sp))        // ← pass &fw, not NULL
+    for (int i = 0; i < Sp->NumPart; ++i) {
+        if (Sp->P[i].getType() == 4 &&    // only stars
+            feedback_isactive(i, &fw, Sp)) // your existing eligibility test
         {
-            Active[NumActive++] = i;
+            Active.push_back(i);
         }
     }
 
-    // 3) Run the tree‐based feedback on those stars
-    if (NumActive > 0) {
-        printf("[Feedback] Running feedback for %d stars.\n", NumActive);
-        feedback_tree(Active, NumActive, Sp);
+    // ————————————————————————————————
+    // 3) Run the tree‐based neighbor walk on those stars
+    // ————————————————————————————————
+    if (!Active.empty()) {
+        FEEDBACK_PRINT("[Feedback] Running feedback for %zu stars.\n", Active.size());
+        feedback_tree(Active.data(), Active.size(), Sp);
     }
-
-    free(Active);
 }
+
 
 
 #endif // FEEDBACK
