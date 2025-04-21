@@ -22,7 +22,6 @@
  extern double erg_per_mass_to_code;
  
  // Main entry points for feedback
- void apply_stellar_feedback(double current_time, simparticles* Sp);
  void apply_stellar_feedback_treewalk(double current_time, simparticles* Sp);
  void apply_stellar_feedback_bruteforce(double current_time, simparticles* Sp);
  
