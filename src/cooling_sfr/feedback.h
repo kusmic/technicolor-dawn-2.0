@@ -1,6 +1,9 @@
 #ifndef FEEDBACK_TREEWALK_H
 #define FEEDBACK_TREEWALK_H
 
+#include "../data/simparticles.h"  // or whatever defines `simparticles`
+
+
 // ------------------------
 // Global feedback tracking
 // ------------------------
@@ -41,10 +44,17 @@ extern double TotalMassReturned;
 // Cumulative mass of individual metal species injected across the full simulation
 extern double TotalMetalsInjected[4];
 
+// Feedback types
+#define FEEDBACK_SNII 1
+#define FEEDBACK_SNIa 2
+#define FEEDBACK_AGB  3
 
 // ------------------------
 // Function Declarations
 // ------------------------
+
+// Main treewalk-driven feedback function
+void run_feedback(double current_time, int feedback_type, simparticles *Sp);
 
 // Core feedback driver:
 // Applies stellar feedback at a given simulation time via a treewalk.
