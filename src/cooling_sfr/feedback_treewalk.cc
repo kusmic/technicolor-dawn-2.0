@@ -77,6 +77,9 @@
  #include <string.h>
  #include <random>
  
+ #include "../gravtree/gravtree.h"
+ #include "../main/simulation.h"
+ #include "../ngbtree/ngbtree.h"
  #include "../data/simparticles.h"
  #include "../data/symtensors.h"
  #include "../domain/domain.h"
@@ -137,11 +140,7 @@ typedef struct {
  #define NEAREST_X(x) NEAREST(x, All.BoxSize)
  #define NEAREST_Y(x) NEAREST(x, All.BoxSize)
  #define NEAREST_Z(x) NEAREST(x, All.BoxSize)
- 
- // Feedback type bitmask flags
- #define FEEDBACK_SNII  1
- #define FEEDBACK_AGB   2
- #define FEEDBACK_SNIa  4
+
  
  #define SNII_ENERGY (1.0e51 / All.UnitEnergy_in_cgs)  // in internal units
  
