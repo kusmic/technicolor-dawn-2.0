@@ -43,8 +43,8 @@ MaxFilesWithConcurrentIO  1
 %---- Accuracy of time integration
 ErrTolIntAccuracy        0.02 
 CourantFac               0.3
-MaxSizeTimestep          0.04
-MinSizeTimestep          0.0 
+MaxSizeTimestep          0.05
+MinSizeTimestep          1e-5 
 
 %---- Tree algorithm, force accuracy, domain update frequency
 TypeOfOpeningCriterion                1
@@ -112,7 +112,7 @@ CritPhysDensity     0           % critical physical density for star formation (
 TreecoolFile        data/TREECOOL
 
 %----- Debugging
-FeedbackDebug       1     % 1 = prints all feedback-related activity; 0 = off
+FeedbackDebug       0     % 1 = prints all feedback-related activity; 0 = off
 
 %----- Dust properties (PartType6)
 #DustFormationEfficiency 0.1   # 10% of metals turn into dust

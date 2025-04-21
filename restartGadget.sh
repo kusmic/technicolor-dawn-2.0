@@ -1,6 +1,13 @@
 #!/bin/bash
 
+which_snapshot=$1
 start_total=$(date +%s)
+
+if [ -z "$which_snapshot" ]; then
+    echo "[runGadget] ERROR: Please provide a snapshot number!"
+    echo "Usage: ./runGadget.sh 30"
+    exit 1
+fi
 
 # get latest from repository
 echo "[runGadget] Pulling latest from repository..."
@@ -18,12 +25,9 @@ end=$(date +%s)
 echo "[runGadget] Build took $((end - start)) seconds."
 
 # run Gadget
-echo "[runGadget] Running Gadget..."
+echo "[runGadget] Running Gadget from snapshot $which_snapshot..."
 start=$(date +%s)
-
-# Second number selects which snapshot to restart from
-mpirun -np 4 ./Gadget4 param.txt 2 30 | tee output.log
-#mpirun -np 4 ./Gadget4 param.txt
+mpirun -np 4 ./Gadget4 param.txt 2 "$which_snapshot" | tee output.log
 end=$(date +%s)
 echo "[runGadget] Gadget run took $((end - start)) seconds."
 

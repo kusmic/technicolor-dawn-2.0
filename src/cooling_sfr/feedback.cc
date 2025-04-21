@@ -230,88 +230,104 @@ inline double kernel_weight_cubic_dimless(double u) {
          return 0.0;
  }
  
-/** Having a constant feedback radius can lead to too few or too many neighbors
+/** 
+   Having a constant feedback radius can lead to too few or too many neighbors
    Let's try adapting the radius (h) based on the number of neighbors found
 
  * Adaptive feedback radius based on local gas density
  * Dynamically determines a suitable radius h for a given star
  * so that it finds ~TARGET_NEIGHBORS gas neighbors.
 
- WHAT IF we could modify adaptive_feedback_radius() to return an array of valid gas indices to avoid the second scan?
+   WHAT IF we could modify adaptive_feedback_radius() to return an array of valid gas indices to avoid the second scan?
+ * --------------------------------------------------------------------------------------------------
+ * Computes an adaptive feedback radius `h` for a star at `starPos`, returning the gas
+ * particles within that radius in `neighbor_list[]`.
+ *
+ * Returns the final smoothing length `h`, or -1.0 if no neighbors found.
  */
- double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp, int *neighbors_ptr) {
+ double adaptive_feedback_radius(MyDouble starPos[3], int feedback_type, simparticles *Sp,
+    int *neighbors_ptr, int *neighbor_list, int max_neighbors)
+{
+// Target neighbor counts per feedback type
+int TARGET_NEIGHBORS;
+if (feedback_type == FEEDBACK_SNII)
+TARGET_NEIGHBORS = 10;
+else if (feedback_type == FEEDBACK_SNIa)
+TARGET_NEIGHBORS = 64;
+else if (feedback_type == FEEDBACK_AGB)
+TARGET_NEIGHBORS = 32;
+else
+TARGET_NEIGHBORS = 48;
 
-    int TARGET_NEIGHBORS;
-    if (feedback_type == FEEDBACK_SNII)
-        TARGET_NEIGHBORS = 10;   // probably increase later with bigger run!
-    else if (feedback_type == FEEDBACK_SNIa)
-        TARGET_NEIGHBORS = 64;
-    else if (feedback_type == FEEDBACK_AGB)
-        TARGET_NEIGHBORS = 32;
-    else
-        TARGET_NEIGHBORS = 48;
+const double H_MIN = 0.05;  // kpc
+const double H_MAX = 3.0;   // kpc
+const int MAX_ATTEMPTS = 10;
 
-    const double H_MIN = 0.05;  // kpc
-    const double H_MAX = 3.0;   // kpc
-    const int MAX_ATTEMPTS = 10;
+double h = 0.7;  // Initial guess
+int attempt = 0;
 
-    double h = 0.7;  // initial guess
-    int attempt = 0;
-    int neighbors_found = 0;
+// Cache gas positions on first call
+static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
+static int gas_count = 0;
+if (!gas_x) {
+gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
+gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
+gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
+}
 
-    static double *gas_x = NULL, *gas_y = NULL, *gas_z = NULL;
-    static int gas_count = 0;
-    if (!gas_x) {
-        gas_x = (double *) malloc(Sp->NumPart * sizeof(double));
-        gas_y = (double *) malloc(Sp->NumPart * sizeof(double));
-        gas_z = (double *) malloc(Sp->NumPart * sizeof(double));
-    }
+gas_count = 0;
+for (int j = 0; j < Sp->NumPart; j++) {
+if (Sp->P[j].getType() != 0) continue;
+gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
+gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
+gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
+gas_count++;
+}
 
-    gas_count = 0;
-    for (int j = 0; j < Sp->NumPart; j++) {
-        if (Sp->P[j].getType() != 0) continue;
-        gas_x[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[0]);
-        gas_y[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[1]);
-        gas_z[gas_count] = intpos_to_kpc(Sp->P[j].IntPos[2]);
-        gas_count++;
-    }
+int neighbors_found = 0;
 
-    do {
-        neighbors_found = 0;
-        for (int j = 0; j < gas_count; j++) {
-            double dx = NEAREST_X(gas_x[j] - starPos[0]);
-            double dy = NEAREST_Y(gas_y[j] - starPos[1]);
-            double dz = NEAREST_Z(gas_z[j] - starPos[2]);
-            double r2 = dx*dx + dy*dy + dz*dz;
-            if (sqrt(r2) < h) neighbors_found++;
-        }
+do {
+neighbors_found = 0;
 
-        FEEDBACK_PRINT("[Feedback Adaptive h] Neighbors found=%d!\n", neighbors_found);
-        *neighbors_ptr = neighbors_found;
+for (int j = 0; j < gas_count; j++) {
+double dx = NEAREST_X(gas_x[j] - starPos[0]);
+double dy = NEAREST_Y(gas_y[j] - starPos[1]);
+double dz = NEAREST_Z(gas_z[j] - starPos[2]);
+double r2 = dx*dx + dy*dy + dz*dz;
 
-        if (neighbors_found < TARGET_NEIGHBORS)
-            h *= 1.25;
-        else if (neighbors_found > TARGET_NEIGHBORS * 1.5)
-            h *= 0.8;
+if (sqrt(r2) < h) {
+if (neighbors_found < max_neighbors)
+neighbor_list[neighbors_found] = j;
+neighbors_found++;
+}
+}
 
-        h = fmax(fmin(h, H_MAX), H_MIN);
-        attempt++;
-    } while ((neighbors_found < TARGET_NEIGHBORS || neighbors_found > TARGET_NEIGHBORS * 2)
-             && attempt < MAX_ATTEMPTS);
+*neighbors_ptr = neighbors_found;
 
-    if (neighbors_found == 0) {
-        if (ThisTask == 0) {
-            FEEDBACK_PRINT("[Feedback WARNING] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
-        }
-        return -1.0;
-    }
+if (neighbors_found < TARGET_NEIGHBORS)
+h *= 1.25;
+else if (neighbors_found > TARGET_NEIGHBORS * 1.5)
+h *= 0.8;
 
-    if (ThisTask == 0) {
-        FEEDBACK_PRINT("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
-               h, attempt, feedback_type, neighbors_found);
-    }
+h = fmax(fmin(h, H_MAX), H_MIN);
+attempt++;
 
-    return h;
+} while ((neighbors_found < TARGET_NEIGHBORS || neighbors_found > TARGET_NEIGHBORS * 2) &&
+attempt < MAX_ATTEMPTS);
+
+if (neighbors_found == 0) {
+if (ThisTask == 0) {
+FEEDBACK_PRINT("[Feedback WARNING] No gas neighbors found within H_MAX=%.2f! Skipping feedback.\n", H_MAX);
+}
+return -1.0;
+}
+
+if (ThisTask == 0) {
+FEEDBACK_PRINT("[Feedback Adaptive h] Final h=%.3f kpc after %d attempts for feedback_type=%d (%d neighbors)\n",
+h, attempt, feedback_type, neighbors_found);
+}
+
+return h;
 }
 
 
@@ -433,7 +449,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
  */
  double clamp_feedback_energy(double u_before, double delta_u, int gas_index, MyIDType gas_id) {
     double u_after = u_before + delta_u;
-    double max_u = 1e4; // Maximum allowed utherm in internal units
+    double max_u = 5e3; // Maximum allowed utherm in internal units
 
     if (!isfinite(delta_u) || delta_u < 0.0 || delta_u > 1e10) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or excessive delta_u=%.3e for gas ID=%llu\n", delta_u, (unsigned long long) gas_id);
@@ -517,7 +533,7 @@ void cache_gas_positions(simparticles *Sp, int *return_count) {
  /**
  * Apply feedback to a neighboring gas particle
  */
-void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
+void feedback_to_gas_neighbor(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *fw, simparticles *Sp) {
     if (Sp->P[j].getType() != 0) return; // Only apply to gas particles
     //if (r > in->h) return;  // Skip if it is outside the feedback radius
 
@@ -528,19 +544,15 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     if (gas_mass <= 0 || isnan(gas_mass) || !isfinite(gas_mass)) return;
 
     // Radial vector from feedback source to this gas particle
-    double gasPos[3];
-    gasPos[0] = intpos_to_kpc(Sp->P[j].IntPos[0]);
-    gasPos[1] = intpos_to_kpc(Sp->P[j].IntPos[1]);
-    gasPos[2] = intpos_to_kpc(Sp->P[j].IntPos[2]);
-
     double dx[3] = {
-        NEAREST_X(gasPos[0] - in->Pos[0]),
-        NEAREST_Y(gasPos[1] - in->Pos[1]),
-        NEAREST_Z(gasPos[2] - in->Pos[2])
+        NEAREST_X(gas_x[j] - in->Pos[0]),
+        NEAREST_Y(gas_y[j] - in->Pos[1]),
+        NEAREST_Z(gas_z[j] - in->Pos[2])
     };
+    
     double r2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
-    double r = sqrt(r2) + 1e-10;
-
+    //double r = sqrt(r2) + 1e-10;
+    double r_inv = 1.0 / (sqrt(r2) + 1e-10);
     //FEEDBACK_PRINT("[Feedback] Distance to source r=%.5f (dx=[%.5f, %.5f, %.5f])\n", r, dx[0], dx[1], dx[2]);
 
     // Distribute energy equally among neighbors (for SNII)
@@ -555,7 +567,8 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
 
     //double delta_u = E_therm_j * erg_to_code / gas_mass;
     double gas_mass_cgs = gas_mass * All.UnitMass_in_g;
-    double delta_u = E_therm_j * erg_per_mass_to_code / gas_mass_cgs;
+    double inv_mass_cgs = 1.0 / gas_mass_cgs;
+    double delta_u = E_therm_j * erg_per_mass_to_code * inv_mass_cgs;
 
     //printf("[Feedback DEBUG] GasID=%d | E_therm_j=%.3e erg | gas_mass_cgs=%.3e g | erg_per_mass_to_code=%.3e | delta_u=%.3e (u_before=%.3e)\n",
     //    Sp->P[j].ID.get(),
@@ -584,13 +597,13 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     FEEDBACK_PRINT("[Feedback] u_before=%.5e, u_after=%.5e, delta_u=%.3e (internal units)\n", utherm_before, utherm_after, delta_u);
 
     // Apply radial kinetic kick
-    double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code / gas_mass_cgs);
+    double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code * inv_mass_cgs);
     if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
         FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
         return;
     }
     for (int k = 0; k < 3; k++)
-        Sp->P[j].Vel[k] += v_kick * dx[k] / r;
+        Sp->P[j].Vel[k] += v_kick * dx[k] * r_inv;
 
     FEEDBACK_PRINT("[Feedback] Applied radial kick v_kick=%.3e km/s\n", v_kick);
 
@@ -624,25 +637,30 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
     fw.current_time = current_time;
     fw.feedback_type = feedback_type;
 
-    // Cache gas positions once per timestep (gas_x, gas_y, gas_z)
+    // Cache gas positions once per timestep
     int n_gas = 0;
     cache_gas_positions(Sp, &n_gas);
 
-    // Convert erg to code units
-    //erg_to_code = 1.0 / (All.UnitEnergy_in_cgs);
+    // Convert erg/g to internal units (Utherm is velocity² units)
     erg_per_mass_to_code = 1.0 / (All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s);
 
     static int printed_erg_code = 0;
     if (!printed_erg_code && ThisTask == 0) {
-        FEEDBACK_PRINT("[Feedback Init] erg_per_mass_to_code = %.3e (UnitEnergy = %.3e cgs)\n", erg_per_mass_to_code, All.UnitEnergy_in_cgs);
+        FEEDBACK_PRINT("[Feedback Init] erg_per_mass_to_code = %.3e (UnitVelocity = %.3e cm/s)\n",
+                       erg_per_mass_to_code, All.UnitVelocity_in_cm_per_s);
         printed_erg_code = 1;
     }
 
+    // Allocate reusable neighbor list
+    const int max_neighbors = 4096;
+    int *neighbor_list = (int *) malloc(sizeof(int) * max_neighbors);
+
     for (int i = 0; i < Sp->NumPart; i++) {
-        if (Sp->P[i].getType() != 4) continue;  // Star particles only
+        if (Sp->P[i].getType() != 4) continue;  // Only star particles
+
         if (!feedback_isactive(i, &fw, Sp)) continue;
 
-        // Set up input for this star
+        // Set up feedback input for this star
         in.Pos[0] = intpos_to_kpc(Sp->P[i].IntPos[0]);
         in.Pos[1] = intpos_to_kpc(Sp->P[i].IntPos[1]);
         in.Pos[2] = intpos_to_kpc(Sp->P[i].IntPos[2]);
@@ -650,7 +668,7 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
         in.Energy = SNII_ENERGY_PER_MASS * Sp->P[i].getMass();
         in.MassReturn = 0.1 * Sp->P[i].getMass();
 
-        // Track diagnostics per type
+        // Diagnostics
         if (feedback_type == FEEDBACK_SNII) {
             ThisStepEnergy_SNII += in.Energy;
             TotalEnergyInjected_SNII += in.Energy;
@@ -661,37 +679,28 @@ void feedback_ngb(FeedbackInput *in, FeedbackResult *out, int j, FeedbackWalk *f
             ThisStepEnergy_AGB += in.Energy;
             TotalEnergyInjected_AGB += in.Energy;
         }
-
         ThisStepMassReturned += in.MassReturn;
         TotalMassReturned += in.MassReturn;
 
-        // Adaptively find a good feedback radius
-        // Can we cache neighbor indices instead of recomputing distances twice (once in adaptive_feedback_radius, once in loop)?
+        // Adaptively find a good feedback radius and get gas neighbors
         int n_neighbors = 0;
-        double h_feedback = adaptive_feedback_radius(in.Pos, feedback_type, Sp, &n_neighbors);
-        if (h_feedback < 0.0) continue;  // skip if no neighbors found
+        double h_feedback = adaptive_feedback_radius(in.Pos, feedback_type, Sp,
+                                                     &n_neighbors, neighbor_list, max_neighbors);
+        if (h_feedback < 0.0) continue;
 
         in.h = h_feedback;
         in.NeighborCount = n_neighbors;
-        double h2 = in.h * in.h;  // will use for quicker distance checks
 
-        FEEDBACK_PRINT("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.1f kpc\n",
-               i, in.NeighborCount, in.h);
+        FEEDBACK_PRINT("[Feedback] Star ID=%d will deposit feedback to %d gas neighbors within %.2f kpc\n",
+                       i, in.NeighborCount, in.h);
 
-        // Apply feedback only to close neighbors
-        for (int j = 0; j < Sp->NumPart; j++) {
-            if (Sp->P[j].getType() != 0) continue;
-
-            double dx = NEAREST_X(gas_x[j] - in.Pos[0]);
-            double dy = NEAREST_Y(gas_y[j] - in.Pos[1]);
-            double dz = NEAREST_Z(gas_z[j] - in.Pos[2]);
-            double r2 = dx*dx + dy*dy + dz*dz;
-
-            // If within feedback radius, apply feedback!
-            if (r2 < h2)
-                feedback_ngb(&in, &out, j, &fw, Sp);
+        for (int n = 0; n < n_neighbors; n++) {
+            int j = neighbor_list[n];
+            feedback_to_gas_neighbor(&in, &out, j, &fw, Sp);
         }
     }
+
+    free(neighbor_list);
 }
 
 
