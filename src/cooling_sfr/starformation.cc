@@ -119,6 +119,11 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
                prob = Sp->P[target].getMass() / mass_of_star * (1 - exp(-pall));
              }
  
+           // To prevent forming stars with negative or zero mass, we clamp the mass to the available gas mass:
+           double mass_of_star = std::min(mstar_phys, Sp->P[target].getMass());
+           if (mass_of_star <= 0)
+             continue;  // nothing left to form
+
            /* Skip if probability is zero */
            if(prob == 0)
              continue;
