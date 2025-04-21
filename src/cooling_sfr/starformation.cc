@@ -67,7 +67,8 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
    double rate_in_msunperyear; // Star formation rate in solar masses per year
    double totsfrrate; // Total star formation rate across the simulation
    double w = 0; // Random number for metallicity update
- 
+   double mstar_phys; // Physical mass of the star sampled from the IMF
+
    All.set_cosmo_factors_for_current_time(); // Update cosmological factors to current time
  
    stars_spawned = stars_converted = 0; // Counters for stars spawned and converted from gas
@@ -111,7 +112,7 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
  
                // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
                // converted into a star of a constant mass. Let's try to make it smarter.
-               double mstar_phys = sample_IMF_mass();  
+               mstar_phys = sample_IMF_mass();  
                mass_of_star = mstar_phys * (All.UnitMass_in_g/SOLAR_MASS);
                //mass_of_star = Sp->P[target].getMass();
  
