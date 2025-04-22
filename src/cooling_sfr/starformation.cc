@@ -68,9 +68,9 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
    double totsfrrate; // Total star formation rate across the simulation
    double w = 0; // Random number for metallicity update
 
-   double k_B = 1.380649e-16     // Boltzmann constant in erg/K
-   double m_H = 1.6735575e-24    // Mass of hydrogen atom in g
-   double mu = 0.6               // Mean molecular weight for fully ionized gas
+   double k_B = 1.380649e-16;     // Boltzmann constant in erg/K
+   double m_H = 1.6735575e-24;    // Mass of hydrogen atom in g
+   double mu = 0.6;               // Mean molecular weight for fully ionized gas
 
    All.set_cosmo_factors_for_current_time(); // Update cosmological factors to current time
  
@@ -104,7 +104,8 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
               continue;  // too diffuse to form stars
 
             // ——— 2) Temperature ceiling ——–
-            double u_cgs = Sp->SphP[target].InternalEnergy * All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s;  // erg/g
+            double u_code = Sp->get_utherm_from_entropy(target); // Get thermal energy per unit mass in code units
+            double u_cgs  = u_code * All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s; // 2) Convert to cgs (erg / g)
             double T = u_cgs * (GAMMA_MINUS1) * mu * m_H / k_B;  // K
 
             if (T > All.MaxStarFormationTemp)   // user‐set in your .param (e.g. 1e4 K)
