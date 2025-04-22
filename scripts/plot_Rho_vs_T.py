@@ -26,8 +26,8 @@ for snapfile in snapshots:
         
         # Unit conversions from header
         UnitMass = 1.989e43        # grams per code mass unit
-        UnitLen = header["UnitLength_in_cm"]       # cm per code length unit
-        UnitVel = header["UnitVelocity_in_cm_per_s"]  # cm/s per code velocity unit
+        UnitLen = 3.085678e24       # cm per code length unit
+        UnitVel = 1e5  # cm/s per code velocity unit
         
         # Load data: convert to cgs
         rho_code = np.array(snap["PartType0/Density"]) * a**3
