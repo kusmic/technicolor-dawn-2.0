@@ -673,8 +673,6 @@ std::vector<double> g_energy_ratio;
         FEEDBACK_PRINT("[Feedback Timestep Summary] Metals (Z=%.3e, C=%.3e, O=%.3e, Fe=%.3e) Msun\n",
                       ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
                       ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
-
-        
     }
     OutputFeedbackDiagnostics();  // Output diagnostics after processing this feedback type
 }
