@@ -761,7 +761,7 @@ std::vector<double> g_energy_ratio;
      out << std::scientific << std::setprecision(6);
  
      // Header with timestamp comment
-     out << "# Feedback diagnostics at time=" << All_Time << "\n";
+     out << "# Feedback diagnostics at time=" << All.Time << "\n";
      out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
  
      // Neighbor metrics: delta_u, delta_v, rel_inc, r; stars fields blank
