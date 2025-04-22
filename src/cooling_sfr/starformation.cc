@@ -480,8 +480,9 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
 /** \brief Make a dust particle from a SPH gas particle.
  *
  *  Given a gas cell where dust formation is active and the probability
- *  of forming dust, this function spawns a dust tracer of finite mass
- *  (rather than converting the gas cell wholesale), and updates totals.
+ *  of forming dust, this function spawns one dust tracer of finite mass
+ *  (rather than converting the gas cell wholesale), handling resolution
+ *  limits and array bounds safely.
  *
  *  \param Sp             pointer to particle arrays
  *  \param i              index of the gas cell
@@ -489,39 +490,47 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  *  \param mass_of_dust   desired dust mass per packet (in code units)
  *  \param sum_mass_dust  accumulator for total dust mass formed on this task
  */
- void coolsfr::make_dust(simparticles *Sp, int i, double prob,
-  MyDouble mass_of_dust, double *sum_mass_dust)
+ void coolsfr::make_dust(simparticles *Sp,
+  int i,
+  double prob,
+  MyDouble mass_of_dust,
+  double *sum_mass_dust)
 {
-// 1) early exits on metallicity & density
+// 1) local resolution thresholds
+const double Z_min           = 0.01;       // min metallicity for dust formation
+const double Density_min     = 1e-24;      // min gas density in cgs
+constexpr MyDouble MIN_DUST_MASS = 1e-6;   // minimum packet mass (code units)
+
+// 2) basic conditions
 if (Sp->SphP[i].Metallicity < Z_min) return;
 if (Sp->SphP[i].Density     < Density_min) return;
 
-// 2) clamp & floor the packet mass
+// 3) clamp to available gas mass
 MyDouble spawn_mass = std::min(mass_of_dust, Sp->P[i].getMass());
-if (spawn_mass < MIN_DUST_MASS) return;
+if (spawn_mass < MIN_DUST_MASS)
+return;
 
-// 3) stochastic draw
-if (get_random_number() >= prob) return;
+// 4) stochastic draw
+if (get_random_number() >= prob)
+return;
 
-// 4) compute your candidate index
-int local_spawn_idx = dust_spawned;
-int j = Sp->NumPart + local_spawn_idx;
-
-// 5) un–bypassable guard
+// 5) determine index and enforce bounds
+static int dust_counter = 0;  // resets each time sfr loop runs
+int j = Sp->NumPart + dust_counter;
 if (j >= Sp->MaxPart) {
-mpi_printf("Rank %d: REFUSING dust spawn @ j=%d  (NumPart=%d, MaxPart=%d)\n",
+mpi_printf("Rank %d: REFUSING dust spawn @ j=%d (NumPart=%d, MaxPart=%d)\n",
 ThisTask, j, Sp->NumPart, Sp->MaxPart);
 return;
 }
 
-// 6) debug before you actually write
-mpi_printf("Rank %d: spawning dust @ j=%d  (spawn_mass=%.6e, prob=%.6e)\n",
+// 6) debug print
+mpi_printf("Rank %d: spawning dust @ j=%d (mass=%.6e, prob=%.6e)\n",
 ThisTask, j, spawn_mass, prob);
 
 // 7) perform the spawn
 spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
 *sum_mass_dust += spawn_mass;
-dust_spawned++;
+dust_counter++;
 }
 
  
