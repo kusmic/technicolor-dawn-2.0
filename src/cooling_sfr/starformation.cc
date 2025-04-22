@@ -425,6 +425,10 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   MyDouble mass_of_star,
   double *sum_mass_stars)
 {
+
+  int stars_spawned = 0;
+  int dust_spawned  = 0;
+
   // Minimum star packet mass to avoid unresolved, near-zero spawns
   const MyDouble MIN_STAR_MASS = 1e-11;  // code units; adjust based on resolution! 1e-4 is about 10^6 solar masses
   if (mass_of_star < MIN_STAR_MASS)
@@ -452,9 +456,11 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   {
   // Spawn a new star packet of finite mass
   altogether_spawned = stars_spawned;
-  if (Sp->NumPart + altogether_spawned >= Sp->MaxPart)
-  Terminate("NumPart=%d spawn %d particles no space left (Sp.MaxPart=%d)\n",
-      Sp->NumPart, altogether_spawned, Sp->MaxPart);
+    if (Sp->NumPart + altogether_spawned >= Sp->MaxPart) {
+        mpi_printf("Rank %d: skipping star spawn (no space): NumPart=%d, spawn=%d, MaxPart=%d\n",
+                   ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
+        return;  // abort this single spawn safely
+    }
 
   int j = Sp->NumPart + altogether_spawned;  // index for new star
   spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
