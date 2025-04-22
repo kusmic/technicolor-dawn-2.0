@@ -801,6 +801,15 @@ std::vector<double> g_energy_ratio;
     }
 
     out.close();
+
+    // Now that everything’s safely on disk, clear the in‑memory buffers:
+    g_delta_u.clear();
+    g_delta_v.clear();
+    g_rel_increase.clear();
+    g_radial_r.clear();
+    g_neighbors_per_star.clear();
+    g_h_per_star.clear();
+    g_energy_ratio.clear();
 }
 
  
