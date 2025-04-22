@@ -17,7 +17,7 @@ part_colors = {
 }
 
 # Change the glob pattern to match the snapshot filenames
-snapshot_files = sorted(glob.glob("output/snap*.hdf5"))
+snapshot_files = sorted(glob.glob("../output/snap*.hdf5"))
 
 # Set up the figure and axis.
 fig, ax = plt.subplots(figsize=(8, 8))

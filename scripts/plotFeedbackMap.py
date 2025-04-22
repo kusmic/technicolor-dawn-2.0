@@ -17,7 +17,7 @@ def create_temperature_map(snapshot_file, slice_thickness=0.5, resolution=200):
     print(f"\nProcessing {snapshot_file}...")
     
     try:
-        with h5py.File(snapshot_file, 'r') as f:
+        with h5py.File("../"+snapshot_file, 'r') as f:
             # Extract header info
             time = f['Header'].attrs['Time']  # Scale factor
             

@@ -18,7 +18,7 @@ UnitEnergy_in_cgs = 1.989e53  # erg/g; this value has been seen other places, bu
 # UnitEnergy_in_cgs = 1.0e10  # derived from your simulation units
 
 # Gather snapshot files
-snapshots = sorted(glob.glob("output/snapshot_*.hdf5"))
+snapshots = sorted(glob.glob("../output/snapshot_*.hdf5"))
 
 fig, ax = plt.subplots(figsize=(7, 6))
 sc = None
