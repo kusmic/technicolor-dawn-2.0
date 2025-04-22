@@ -746,48 +746,60 @@ std::vector<double> g_energy_ratio;
  *  Neighbors have values in the first four columns; stars in the last three.
  */
  void OutputFeedbackDiagnostics()
- {
-     if (ThisTask != 0)
-         return;
- 
-     // Debug: report sizes of diagnostics arrays
-     std::fprintf(stderr,
-         "[FeedbackDiag] ThisTask=0: neighbors=%zu, stars=%zu\n",
-         g_delta_u.size(), g_neighbors_per_star.size());
- 
-     // Open output file, truncating existing contents
-     std::ofstream out("feedback_diagnostics.csv", std::ios::trunc);
-     if (!out.is_open()) {
-         std::fprintf(stderr,
-             "[Error] Could not open feedback_diagnostics.csv for writing\n");
-         return;
-     }
- 
-     // Use scientific notation and fixed precision for clarity
-     out << std::scientific << std::setprecision(6);
- 
-     // Header with timestamp comment
-     out << "# Feedback diagnostics at time=" << All.Time << "\n";
-     out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
- 
-     // 1) Neighbor metrics: delta_u, delta_v, rel_inc, r
-     //    star columns blank
-     for (size_t k = 0; k < g_delta_u.size(); ++k) {
-         out << g_delta_u[k]      << ","
-             << g_delta_v[k]      << ","
-             << g_rel_increase[k] << ","
-             << g_radial_r[k]     << ",,,\n";
-     }
- 
-     // 2) Star metrics: first four fields blank, then n_ngb, h_star, E_ratio
-     for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
-         out << ",,,,"
-             << g_neighbors_per_star[k] << ","
-             << g_h_per_star[k]         << ","
-             << g_energy_ratio[k]       << "\n";
-     }
- 
-     out.close();
- }
+{
+    if (ThisTask != 0)
+        return;
+
+    // Report sizes of diagnostics arrays
+    std::fprintf(stderr,
+        "[FeedbackDiag] ThisTask=0: neighbors=%zu, stars=%zu\n",
+        g_delta_u.size(), g_neighbors_per_star.size());
+
+    // Open CSV: truncate only on first call, else append
+    static bool firstCall = true;
+    std::ofstream out;
+    if (firstCall) {
+        out.open("feedback_diagnostics.csv", std::ios::out);
+        firstCall = false;
+
+        if (!out.is_open()) {
+            std::fprintf(stderr,
+                "[Error] Could not open feedback_diagnostics.csv for writing\n");
+            return;
+        }
+        out << std::scientific << std::setprecision(6);
+
+        // Write header once
+        out << "# Feedback diagnostics at time=" << All.Time << "\n";
+        out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
+    } else {
+        out.open("feedback_diagnostics.csv", std::ios::app);
+        if (!out.is_open()) {
+            std::fprintf(stderr,
+                "[Error] Could not open feedback_diagnostics.csv for appending\n");
+            return;
+        }
+        out << std::scientific << std::setprecision(6);
+    }
+
+    // 1) Neighbor metrics: delta_u, delta_v, rel_inc, r (stars blank)
+    for (size_t k = 0; k < g_delta_u.size(); ++k) {
+        out << g_delta_u[k]      << ","
+            << g_delta_v[k]      << ","
+            << g_rel_increase[k] << ","
+            << g_radial_r[k]     << ",,,\n";
+    }
+
+    // 2) Star metrics: first four fields blank, then n_ngb, h_star, E_ratio
+    for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
+        out << ",,,,"
+            << g_neighbors_per_star[k] << ","
+            << g_h_per_star[k]         << ","
+            << g_energy_ratio[k]       << "\n";
+    }
+
+    out.close();
+}
+
  
  #endif // FEEDBACK
