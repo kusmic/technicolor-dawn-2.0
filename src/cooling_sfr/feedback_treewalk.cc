@@ -460,7 +460,8 @@ static std::vector<double> g_energy_ratio;
          // Energy partitioning
          double E_kin = E_total * SNKickFraction;
          double E_therm = E_total * (1.0 - SNKickFraction);
-         
+         double v_kick = 0;
+
          // Apply feedback to each target
          for (int i = 0; i < TargetCount; i++) {
              int j = Targets[i].index;
@@ -479,12 +480,7 @@ static std::vector<double> g_energy_ratio;
              double E_therm_j = E_therm * norm_weight;
              double delta_u = E_therm_j * erg_per_mass_to_code * inv_mass_cgs;
              
-             // ─── DIAG: per‐neighbor record ───
-             double rel_inc = delta_u / (Sp->get_utherm_from_entropy(j) + 1e-10);
-             g_delta_u    .push_back(delta_u);
-             
-             g_rel_increase.push_back(rel_inc);
-             g_radial_r   .push_back(Targets[i].dist);
+
 
                 // accumulate for per‐star energy‐conservation check
                 sum_applied += E_therm_j;
@@ -510,7 +506,7 @@ static std::vector<double> g_energy_ratio;
              
              // Kinetic energy injection
              double E_kin_j = E_kin * norm_weight;
-             double v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code * inv_mass_cgs);
+             v_kick = sqrt(2.0 * E_kin_j * erg_per_mass_to_code * inv_mass_cgs);
              
              if (!isfinite(v_kick) || v_kick < 0 || v_kick > 1e5) {
                  FEEDBACK_PRINT("[Feedback WARNING] Non-finite or huge v_kick = %.3e for gas %d\n", v_kick, j);
@@ -545,10 +541,16 @@ static std::vector<double> g_energy_ratio;
              if (!isfinite(final_u) || final_u < 1e-20 || final_u > 1e10) {
                  FEEDBACK_PRINT("[Feedback WARNING] Bad final entropy on gas %d: u=%.3e\n", j, final_u);
              }
+             
+            // ─── DIAG: per‐neighbor record ───
+            double rel_inc = delta_u / (Sp->get_utherm_from_entropy(j) + 1e-10);
+            g_delta_u    .push_back(delta_u);
+            g_delta_v.push_back(v_kick);
+            g_rel_increase.push_back(rel_inc);
+            g_radial_r   .push_back(Targets[i].dist);
          }
          
             // ─── DIAG: per‐star record ───
-            g_delta_v.push_back(v_kick);
             g_neighbors_per_star.push_back(TargetCount);
             g_h_per_star         .push_back(SearchRadius);
             g_energy_ratio      .push_back(sum_applied / E_input);
