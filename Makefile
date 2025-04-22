@@ -507,26 +507,26 @@ check_docs: $(DOCS_CHECK)
 $(CONFIG_CHECK): $(TO_CHECK) $(CONFIG) buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 2 $(CONFIG) $(CONFIG_CHECK) defines_extra $(TO_CHECK)
 
-$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cpp Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 1 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cpp backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cc Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 1 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cc backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/%.h.check: $(SRC_DIR)/%.h Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 1 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/%.h.check: $(SRC_DIR)/%.h backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/%.o.check: $(BUILD_DIR)/%.cc Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 1 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/%.o.check: $(BUILD_DIR)/%.cc backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/%.h.check: $(BUILD_DIR)/%.h Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 1 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/%.h.check: $(BUILD_DIR)/%.h backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/Makefile.check: Makefile Template-Config.sh defines_extra buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 3 $< $@ Template-Config.sh defines_extra
+$(BUILD_DIR)/Makefile.check: Makefile backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 3 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/config.check: documentation/04_config-options.md Template-Config.sh buildsystem/check.py
-	@$(PYTHON) buildsystem/check.py 4 Template-Config.sh $@  $<
+$(BUILD_DIR)/config.check: documentation/04_config-options.md backup/Template-Config.sh buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 4 backup/Template-Config.sh $@  $<
 
 $(BUILD_DIR)/param.check: documentation/05_parameterfile.md $(SRC_DIR)/io/parameters.cc buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 5 $(SRC_DIR)/data/allvars.cc $@  $<
