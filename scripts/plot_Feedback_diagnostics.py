@@ -9,6 +9,10 @@ df = pd.read_csv(
     names=["delta_u", "delta_v", "rel_inc", "r", "n_ngb", "h_star", "E_ratio"]
 )
 
+# 2) Coerce all your columns to floats
+for col in ["delta_u","delta_v","rel_inc","r","n_ngb","h_star","E_ratio"]:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+
 # Split neighbor vs. star records
 neighbors = df.dropna(subset=["delta_u"])
 stars     = df.dropna(subset=["n_ngb"])
