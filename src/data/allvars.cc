@@ -183,6 +183,9 @@ void global_data_all_processes::register_parameters(void)
   add_param("TempClouds", &TempClouds, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MaxSfrTimescale", &MaxSfrTimescale, PARAM_DOUBLE, PARAM_FIXED);
 
+  add_param("CritHydrogenDensity", &CritHydrogenDensity, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("MaxStarFormationTemp", &MaxStarFormationTemp, PARAM_DOUBLE, PARAM_FIXED);
+
   add_param("FeedbackDebug", &FeedbackDebug, PARAM_INT, PARAM_FIXED);
   add_param("FeedbackSNII", &FeedbackSNII, PARAM_INT, PARAM_FIXED);
   add_param("FeedbackSNIa", &FeedbackSNIa, PARAM_INT, PARAM_FIXED);

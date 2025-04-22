@@ -68,6 +68,10 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
    double totsfrrate; // Total star formation rate across the simulation
    double w = 0; // Random number for metallicity update
 
+   double k_B = 1.380649e-16     // Boltzmann constant in erg/K
+   double m_H = 1.6735575e-24    // Mass of hydrogen atom in g
+   double mu = 0.6               // Mean molecular weight for fully ionized gas
+
    All.set_cosmo_factors_for_current_time(); // Update cosmological factors to current time
  
    stars_spawned = stars_converted = 0; // Counters for stars spawned and converted from gas
@@ -90,6 +94,22 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
            prob         = 0;
            p            = 0;
  
+           /* DENSITY and TEMPERATURE cuts ---- 
+              If the gas is too diffuse or too hot, skip this 
+           */
+            double rho_cgs = Sp->SphP[target].Density * (All.UnitMass_in_g / pow(All.UnitLength_in_cm, 3));  // g/cm³
+            double n_H     = rho_cgs / m_H;  // cm⁻³
+
+            if (n_H < All.CritHydrogenDensity)   // user‐set in your .param (e.g. 0.1 cm⁻³)
+              continue;  // too diffuse to form stars
+
+            // ——— 2) Temperature ceiling ——–
+            double u_cgs = Sp->SphP[target].InternalEnergy * All.UnitVelocity_in_cm_per_s * All.UnitVelocity_in_cm_per_s;  // erg/g
+            double T = u_cgs * (GAMMA_MINUS1) * mu * m_H / k_B;  // K
+
+            if (T > All.MaxStarFormationTemp)   // user‐set in your .param (e.g. 1e4 K)
+              continue;  // too hot to form stars
+
            /* Calculate the probability of star formation based on the SFR */
            if(Sp->SphP[target].Sfr > 0)
              {
