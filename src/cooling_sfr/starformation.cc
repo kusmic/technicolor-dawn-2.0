@@ -322,7 +322,7 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
  */
 void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star)
 {
-  printf("STAR: spawn star from gas particle of mass %.3f!\n", mass_of_star);
+  printf("STAR: spawn star from gas particle of mass %.6f!\n", mass_of_star);
   Sp->P[istar] = Sp->P[igas];
   Sp->P[istar].setType(STAR_TYPE);
 #if NSOFTCLASSES > 1
@@ -367,7 +367,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  */
  void coolsfr::spawn_dust_from_sph_particle(simparticles *Sp, int igas, double birthtime, int idust, MyDouble mass_of_dust)
  {
-  printf("DUST: spawn dust from gas particle of mass %.3f!\n", mass_of_dust);
+  printf("DUST: spawn dust from gas particle of mass %.6f!\n", mass_of_dust);
 
      // Copy gas properties to new dust particle
      Sp->P[idust] = Sp->P[igas];
@@ -452,54 +452,56 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
 /** \brief Make a dust particle from a SPH gas particle.
  *
  *  Given a gas cell where dust formation is active and the probability
- *  of forming dust, this function selects either to convert the gas
- *  particle into a dust particle or to spawn a dust particle.
+ *  of forming dust, this function spawns a dust tracer of finite mass
+ *  (rather than converting the gas cell wholesale), and updates totals.
  *
- *  \param i index of the gas cell
- *  \param prob probability of making a dust particle
- *  \param mass_of_dust desired mass of the dust particle
- *  \param sum_mass_dust holds the mass of all the dust created at the current time-step (for the local task)
+ *  \param Sp             pointer to particle arrays
+ *  \param i              index of the gas cell
+ *  \param prob           probability of spawning a dust packet this timestep
+ *  \param mass_of_dust   desired dust mass per packet (in code units)
+ *  \param sum_mass_dust  accumulator for total dust mass formed on this task
  */
- void coolsfr::make_dust(simparticles *Sp, int i, double prob, MyDouble mass_of_dust, double *sum_mass_dust)
- {
-     // Dust formation conditions
-     double Z_min = 0.01;  // Minimum metallicity for dust formation
-     // double T_max = 1000.0; // Maximum temperature for dust survival (Kelvin)
-     double Density_min = 1e-24; // Minimum gas density (cgs)
- 
-     if (Sp->SphP[i].Metallicity < Z_min) return; // Not enough metals
-     // if (Sp->SphP[i].Temperature > T_max) return; // Too hot for dust to survive
-     if (Sp->SphP[i].Density < Density_min) return; // Density too low for dust formation
- 
-     if (mass_of_dust > Sp->P[i].getMass())
-         Terminate("mass_of_dust > P[i].Mass");
- 
-     if (get_random_number() < prob)
-     {
-         if (mass_of_dust == Sp->P[i].getMass())
-         {
-             // Convert the entire gas particle into a dust particle
-             dust_converted++;
- 
-             *sum_mass_dust += Sp->P[i].getMass();
- 
-             convert_sph_particle_into_dust(Sp, i, All.Time);
-         }
-         else
-         {
-             // Spawn a new dust particle, only reducing the mass in the gas cell by mass_of_dust
-             altogether_spawned = dust_spawned;
-             if (Sp->NumPart + altogether_spawned >= Sp->MaxPart)
-                 Terminate("NumPart=%d spawn %d particles no space left (Sp.MaxPart=%d)\n", Sp->NumPart, altogether_spawned, Sp->MaxPart);
- 
-             int j = Sp->NumPart + altogether_spawned; /* index of new dust particle */
- 
-             spawn_dust_from_sph_particle(Sp, i, All.Time, j, mass_of_dust);
- 
-             *sum_mass_dust += mass_of_dust;
-             dust_spawned++;
-         }
-     }
- }
+ void coolsfr::make_dust(simpaticles *Sp,
+  int i,
+  double prob,
+  MyDouble mass_of_dust,
+  double *sum_mass_dust)
+{
+// --- Dust formation prerequisites ---
+const double Z_min       = 0.01;       // minimum gas metallicity
+const double Density_min = 1e-24;      // minimum density (cgs)
+constexpr MyDouble MIN_DUST_MASS = 1e-6; // code-unit floor to ignore tiny spawns
+
+// Only proceed if gas has enough metals and density
+if (Sp->SphP[i].Metallicity < Z_min) return;
+if (Sp->SphP[i].Density     < Density_min) return;
+
+// Clamp the packet mass to what's available in the cell
+MyDouble spawn_mass = std::min(mass_of_dust, Sp->P[i].getMass());
+if (spawn_mass < MIN_DUST_MASS)
+return;  // too small to spawn meaningfully
+
+// Optionally, recompute the spawn probability based on spawn_mass?
+// prob = (Sp->P[i].getMass() / spawn_mass) * (1 - exp(-pall));
+
+// Stochastic draw: skip most timesteps
+if (get_random_number() >= prob)
+return;
+
+// Reserve slots: ensure we don't exceed MaxPart
+int altogether_spawned = dust_spawned;
+if (Sp->NumPart + altogether_spawned + 1 > Sp->MaxPart)
+Terminate("NumPart=%d spawn %d particles, no space left (MaxPart=%d)\n",
+Sp->NumPart, altogether_spawned, Sp->MaxPart);
+
+// Perform the spawn: create a new dust tracer of mass spawn_mass
+int j = Sp->NumPart + altogether_spawned;
+spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
+
+// Bookkeeping
+*sum_mass_dust += spawn_mass;
+dust_spawned++;
+}
+
  
  #endif /* closes SFR */
