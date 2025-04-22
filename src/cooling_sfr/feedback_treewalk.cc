@@ -29,7 +29,7 @@
  #include <random>
  #include <fstream>
  #include <iomanip>
- 
+
  #include "../gravtree/gravtree.h"
  #include "../cooling_sfr/feedback_treewalk.h"
  #include "../cooling_sfr/cooling.h"
@@ -43,13 +43,13 @@
  #include "../time_integration/timestep.h"
  
 // ─── For diagnostic output CSV file ───
-extern std::vector<double> g_delta_u;
-extern std::vector<double> g_delta_v;
-extern std::vector<double> g_rel_increase;
-extern std::vector<double> g_radial_r;
-extern std::vector<int>    g_neighbors_per_star;
-extern std::vector<double> g_h_per_star;
-extern std::vector<double> g_energy_ratio;
+std::vector<double> g_delta_u;
+std::vector<double> g_delta_v;
+std::vector<double> g_rel_increase;
+std::vector<double> g_radial_r;
+std::vector<int>    g_neighbors_per_star;
+std::vector<double> g_h_per_star;
+std::vector<double> g_energy_ratio;
 
 extern int ThisTask;
 extern double All_Time;
