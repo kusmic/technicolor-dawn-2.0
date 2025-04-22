@@ -25,7 +25,7 @@ for snapfile in snapshots:
         a = header["Time"]
         
         # Unit conversions from header
-        UnitMass = header["UnitMass_in_g"]         # grams per code mass unit
+        UnitMass = 1.989e43        # grams per code mass unit
         UnitLen = header["UnitLength_in_cm"]       # cm per code length unit
         UnitVel = header["UnitVelocity_in_cm_per_s"]  # cm/s per code velocity unit
         
