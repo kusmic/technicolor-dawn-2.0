@@ -517,7 +517,7 @@ return;
     if (Sp->NumPart + altogether_spawned >= Sp->MaxPart) {
         mpi_printf("Rank %d: skipping dust spawn (no space): NumPart=%d, spawn=%d, MaxPart=%d\n",
                    ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
-        continue;    // skip this spawn safely
+        return;    // skip this spawn safely
     }
 
 // Perform the spawn: create a new dust tracer of mass spawn_mass
