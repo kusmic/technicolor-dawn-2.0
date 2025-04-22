@@ -461,7 +461,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  *  \param mass_of_dust   desired dust mass per packet (in code units)
  *  \param sum_mass_dust  accumulator for total dust mass formed on this task
  */
- void coolsfr::make_dust(simpaticles *Sp,
+ void coolsfr::make_dust(simparticles *Sp,
   int i,
   double prob,
   MyDouble mass_of_dust,
