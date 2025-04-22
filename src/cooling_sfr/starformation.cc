@@ -134,7 +134,7 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
            p_decide = get_random_number();
            if(p_decide < p / pall) { // A star formation event is considered
              make_star(Sp, target, prob, mass_of_star, &sum_mass_stars); // Function to form a new star
-             make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars); // Function to simulate dust production
+             //make_dust(Sp, target, prob, mass_of_star, &sum_mass_stars); // Function to simulate dust production
            }
            if(Sp->SphP[target].Sfr > 0)
              {
