@@ -51,9 +51,6 @@ std::vector<int>    g_neighbors_per_star;
 std::vector<double> g_h_per_star;
 std::vector<double> g_energy_ratio;
 
-extern int ThisTask;
-extern double All_Time;
-
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
  #define NEAREST_X(x) NEAREST(x, All.BoxSize)
