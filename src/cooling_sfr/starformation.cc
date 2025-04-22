@@ -399,53 +399,69 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
      return;
  }
  
-
 /** \brief Make a star particle from a SPH gas particle.
  *
  *  Given a gas cell where star formation is active and the probability
- *  of forming a star, this function selectes either to convert the gas
- *  particle into a star particle or to spawn a star depending on the
- *  target mass for the star.
+ *  of forming a star, this function either converts the entire gas
+ *  particle into a star or spawns a new star packet of finite mass,
+ *  while enforcing a minimum packet mass and protecting against
+ *  excessive zero‑mass spawns.
  *
- *  \param i index of the gas cell
- *  \param prob probability of making a star
- *  \param mass_of_star desired mass of the star particle
- *  \param sum_mass_stars holds the mass of all the stars created at the current time-step (for the local task)
+ *  \param Sp               pointer to particle arrays
+ *  \param i                index of the gas cell
+ *  \param prob             probability of forming a star packet
+ *  \param mass_of_star     target mass (code units) for the star packet
+ *  \param sum_mass_stars   accumulator for total stellar mass formed this timestep
  */
- void coolsfr::make_star(simparticles *Sp, int i, double prob, MyDouble mass_of_star, double *sum_mass_stars)
- {
-   if(mass_of_star > Sp->P[i].getMass())
-     Terminate("mass_of_star > P[i].Mass");
- 
-   if(get_random_number() < prob)
-     {
-       if(mass_of_star == Sp->P[i].getMass())
-         {
-           /* here we turn the gas particle itself into a star particle */
-           stars_converted++;
- 
-           *sum_mass_stars += Sp->P[i].getMass();
- 
-           convert_sph_particle_into_star(Sp, i, All.Time);
-         }
-       else
-         {
-           /* in this case we spawn a new star particle, only reducing the mass in the cell by mass_of_star */
-           altogether_spawned = stars_spawned;
-           if(Sp->NumPart + altogether_spawned >= Sp->MaxPart)
-             Terminate("NumPart=%d spwawn %d particles no space left (Sp.MaxPart=%d)\n", Sp->NumPart, altogether_spawned, Sp->MaxPart);
- 
-           int j = Sp->NumPart + altogether_spawned; /* index of new star */
- 
-           spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
- 
-           *sum_mass_stars += mass_of_star;
-           stars_spawned++;
-         }
-     }
- }
- 
+ void coolsfr::make_star(simparticles *Sp,
+  int i,
+  double prob,
+  MyDouble mass_of_star,
+  double *sum_mass_stars)
+{
+  // Minimum star packet mass to avoid unresolved, near-zero spawns
+  const MyDouble MIN_STAR_MASS = 1e-4;  // code units; adjust based on resolution
+  if (mass_of_star < MIN_STAR_MASS)
+  return;
 
+  // Prevent asking for more mass than available
+  if (mass_of_star > Sp->P[i].getMass())
+    Terminate("mass_of_star > P[i].Mass");
+
+  // Stochastic formation decision
+  if (get_random_number() < prob)
+  {
+  if (mass_of_star == Sp->P[i].getMass())
+  {
+  // Convert the entire gas particle into a star
+  stars_converted++;
+  *sum_mass_stars += Sp->P[i].getMass();
+  convert_sph_particle_into_star(Sp, i, All.Time);
+
+  // Debug output (only on task 0)
+  if (ThisTask == 0)
+    printf("STAR: convert gas -> star, mass %.6e code-units\n", Sp->P[i].getMass());
+  }
+  else
+  {
+  // Spawn a new star packet of finite mass
+  altogether_spawned = stars_spawned;
+  if (Sp->NumPart + altogether_spawned >= Sp->MaxPart)
+  Terminate("NumPart=%d spawn %d particles no space left (Sp.MaxPart=%d)\n",
+      Sp->NumPart, altogether_spawned, Sp->MaxPart);
+
+  int j = Sp->NumPart + altogether_spawned;  // index for new star
+  spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
+
+  *sum_mass_stars += mass_of_star;
+  stars_spawned++;
+
+  // Debug output (only on task 0)
+  if (ThisTask == 0)
+  printf("STAR: spawn star of mass %.6e code-units\n", mass_of_star);
+  }
+  }
+}
 
  
 
