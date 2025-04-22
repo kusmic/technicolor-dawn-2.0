@@ -113,6 +113,8 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
 
               mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
 
+              mpi_printf("[STAR] Mass of potential star=%.3f (must be above 1e-4)\n", mass_of_star);
+
               if (mass_of_star <= 0)
                   continue;
 
