@@ -444,7 +444,6 @@ double sfe = 0.05;  // Make this a param.txt variable!!! All.StarFormationEffici
 double rnd = get_random_number();
 if (rnd >= prob * sfe)  // <-- note the '* sfe' here
     return;
-}
 
 // 3) Convert whole particle?
 if (mass_of_star == available) {
