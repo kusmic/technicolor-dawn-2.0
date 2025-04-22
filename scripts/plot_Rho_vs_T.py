@@ -11,12 +11,6 @@ m_H = 1.6735575e-24    # Mass of hydrogen atom in g
 mu = 0.6               # Mean molecular weight for fully ionized gas
 gamma = 5.0 / 3.0      # Adiabatic index for monoatomic gas
 
-# Simulation unit for internal energy
-UnitEnergy_in_cgs = 1.989e53  # erg/g; this value has been seen other places, but seems WAY too big?
-# Since Gadget stores u as specific internal energy (i.e., energy per unit mass), we do
-# UnitVelocity_in_cm_per_s ** 2 ?   That would be:
-# UnitEnergy_in_cgs = 1.0e10  # derived from your simulation units
-
 # Gather snapshot files
 snapshots = sorted(glob.glob("../output/snapshot_*.hdf5"))
 
@@ -26,54 +20,44 @@ sc = None
 # Preload data for animation
 snapshot_data = []
 for snapfile in snapshots:
-    snap = h5py.File(snapfile, "r")
-    header = dict(snap["Header"].attrs)
-    a = header["Time"]
-    snapnum = snapfile.split("_")[-1].split(".")[0]
-
-    # Load data
-    rho = np.array(snap["PartType0/Density"]) * a**3
-    u = np.array(snap["PartType0/InternalEnergy"])
-
-    # Clip extreme internal energies BEFORE computing T
-    clip_threshold = 1e5
-    num_high = np.sum(u > clip_threshold)
-    if num_high > 0:
-        print(f"[DEBUG] Number of particles with InternalEnergy > {clip_threshold:.0e}: {num_high}")
-        sample = np.where(u > clip_threshold)[0][:10]
-        for i in sample:
-            print(f"  rho = {rho[i]:.3e}, u = {u[i]:.3e} (before clip)")
-        u = np.clip(u, None, clip_threshold)
-
-    # Convert internal energy and compute temperature
-    u_cgs = u * UnitEnergy_in_cgs
-    T = (gamma - 1.0) * mu * m_H / k_B * u_cgs
-
-    # Sanity checks
-    print(f"[INFO] u min/max: {u.min():.2e} / {u.max():.2e}")
-    print(f"[INFO] T min/max: {T.min():.2e} / {T.max():.2e}")
-
-    # Warn on unphysical temperatures
-    bad_temp_mask = (T < 1) | (T > 1e10)
-    if np.any(bad_temp_mask):
-        print(f"[WARNING] {np.sum(bad_temp_mask)} particles have unphysical temperatures.")
-
-    snapshot_data.append((rho, T, snapnum))
-    snap.close()
+    with h5py.File(snapfile, "r") as snap:
+        header = dict(snap["Header"].attrs)
+        a = header["Time"]
+        
+        # Unit conversions from header
+        UnitMass = header["UnitMass_in_g"]         # grams per code mass unit
+        UnitLen = header["UnitLength_in_cm"]       # cm per code length unit
+        UnitVel = header["UnitVelocity_in_cm_per_s"]  # cm/s per code velocity unit
+        
+        # Load data: convert to cgs
+        rho_code = np.array(snap["PartType0/Density"]) * a**3
+        rho_cgs = rho_code * (UnitMass / UnitLen**3)
+        
+        u_code = np.array(snap["PartType0/InternalEnergy"])
+        u_cgs = u_code * UnitVel**2  # erg/g
+        
+        # Compute temperature
+        T = u_cgs * (gamma - 1.0) * mu * m_H / k_B
+        
+        # Debug prints
+        print(f"[INFO] Snapshot {snapfile}:")
+        print(f"  rho_cgs min/max: {rho_cgs.min():.2e} / {rho_cgs.max():.2e} g/cm³")
+        print(f"  u_cgs min/max:  {u_cgs.min():.2e} / {u_cgs.max():.2e} erg/g")
+        print(f"  T min/max:      {T.min():.2e} / {T.max():.2e} K")
+        
+        snapshot_data.append((rho_cgs, T, os.path.basename(snapfile)))
 
 def update(frame):
-    global sc
-    rho, T, snapnum = snapshot_data[frame]
+    rho, T, snapname = snapshot_data[frame]
     ax.clear()
     ax.loglog(rho, T, 'o', markersize=2, alpha=0.7)
     ax.set_xlabel("Density [g/cm³]")
     ax.set_ylabel("Temperature [K]")
-    ax.set_title(f"\u03c1–T diagram from snapshot {snapnum}")
+    ax.set_title(f"ρ–T diagram: {snapname}")
     ax.grid(True, which="both", ls="--", alpha=0.3)
     plt.tight_layout()
-    # Save each frame as PNG
     os.makedirs("rho_T_frames", exist_ok=True)
-    plt.savefig(f"rho_T_frames/frame_{snapnum}.png", dpi=150)
+    plt.savefig(f"rho_T_frames/{snapname}.png", dpi=150)
 
 # Run animation
 ani = animation.FuncAnimation(fig, update, frames=len(snapshot_data), interval=500)

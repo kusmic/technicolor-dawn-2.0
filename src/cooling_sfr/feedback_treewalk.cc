@@ -739,10 +739,10 @@ std::vector<double> g_energy_ratio;
 }
  
 
-/** \brief Write out detailed feedback diagnostics to CSV for plotting with plot_Feedback_diagnostics.py
+/** \brief Write out detailed feedback diagnostics to CSV for plotting
  *
- *  This routine dumps both per-neighbor and per-star metrics into a CSV file
- *  with columns: delta_u, delta_v, rel_inc, r, n_ngb, h_star, E_ratio
+ *  This routine dumps both per-neighbor and per-star metrics into a CSV
+ *  file with columns: delta_u, delta_v, rel_inc, r, n_ngb, h_star, E_ratio.
  *  Neighbors have values in the first four columns; stars in the last three.
  */
  void OutputFeedbackDiagnostics()
@@ -750,10 +750,16 @@ std::vector<double> g_energy_ratio;
      if (ThisTask != 0)
          return;
  
+     // Debug: report sizes of diagnostics arrays
+     std::fprintf(stderr,
+         "[FeedbackDiag] ThisTask=0: neighbors=%zu, stars=%zu\n",
+         g_delta_u.size(), g_neighbors_per_star.size());
+ 
      // Open output file, truncating existing contents
      std::ofstream out("feedback_diagnostics.csv", std::ios::trunc);
      if (!out.is_open()) {
-         std::fprintf(stderr, "[Error] Could not open feedback_diagnostics.csv for writing\n");
+         std::fprintf(stderr,
+             "[Error] Could not open feedback_diagnostics.csv for writing\n");
          return;
      }
  
@@ -761,10 +767,11 @@ std::vector<double> g_energy_ratio;
      out << std::scientific << std::setprecision(6);
  
      // Header with timestamp comment
-     out << "# Feedback diagnostics at time=" << All.Time << "\n";
+     out << "# Feedback diagnostics at time=" << All_Time << "\n";
      out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
  
-     // Neighbor metrics: delta_u, delta_v, rel_inc, r; stars fields blank
+     // 1) Neighbor metrics: delta_u, delta_v, rel_inc, r
+     //    star columns blank
      for (size_t k = 0; k < g_delta_u.size(); ++k) {
          out << g_delta_u[k]      << ","
              << g_delta_v[k]      << ","
@@ -772,9 +779,9 @@ std::vector<double> g_energy_ratio;
              << g_radial_r[k]     << ",,,\n";
      }
  
-     // Star metrics: neighbor fields blank; then n_ngb, h_star, E_ratio
+     // 2) Star metrics: first four fields blank, then n_ngb, h_star, E_ratio
      for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
-         out << ",,,"
+         out << ",,,,"
              << g_neighbors_per_star[k] << ","
              << g_h_per_star[k]         << ","
              << g_energy_ratio[k]       << "\n";
@@ -782,5 +789,5 @@ std::vector<double> g_energy_ratio;
  
      out.close();
  }
-
+ 
  #endif // FEEDBACK
