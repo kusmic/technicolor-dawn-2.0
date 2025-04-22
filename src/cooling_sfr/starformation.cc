@@ -108,7 +108,7 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
                // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
                // converted into a star of a constant mass. Let's try to make it smarter.
               //double mstar_phys = sample_IMF_mass();  // sample a physical mass (in M⊙)
-              double target_phys = 1e6;  // e.g. 10^6 M⊙ per star particle
+              double target_phys = 1e7;  // e.g. 10^6 M⊙ per star particle
               double ideal_code_mass = target_phys * (SOLAR_MASS / All.UnitMass_in_g);
 
               mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
@@ -437,10 +437,13 @@ return;
 }
 
 // 2) Stochastic decision
+// read from the parameter file (in gadgetconfig.h + .param)
+double sfe = 0.05;  // Make this a param.txt variable!!! All.StarFormationEfficiency;   // e.g. 0.1 = 10% efficiency per dt
+
+// original probability
 double rnd = get_random_number();
-if (rnd >= prob) {
-// most timesteps no star
-return;
+if (rnd >= prob * sfe)  // <-- note the '* sfe' here
+    return;
 }
 
 // 3) Convert whole particle?

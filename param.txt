@@ -1,6 +1,6 @@
 
 %----  Relevant files 
-InitCondFile         ICs/ics_from_music_16
+InitCondFile         ICs/ics_from_music_32
 OutputDir            ./output
 SnapshotFileBase     snapshot
 OutputListFilename   empty.txt
