@@ -408,72 +408,82 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
 /** \brief Make a star particle from a SPH gas particle.
  *
  *  Given a gas cell where star formation is active and the probability
- *  of forming a star, this function either converts the entire gas
+ *  of forming a star packet, this function either converts the entire gas
  *  particle into a star or spawns a new star packet of finite mass,
  *  while enforcing a minimum packet mass and protecting against
- *  excessive zero‑mass spawns.
+ *  exceeding the per‐rank particle limit.
  *
- *  \param Sp               pointer to particle arrays
- *  \param i                index of the gas cell
- *  \param prob             probability of forming a star packet
- *  \param mass_of_star     target mass (code units) for the star packet
- *  \param sum_mass_stars   accumulator for total stellar mass formed this timestep
+ *  \param Sp              pointer to particle arrays
+ *  \param i               index of the gas cell
+ *  \param prob            probability of making a star packet
+ *  \param mass_of_star    target mass (code units) for the star packet
+ *  \param sum_mass_stars  accumulator for total stellar mass formed this timestep
  */
- void coolsfr::make_star(simparticles *Sp,
+ void coolsfr::make_star(simpaticles *Sp,
   int i,
   double prob,
   MyDouble mass_of_star,
   double *sum_mass_stars)
 {
+// Minimum resolvable star‐packet mass (in code units)
+constexpr MyDouble MIN_STAR_MASS = 1e-12;
 
-  int stars_spawned = 0;
-  int dust_spawned  = 0;
-
-  // Minimum star packet mass to avoid unresolved, near-zero spawns
-  const MyDouble MIN_STAR_MASS = 1e-11;  // code units; adjust based on resolution! 1e-4 is about 10^6 solar masses
-  if (mass_of_star < MIN_STAR_MASS)
-    return;
-
-  // Prevent asking for more mass than available
-  if (mass_of_star > Sp->P[i].getMass())
-    Terminate("mass_of_star > P[i].Mass");
-
-  // Stochastic formation decision
-  if (get_random_number() < prob)
-  {
-  if (mass_of_star == Sp->P[i].getMass())
-  {
-  // Convert the entire gas particle into a star
-  stars_converted++;
-  *sum_mass_stars += Sp->P[i].getMass();
-  convert_sph_particle_into_star(Sp, i, All.Time);
-
-  // Debug output (only on task 0)
-  if (ThisTask == 0)
-    printf("STAR: convert gas -> star, mass %.6e code-units\n", Sp->P[i].getMass());
-  }
-  else
-  {
-  // Spawn a new star packet of finite mass
-  altogether_spawned = stars_spawned;
-    if (Sp->NumPart + altogether_spawned >= Sp->MaxPart) {
-        mpi_printf("Rank %d: skipping star spawn (no space): NumPart=%d, spawn=%d, MaxPart=%d\n",
-                   ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
-        return;  // abort this single spawn safely
-    }
-
-  int j = Sp->NumPart + altogether_spawned;  // index for new star
-  spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
-
-  *sum_mass_stars += mass_of_star;
-  stars_spawned++;
-
-    // Debug output (only on task 0)
-    if (ThisTask == 0)
-      printf("STAR: spawn star of mass %.6e code-units\n", mass_of_star);
-    }
-  }
+// 1) Don’t exceed available gas
+MyDouble available = Sp->P[i].getMass();
+if (mass_of_star > available) {
+mpi_printf("Rank %d: requested star mass (%.6e) > available gas (%.6e). Skipping.\n",
+ThisTask, (double)mass_of_star, (double)available);
+return;
 }
+
+// 2) Stochastic decision
+double rnd = get_random_number();
+if (rnd >= prob) {
+// most timesteps no star
+return;
+}
+
+// 3) Convert whole particle?
+if (mass_of_star == available) {
+stars_converted++;
+*sum_mass_stars += available;
+convert_sph_particle_into_star(Sp, i, All.Time);
+if (ThisTask == 0)
+printf("STAR: convert gas -> star, mass %.6e code‐units\n", (double)available);
+return;
+}
+
+// 4) Spawn small packet
+if (mass_of_star < MIN_STAR_MASS) {
+// too small to resolve
+return;
+}
+
+// local index among this task’s new star packets
+int local_idx = stars_spawned;
+int j = Sp->NumPart + local_idx;
+
+// 5) Bounds‐check once, in one place
+if (j >= Sp->MaxPart) {
+mpi_printf("Rank %d: refusing star spawn @ j=%d (NumPart=%d, MaxPart=%d)\n",
+ThisTask, j, Sp->NumPart, Sp->MaxPart);
+return;
+}
+
+// 6) Diagnostics
+mpi_printf("Rank %d: spawning star @ j=%d  mass=%.6e  prob=%.6e\n",
+ThisTask, j, (double)mass_of_star, prob);
+
+// 7) Do the actual spawn
+spawn_star_from_sph_particle(Sp, i, All.Time, j, mass_of_star);
+*sum_mass_stars += mass_of_star;
+stars_spawned++;
+
+if (ThisTask == 0)
+printf("STAR: spawn star of mass %.6e code‐units at j=%d\n",
+(double)mass_of_star, j);
+}
+
 
  
 
