@@ -489,64 +489,37 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  *  \param mass_of_dust   desired dust mass per packet (in code units)
  *  \param sum_mass_dust  accumulator for total dust mass formed on this task
  */
- void coolsfr::make_dust(simparticles *Sp,
-  int i,
-  double prob,
-  MyDouble mass_of_dust,
-  double *sum_mass_dust)
+ void coolsfr::make_dust(simparticles *Sp, int i, double prob,
+  MyDouble mass_of_dust, double *sum_mass_dust)
 {
-  printf("mass_of_dust!= %.6f code-units\n", mass_of_dust);
-
-// --- Dust formation prerequisites ---
-const double Z_min       = 0.01;       // minimum gas metallicity
-const double Density_min = 1e-24;      // minimum density (cgs)
-constexpr MyDouble MIN_DUST_MASS = 1e-6; // code-unit floor to ignore tiny spawns
-
-// Only proceed if gas has enough metals and density
+// 1) early exits on metallicity & density
 if (Sp->SphP[i].Metallicity < Z_min) return;
 if (Sp->SphP[i].Density     < Density_min) return;
 
-// Clamp the packet mass to what's available in the cell
+// 2) clamp & floor the packet mass
 MyDouble spawn_mass = std::min(mass_of_dust, Sp->P[i].getMass());
-if (spawn_mass < MIN_DUST_MASS)
-    return;
+if (spawn_mass < MIN_DUST_MASS) return;
 
-if (get_random_number() >= prob)
-    return;
+// 3) stochastic draw
+if (get_random_number() >= prob) return;
 
-// Now the only code that touches j and the arrays lives inside this if:
-altogether_spawned = dust_spawned;
-if (Sp->NumPart + altogether_spawned < Sp->MaxPart)
-{
-    int j = Sp->NumPart + altogether_spawned;
-    spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
-    *sum_mass_dust += spawn_mass;
-    dust_spawned++;
-}
-else
-{
-    mpi_printf("Rank %d: no space for dust spawn at j=%d (MaxPart=%d)\n",
-               ThisTask, Sp->NumPart + altogether_spawned, Sp->MaxPart);
+// 4) compute your candidate index
+int local_spawn_idx = dust_spawned;
+int j = Sp->NumPart + local_spawn_idx;
+
+// 5) un–bypassable guard
+if (j >= Sp->MaxPart) {
+mpi_printf("Rank %d: REFUSING dust spawn @ j=%d  (NumPart=%d, MaxPart=%d)\n",
+ThisTask, j, Sp->NumPart, Sp->MaxPart);
+return;
 }
 
+// 6) debug before you actually write
+mpi_printf("Rank %d: spawning dust @ j=%d  (spawn_mass=%.6e, prob=%.6e)\n",
+ThisTask, j, spawn_mass, prob);
 
-// Reserve slots: ensure we don't exceed MaxPart
-    altogether_spawned = dust_spawned;
-    if (Sp->NumPart + altogether_spawned >= Sp->MaxPart) {
-        mpi_printf("Rank %d: skipping dust spawn (no space): NumPart=%d, spawn=%d, MaxPart=%d\n",
-                   ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
-        return;    // skip this spawn safely
-    }
-
-    int j = Sp->NumPart + altogether_spawned;
-    mpi_printf("Rank %d: about to spawn dust at j=%d  (NumPart=%d, MaxPart=%d, spawn_mass=%.6e, prob=%.6e)\n",
-               ThisTask, j, Sp->NumPart, Sp->MaxPart, spawn_mass, prob);
-
-
-// Perform the spawn: create a new dust tracer of mass spawn_mass
+// 7) perform the spawn
 spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
-
-// Bookkeeping
 *sum_mass_dust += spawn_mass;
 dust_spawned++;
 }
