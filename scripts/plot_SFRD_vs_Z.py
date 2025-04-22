@@ -6,7 +6,8 @@ import os
 import matplotlib.animation as animation
 
 # Constants
-snapshots = sorted(glob.glob("output/snapshot_*.hdf5"))
+#snapshots = sorted(glob.glob("output/snapshot_*.hdf5"))
+snapshots = sorted(glob.glob("../snap_*.hdf5"))
 sfrd_values = []
 redshifts = []
 
