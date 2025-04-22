@@ -420,9 +420,9 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   double *sum_mass_stars)
 {
   // Minimum star packet mass to avoid unresolved, near-zero spawns
-  const MyDouble MIN_STAR_MASS = 1e-4;  // code units; adjust based on resolution
+  const MyDouble MIN_STAR_MASS = 1e-4;  // code units; adjust based on resolution! 1e-4 is about 10^6 solar masses
   if (mass_of_star < MIN_STAR_MASS)
-  return;
+    return;
 
   // Prevent asking for more mass than available
   if (mass_of_star > Sp->P[i].getMass())
@@ -456,10 +456,10 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   *sum_mass_stars += mass_of_star;
   stars_spawned++;
 
-  // Debug output (only on task 0)
-  if (ThisTask == 0)
-  printf("STAR: spawn star of mass %.6e code-units\n", mass_of_star);
-  }
+    // Debug output (only on task 0)
+    if (ThisTask == 0)
+      printf("STAR: spawn star of mass %.6e code-units\n", mass_of_star);
+    }
   }
 }
 
