@@ -674,8 +674,9 @@ std::vector<double> g_energy_ratio;
                       ThisStepMetalsInjected[0], ThisStepMetalsInjected[1], 
                       ThisStepMetalsInjected[2], ThisStepMetalsInjected[3]);
 
-        OutputFeedbackDiagnostics();  // Output diagnostics after processing this feedback type
+        
     }
+    OutputFeedbackDiagnostics();  // Output diagnostics after processing this feedback type
 }
 
 /**
