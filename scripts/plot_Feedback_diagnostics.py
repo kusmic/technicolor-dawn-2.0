@@ -4,9 +4,11 @@ plt.style.use('bmh')
 
 # Read the CSV (skipping comments)
 df = pd.read_csv(
-    "../feedback_diagnostics.csv",
+    "feedback_diagnostics.csv",
     comment="#",
-    names=["delta_u", "delta_v", "rel_inc", "r", "n_ngb", "h_star", "E_ratio"]
+    names=["delta_u","delta_v","rel_inc","r","n_ngb","h_star","E_ratio"],
+    engine="python",
+    on_bad_lines="skip"    # skip any lines that don’t match 7 fields
 )
 
 # 2) Coerce all your columns to floats
