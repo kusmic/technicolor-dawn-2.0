@@ -740,28 +740,44 @@ static std::vector<double> g_energy_ratio;
     OutputFeedbackDiagnostics();  // Output diagnostics after processing this feedback type
 }
  
-// OUTPUT Feedback Diagnostics to a CSV for plotting
-// with plot_Feedback_diagnostics.py
-void OutputFeedbackDiagnostics() {
-    if (ThisTask == 0) {
-        std::ofstream out("feedback_diagnostics.csv");
-        out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n"; 
-        // first all the neighbor‐lines
-        for (size_t k = 0; k < g_delta_u.size(); ++k) {
-            out << g_delta_u[k]      << ","
-            << g_delta_v[k]      << ","    // ← new
-            << g_rel_increase[k] << ","
-            << g_radial_r[k]     << ",,,\n";
-        }
-        // then the star‐lines
-        for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
-            out << ",,,"
-            << g_neighbors_per_star[k] << ","
-            << g_h_per_star[k]         << ","
-            << g_energy_ratio[k]       << "\n";
-        }
-        out.close();
-    }
-}
+
+/** \brief Write out detailed feedback diagnostics to CSV for plotting with plot_Feedback_diagnostics.py
+ *
+ *  This routine dumps both per-neighbor and per-star metrics into a CSV file
+ *  with columns: delta_u, delta_v, rel_inc, r, n_ngb, h_star, E_ratio
+ *  Neighbors have values in the first four columns; stars in the last three.
+ */
+ void OutputFeedbackDiagnostics()
+ {
+     if (ThisTask != 0)
+         return;
+ 
+     // Open output file (overwrites existing)
+     std::ofstream out("feedback_diagnostics.csv");
+     out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
+ 
+     // 1) Neighbor entries: delta_u, delta_v, rel_inc, r, then blanks for star-only fields
+     size_t nNeigh = g_delta_u.size();
+     for (size_t k = 0; k < nNeigh; ++k) {
+         out
+             << g_delta_u[k]      << ","
+             << g_delta_v[k]      << ","
+             << g_rel_increase[k] << ","
+             << g_radial_r[k]     << ",,,"  // blanks for n_ngb, h_star, E_ratio
+             << "\n";
+     }
+ 
+     // 2) Star entries: blanks for neighbor-only fields, then n_ngb, h_star, E_ratio
+     size_t nStars = g_neighbors_per_star.size();
+     for (size_t k = 0; k < nStars; ++k) {
+         out
+             << ",,,"  // blanks for delta_u, delta_v, rel_inc
+             << g_neighbors_per_star[k] << ","
+             << g_h_per_star[k]         << ","
+             << g_energy_ratio[k]       << "\n";
+     }
+ 
+     out.close();
+ }
 
  #endif // FEEDBACK
