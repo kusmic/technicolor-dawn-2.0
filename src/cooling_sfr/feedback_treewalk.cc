@@ -41,17 +41,17 @@
  #include "../system/system.h"
  #include "../time_integration/timestep.h"
  
- // ─── DIAGNOSTIC STORAGE ───
-// per‐neighbor
-static std::vector<double> g_delta_u;
-static std::vector<double> g_delta_v;
-static std::vector<double> g_rel_increase;
-static std::vector<double> g_radial_r;
+// ─── For diagnostic output CSV file ───
+extern std::vector<double> g_delta_u;
+extern std::vector<double> g_delta_v;
+extern std::vector<double> g_rel_increase;
+extern std::vector<double> g_radial_r;
+extern std::vector<int>    g_neighbors_per_star;
+extern std::vector<double> g_h_per_star;
+extern std::vector<double> g_energy_ratio;
 
-// per‐star
-static std::vector<int>    g_neighbors_per_star;
-static std::vector<double> g_h_per_star;
-static std::vector<double> g_energy_ratio;
+extern int ThisTask;
+extern double All_Time;
 
  // Define NEAREST macros for periodic wrapping (or no-op if not periodic)
  #define NEAREST(x, box) (((x) > 0.5 * (box)) ? ((x) - (box)) : (((x) < -0.5 * (box)) ? ((x) + (box)) : (x)))
@@ -752,26 +752,31 @@ static std::vector<double> g_energy_ratio;
      if (ThisTask != 0)
          return;
  
-     // Open output file (overwrites existing)
-     std::ofstream out("feedback_diagnostics.csv");
-     out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
- 
-     // 1) Neighbor entries: delta_u, delta_v, rel_inc, r, then blanks for star-only fields
-     size_t nNeigh = g_delta_u.size();
-     for (size_t k = 0; k < nNeigh; ++k) {
-         out
-             << g_delta_u[k]      << ","
-             << g_delta_v[k]      << ","
-             << g_rel_increase[k] << ","
-             << g_radial_r[k]     << ",,,"  // blanks for n_ngb, h_star, E_ratio
-             << "\n";
+     // Open output file, truncating existing contents
+     std::ofstream out("feedback_diagnostics.csv", std::ios::trunc);
+     if (!out.is_open()) {
+         std::fprintf(stderr, "[Error] Could not open feedback_diagnostics.csv for writing\n");
+         return;
      }
  
-     // 2) Star entries: blanks for neighbor-only fields, then n_ngb, h_star, E_ratio
-     size_t nStars = g_neighbors_per_star.size();
-     for (size_t k = 0; k < nStars; ++k) {
-         out
-             << ",,,"  // blanks for delta_u, delta_v, rel_inc
+     // Use scientific notation and fixed precision for clarity
+     out << std::scientific << std::setprecision(6);
+ 
+     // Header with timestamp comment
+     out << "# Feedback diagnostics at time=" << All_Time << "\n";
+     out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n";
+ 
+     // Neighbor metrics: delta_u, delta_v, rel_inc, r; stars fields blank
+     for (size_t k = 0; k < g_delta_u.size(); ++k) {
+         out << g_delta_u[k]      << ","
+             << g_delta_v[k]      << ","
+             << g_rel_increase[k] << ","
+             << g_radial_r[k]     << ",,,\n";
+     }
+ 
+     // Star metrics: neighbor fields blank; then n_ngb, h_star, E_ratio
+     for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
+         out << ",,,"
              << g_neighbors_per_star[k] << ","
              << g_h_per_star[k]         << ","
              << g_energy_ratio[k]       << "\n";
