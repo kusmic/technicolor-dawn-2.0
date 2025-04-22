@@ -107,9 +107,9 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
  
                // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
                // converted into a star of a constant mass. Let's try to make it smarter.
-              double mstar_phys = sample_IMF_mass();  // sample a physical mass (in M⊙)
-              //double ideal_code_mass = mstar_phys * (All.UnitMass_in_g / SOLAR_MASS);  // convert to code units
-              double ideal_code_mass = mstar_phys * (SOLAR_MASS / All.UnitMass_in_g);
+              //double mstar_phys = sample_IMF_mass();  // sample a physical mass (in M⊙)
+              double target_phys = 1e6;  // e.g. 10^6 M⊙ per star particle
+              double ideal_code_mass = target_phys * (SOLAR_MASS / All.UnitMass_in_g);
 
               mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
 
@@ -329,7 +329,6 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
  */
 void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star)
 {
-  printf("STAR: spawn star from gas particle of mass %.6f!\n", mass_of_star);
   Sp->P[istar] = Sp->P[igas];
   Sp->P[istar].setType(STAR_TYPE);
 #if NSOFTCLASSES > 1
