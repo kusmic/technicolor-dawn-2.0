@@ -4,7 +4,7 @@ plt.style.use('bmh')
 
 # Read the CSV (skipping comments)
 df = pd.read_csv(
-    "feedback_diagnostics.csv",
+    "../feedback_diagnostics.csv",
     comment="#",
     names=["delta_u","delta_v","rel_inc","r","n_ngb","h_star","E_ratio"],
     engine="python",
