@@ -489,6 +489,8 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   MyDouble mass_of_dust,
   double *sum_mass_dust)
 {
+  printf("mass_of_dust!= %.6f code-units\n", mass_of_dust);
+
 // --- Dust formation prerequisites ---
 const double Z_min       = 0.01;       // minimum gas metallicity
 const double Density_min = 1e-24;      // minimum density (cgs)
@@ -511,10 +513,12 @@ if (get_random_number() >= prob)
 return;
 
 // Reserve slots: ensure we don't exceed MaxPart
-int altogether_spawned = dust_spawned;
-if (Sp->NumPart + altogether_spawned + 1 > Sp->MaxPart)
-Terminate("NumPart=%d spawn %d particles, no space left (MaxPart=%d)\n",
-Sp->NumPart, altogether_spawned, Sp->MaxPart);
+    altogether_spawned = dust_spawned;
+    if (Sp->NumPart + altogether_spawned >= Sp->MaxPart) {
+        mpi_printf("Rank %d: skipping dust spawn (no space): NumPart=%d, spawn=%d, MaxPart=%d\n",
+                   ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
+        continue;    // skip this spawn safely
+    }
 
 // Perform the spawn: create a new dust tracer of mass spawn_mass
 int j = Sp->NumPart + altogether_spawned;
