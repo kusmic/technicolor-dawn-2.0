@@ -17,35 +17,35 @@ axes = axes.flatten()
 # 1) Histogram of delta_u (log-log)
 axes[0].hist(neighbors["delta_u"], bins=50, log=True)
 axes[0].set_xscale("log")
-axes[0].set_xlabel("delta_u")
+axes[0].set_xlabel("Δu (post-feedback specific internal energy)")
 axes[0].set_ylabel("Count")
-axes[0].set_title("delta_u distribution")
+axes[0].set_title("Δ Thermal Energy Injection After Feedback")
 
 # 2) rel_inc vs radius (scatter)
 axes[1].scatter(neighbors["r"], neighbors["rel_inc"], s=2, alpha=0.5)
 axes[1].set_xscale("log")
 axes[1].set_yscale("log")
-axes[1].set_xlabel("r [kpc]")
-axes[1].set_ylabel("delta_u / u_before")
-axes[1].set_title("Relative energy kick vs distance")
+axes[1].set_xlabel("Distance r [kpc]")
+axes[1].set_ylabel("Δu / u_before")
+axes[1].set_title("Fractional Thermal Energy Increase vs Distance")
 
 # 3) Histogram of neighbor-counts
 axes[2].hist(stars["n_ngb"], bins=30)
-axes[2].set_xlabel("Neighbors per star")
+axes[2].set_xlabel("Neighbors per Star")
 axes[2].set_ylabel("Events")
-axes[2].set_title("Neighbor count distribution")
+axes[2].set_title("Number of Neighbors Receiving Feedback")
 
 # 4) Histogram of h_star
 axes[3].hist(stars["h_star"], bins=30)
-axes[3].set_xlabel("h [kpc]")
+axes[3].set_xlabel("Kernel Radius h [kpc]")
 axes[3].set_ylabel("Events")
-axes[3].set_title("Feedback radii distribution")
+axes[3].set_title("Feedback Kernel Radii Distribution")
 
 # 5) Energy ratio
 axes[4].hist(stars["E_ratio"], bins=30)
 axes[4].set_xlabel("E_applied / E_input")
-axes[4].set_ylabel("Stars")
-axes[4].set_title("Per-star energy-conservation ratio")
+axes[4].set_ylabel("Counts")
+axes[4].set_title("Energy Conservation Ratio per Star Event")
 
 # hide the empty sixth subplot
 axes[5].axis("off")
