@@ -44,6 +44,7 @@
  // ─── DIAGNOSTIC STORAGE ───
 // per‐neighbor
 static std::vector<double> g_delta_u;
+static std::vector<double> g_delta_v;
 static std::vector<double> g_rel_increase;
 static std::vector<double> g_radial_r;
 
@@ -481,6 +482,7 @@ static std::vector<double> g_energy_ratio;
              // ─── DIAG: per‐neighbor record ───
              double rel_inc = delta_u / (Sp->get_utherm_from_entropy(j) + 1e-10);
              g_delta_u    .push_back(delta_u);
+             
              g_rel_increase.push_back(rel_inc);
              g_radial_r   .push_back(Targets[i].dist);
 
@@ -546,6 +548,7 @@ static std::vector<double> g_energy_ratio;
          }
          
             // ─── DIAG: per‐star record ───
+            g_delta_v.push_back(v_kick);
             g_neighbors_per_star.push_back(TargetCount);
             g_h_per_star         .push_back(SearchRadius);
             g_energy_ratio      .push_back(sum_applied / E_input);
@@ -741,18 +744,17 @@ static std::vector<double> g_energy_ratio;
 void OutputFeedbackDiagnostics() {
     if (ThisTask == 0) {
         std::ofstream out("feedback_diagnostics.csv");
-        out << "#delta_u,rel_inc,r,n_ngb,h_star,E_ratio\n";
+        out << "#delta_u,delta_v,rel_inc,r,n_ngb,h_star,E_ratio\n"; 
         // first all the neighbor‐lines
         for (size_t k = 0; k < g_delta_u.size(); ++k) {
-            out 
-            << g_delta_u[k]      << ","
+            out << g_delta_u[k]      << ","
+            << g_delta_v[k]      << ","    // ← new
             << g_rel_increase[k] << ","
             << g_radial_r[k]     << ",,,\n";
         }
         // then the star‐lines
         for (size_t k = 0; k < g_neighbors_per_star.size(); ++k) {
-            out 
-            << ",,,"
+            out << ",,,"
             << g_neighbors_per_star[k] << ","
             << g_h_per_star[k]         << ","
             << g_energy_ratio[k]       << "\n";
