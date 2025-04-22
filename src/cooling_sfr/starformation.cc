@@ -509,14 +509,26 @@ if (Sp->SphP[i].Density     < Density_min) return;
 // Clamp the packet mass to what's available in the cell
 MyDouble spawn_mass = std::min(mass_of_dust, Sp->P[i].getMass());
 if (spawn_mass < MIN_DUST_MASS)
-return;  // too small to spawn meaningfully
+    return;
 
-// Optionally, recompute the spawn probability based on spawn_mass?
-// prob = (Sp->P[i].getMass() / spawn_mass) * (1 - exp(-pall));
-
-// Stochastic draw: skip most timesteps
 if (get_random_number() >= prob)
-return;
+    return;
+
+// Now the only code that touches j and the arrays lives inside this if:
+altogether_spawned = dust_spawned;
+if (Sp->NumPart + altogether_spawned < Sp->MaxPart)
+{
+    int j = Sp->NumPart + altogether_spawned;
+    spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
+    *sum_mass_dust += spawn_mass;
+    dust_spawned++;
+}
+else
+{
+    mpi_printf("Rank %d: no space for dust spawn at j=%d (MaxPart=%d)\n",
+               ThisTask, Sp->NumPart + altogether_spawned, Sp->MaxPart);
+}
+
 
 // Reserve slots: ensure we don't exceed MaxPart
     altogether_spawned = dust_spawned;
@@ -525,6 +537,11 @@ return;
                    ThisTask, Sp->NumPart, altogether_spawned, Sp->MaxPart);
         return;    // skip this spawn safely
     }
+
+    int j = Sp->NumPart + altogether_spawned;
+    mpi_printf("Rank %d: about to spawn dust at j=%d  (NumPart=%d, MaxPart=%d, spawn_mass=%.6e, prob=%.6e)\n",
+               ThisTask, j, Sp->NumPart, Sp->MaxPart, spawn_mass, prob);
+
 
 // Perform the spawn: create a new dust tracer of mass spawn_mass
 int j = Sp->NumPart + altogether_spawned;
