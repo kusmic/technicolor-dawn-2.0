@@ -108,7 +108,8 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
                // Initially, Gadget-4 was just setting the mass of the star to the gas mass itself, so the entire gas particle is
                // converted into a star of a constant mass. Let's try to make it smarter.
               double mstar_phys = sample_IMF_mass();  // sample a physical mass (in M⊙)
-              double ideal_code_mass = mstar_phys * (All.UnitMass_in_g / SOLAR_MASS);  // convert to code units
+              //double ideal_code_mass = mstar_phys * (All.UnitMass_in_g / SOLAR_MASS);  // convert to code units
+              double ideal_code_mass = mstar_phys * (SOLAR_MASS / All.UnitMass_in_g);
 
               mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
 

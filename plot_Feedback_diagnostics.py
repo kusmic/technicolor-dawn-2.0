@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.style.use("seaborn-deep")
 
 # read the CSV (skipping comments)
 df = pd.read_csv("feedback_diagnostics.csv", comment="#",
@@ -9,47 +10,45 @@ df = pd.read_csv("feedback_diagnostics.csv", comment="#",
 neighbors = df.dropna(subset=["delta_u"])
 stars     = df.dropna(subset=["n_ngb"])
 
-# 1) Histogram of delta_u
-plt.figure()
-plt.hist(neighbors["delta_u"], bins=50, log=True)
-plt.xscale("log")
-plt.xlabel("delta_u")
-plt.ylabel("Count")
-plt.title("delta_u distribution")
-plt.tight_layout()
+# create 2x3 subplots
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+axes = axes.flatten()
 
-# 2) rel_increase vs radius
-plt.figure()
-plt.scatter(neighbors["r"], neighbors["rel_inc"], s=2, alpha=0.5)
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("r [kpc]")
-plt.ylabel("delta_u / u_before")
-plt.title("Relative energy kick vs distance")
-plt.tight_layout()
+# 1) Histogram of delta_u (log-log)
+axes[0].hist(neighbors["delta_u"], bins=50, log=True)
+axes[0].set_xscale("log")
+axes[0].set_xlabel("delta_u")
+axes[0].set_ylabel("Count")
+axes[0].set_title("delta_u distribution")
 
-# 3) Histogram of neighbor‐counts
-plt.figure()
-plt.hist(stars["n_ngb"], bins=30)
-plt.xlabel("Neighbors per star")
-plt.ylabel("Events")
-plt.title("Neighbor count distribution")
-plt.tight_layout()
+# 2) rel_inc vs radius (scatter)
+axes[1].scatter(neighbors["r"], neighbors["rel_inc"], s=2, alpha=0.5)
+axes[1].set_xscale("log")
+axes[1].set_yscale("log")
+axes[1].set_xlabel("r [kpc]")
+axes[1].set_ylabel("delta_u / u_before")
+axes[1].set_title("Relative energy kick vs distance")
+
+# 3) Histogram of neighbor-counts
+axes[2].hist(stars["n_ngb"], bins=30)
+axes[2].set_xlabel("Neighbors per star")
+axes[2].set_ylabel("Events")
+axes[2].set_title("Neighbor count distribution")
 
 # 4) Histogram of h_star
-plt.figure()
-plt.hist(stars["h_star"], bins=30)
-plt.xlabel("h [kpc]")
-plt.ylabel("Events")
-plt.title("Feedback radii distribution")
-plt.tight_layout()
+axes[3].hist(stars["h_star"], bins=30)
+axes[3].set_xlabel("h [kpc]")
+axes[3].set_ylabel("Events")
+axes[3].set_title("Feedback radii distribution")
 
 # 5) Energy ratio
-plt.figure()
-plt.hist(stars["E_ratio"], bins=30)
-plt.xlabel("E_applied / E_input")
-plt.ylabel("Stars")
-plt.title("Per‐star energy‐conservation ratio")
-plt.tight_layout()
+axes[4].hist(stars["E_ratio"], bins=30)
+axes[4].set_xlabel("E_applied / E_input")
+axes[4].set_ylabel("Stars")
+axes[4].set_title("Per-star energy-conservation ratio")
 
+# hide the empty sixth subplot
+axes[5].axis("off")
+
+plt.tight_layout()
 plt.show()
