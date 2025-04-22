@@ -419,7 +419,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
  *  \param mass_of_star    target mass (code units) for the star packet
  *  \param sum_mass_stars  accumulator for total stellar mass formed this timestep
  */
- void coolsfr::make_star(simpaticles *Sp,
+ void coolsfr::make_star(simparticles *Sp,
   int i,
   double prob,
   MyDouble mass_of_star,
