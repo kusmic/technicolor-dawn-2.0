@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-plt.style.use("seaborn-deep")
+plt.style.use('bmh')
 
 # read the CSV (skipping comments)
 df = pd.read_csv("feedback_diagnostics.csv", comment="#",
