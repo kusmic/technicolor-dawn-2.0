@@ -114,7 +114,7 @@ static inline double sample_IMF_mass(double alpha = 2.35, double m_min = 0.1, do
               mass_of_star = std::min(ideal_code_mass, Sp->P[target].getMass());  // clamp to what’s actually available in the gas cell
 
               // After you compute ideal_code_mass:
-              mpi_printf("[STAR DEBUG] idx=%d  SFR=%.3e  gas_mass=%.6f  ideal_mass=%.6f\n",
+              mpi_printf("[STAR DEBUG] idx=%d  SFR=%.3e  gas_mass=%.6f  ideal_mass=%.12f\n",
                 i,
                 Sp->SphP[target].Sfr,
                 Sp->P[target].getMass(),
@@ -427,7 +427,7 @@ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double bi
   double *sum_mass_stars)
 {
   // Minimum star packet mass to avoid unresolved, near-zero spawns
-  const MyDouble MIN_STAR_MASS = 1e-6;  // code units; adjust based on resolution! 1e-4 is about 10^6 solar masses
+  const MyDouble MIN_STAR_MASS = 1e-11;  // code units; adjust based on resolution! 1e-4 is about 10^6 solar masses
   if (mass_of_star < MIN_STAR_MASS)
     return;
 
