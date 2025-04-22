@@ -544,7 +544,6 @@ else
 
 
 // Perform the spawn: create a new dust tracer of mass spawn_mass
-int j = Sp->NumPart + altogether_spawned;
 spawn_dust_from_sph_particle(Sp, i, All.Time, j, spawn_mass);
 
 // Bookkeeping
