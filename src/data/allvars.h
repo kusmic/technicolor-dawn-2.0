@@ -326,6 +326,8 @@ struct global_data_all_processes : public parameters
   double TempClouds;
   double MaxSfrTimescale;
   double FactorSN;
+  int StarformationMode;
+  double MetalYield;
   double CritHydrogenDensity;
   double MaxStarFormationTemp;
   int FeedbackDebug;         /* Print detailed diagnostics (0=no, 1=yes) */

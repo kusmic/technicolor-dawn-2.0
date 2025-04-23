@@ -571,6 +571,9 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                  1.0/All.Time - 1.0, rate_in_msunperyear, total_sm, total_mass_stars);
     }
   
+  // CREATE STARS!
+  sfr_create_star_particles(Sp);
+
   TIMER_STOP(CPU_COOLING_SFR);
 }
 
