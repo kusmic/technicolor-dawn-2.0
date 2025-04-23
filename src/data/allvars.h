@@ -317,6 +317,7 @@ struct global_data_all_processes : public parameters
 #ifdef STARFORMATION /* star formation and feedback sector */
   double CritOverDensity;
   double CritPhysDensity;
+  double CritHydrogenDensity;
   double OverDensThresh;
   double PhysDensThresh;
   double EgySpecSN;
