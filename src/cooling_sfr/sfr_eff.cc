@@ -1,4 +1,7 @@
 /*******************************************************************************
+ Uses a polytropic equation of state with variable effective pressure and 
+ thermodynamics that mimic a multiphase ISM.
+
  main functions:
  --------------------------
  sf_evaluate_particle()       : Determines if a gas particle is eligible for star formation
@@ -511,10 +514,10 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                   // GO LOOK AT Shayou's GADGET3s random number generator
                   if(randomnum < p)
                     {
-                         mpi_printf("STARFORMATION: Reached star formation probability!\n");
 
                             if (sm >= Sp->P[target].getMass()) {
                                 // convert the entire gas particle into a star
+                                mpi_printf("STARFORMATION: Reached star formation probability (convert)! random=%.4e is less than prob=%.4e\n", randomnum, p);
                                 stars_converted++;
                                 sum_mass_stars += Sp->P[target].getMass();
                                 convert_sph_particle_into_star(Sp, target, All.Time);
@@ -526,13 +529,14 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                                             Sp->P[target].ID.get());
                                     continue;  // skip this spawn, but keep processing the rest
                                 }
+                                mpi_printf("STARFORMATION: Reached star formation probability (spawn)! random=%.4e is less than prob=%.4e\n", randomnum, p);
                                 int j = Sp->NumPart + stars_spawned;
                                 spawn_star_from_sph_particle(Sp, target, All.Time, j, sm);
                                 sum_mass_stars += sm;
                                 stars_spawned++;
                             }
                         
-                      mpi_printf("STARFORMATION: Particle %d forms star with probability %g\n", Sp->P[target].ID.get(), p);
+                      mpi_printf("STARFORMATION: Particle %d forms star with probability %g at z=%.3e\n", Sp->P[target].ID.get(), p, 1.0/All.Time - 1.0);
                       
                       // Add to the converted stellar mass
                       sum_mass_stars += Sp->P[target].getMass();
