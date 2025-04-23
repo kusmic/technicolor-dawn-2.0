@@ -508,11 +508,7 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                     {
                       // Call the star formation routine from starformation.cc
                       // This will either convert the gas particle to a star or spawn a new star
-                       
-                      // … after calculating `sm` and `p` and drawing `r = get_random_number(...)` …
-                        if(r < p) {
-                            // ← this is around line 512 in your sfr_eff.cc
-                            // original Gadget-3 did one of two things here:
+
                             if (sm >= Sp->P[target].getMass()) {
                                 // convert the entire gas particle into a star
                                 stars_converted++;
@@ -520,14 +516,18 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                                 convert_sph_particle_into_star(Sp, target, All.Time);
                             } else {
                                 // spawn a brand new star of mass = sm
-                                if (Sp->NumPart + stars_spawned >= All.MaxPart)
-                                    endrun(8888, "no space to spawn star\n");
+                                if(Sp->NumPart + stars_spawned >= Sp->MaxPart) {
+                                    if(ThisTask == 0)
+                                        printf("WARNING: no space to spawn star for gas particle %d (skipping)\n",
+                                               Sp->P[target].ID);
+                                    continue;  // skip this spawn, but keep processing the rest
+                                }
                                 int j = Sp->NumPart + stars_spawned;
                                 spawn_star_from_sph_particle(Sp, target, All.Time, j, sm);
                                 sum_mass_stars += sm;
                                 stars_spawned++;
                             }
-                        }
+                        
 
                       
                       mpi_printf("STARFORMATION: Particle %d forms star with probability %g\n", Sp->P[target].ID.get(), p);
