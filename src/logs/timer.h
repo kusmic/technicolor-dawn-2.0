@@ -79,6 +79,7 @@ TIMER_CREATE(CPU_SNAPSHOT, "i/o", CPU_ALL, '3', 'B')
 TIMER_CREATE(CPU_LOGS, "logs", CPU_ALL, 'K', 'k')
 #if defined(COOLING) || defined(STARFORMATION)
 TIMER_CREATE(CPU_COOLING_SFR, "sfrcool", CPU_ALL, '1', 'T')
+TIMER_CREATE(CPU_SFR_CREATION, "sfrcreate", CPU_ALL, '1', 'T')
 #endif
 #ifdef FOF
 TIMER_CREATE(CPU_FOF, "fof", CPU_ALL, '5', 'D')
@@ -100,4 +101,12 @@ TIMER_CREATE(CPU_LAST, "LAST", CPU_NONE, ' ', ' ') /*!<last item, do not use! */
 
 #undef TIMER_CREATE
 
+#endif
+
+#ifndef TIMER_IS_RUNNING
+static inline int TIMER_IS_RUNNING(int t)
+{
+    return Timer_data[t].active > 0;
+}
+#define TIMER_IS_RUNNING(name)  TIMER_IS_RUNNING(name)
 #endif
