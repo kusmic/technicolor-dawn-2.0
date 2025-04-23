@@ -571,11 +571,13 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
       mpi_printf("STARFORMATION: z=%g  SFR=%g Msun/yr  total_sm=%g  total_new_stars=%g\n",
                  1.0/All.Time - 1.0, rate_in_msunperyear, total_sm, total_mass_stars);
     }
-  
-  // CREATE STARS!
-  sfr_create_star_particles(Sp);
 
   TIMER_STOP(CPU_COOLING_SFR);
+
+  // CREATE STARS!
+  TIMER_START(CPU_SFR_CREATION);
+     sfr_create_star_particles(Sp);
+  TIMER_STOP(CPU_SFR_CREATION);
 }
 
 

@@ -40,8 +40,6 @@
   Timer_data[name].symbImbal = (symbb);
 #endif
 
-#define TIMER_IS_RUNNING(name)  (Timer_data[(name)].active > 0)
-
 /*add your counter here, they must appear in the right order*/
 
 TIMER_CREATE(CPU_ALL, "total", CPU_ROOT, 0, 0) /*!< root timer, everything should be below this timer */
@@ -81,7 +79,7 @@ TIMER_CREATE(CPU_SNAPSHOT, "i/o", CPU_ALL, '3', 'B')
 TIMER_CREATE(CPU_LOGS, "logs", CPU_ALL, 'K', 'k')
 #if defined(COOLING) || defined(STARFORMATION)
 TIMER_CREATE(CPU_COOLING_SFR, "sfrcool", CPU_ALL, '1', 'T')
-TIMER_CREATE(CPU_SFR_CREATION, "sfrcreate", CPU_ALL, '1', 'T')
+TIMER_CREATE(CPU_SFR_CREATION, "sfrcreate", CPU_ALL, '-', 'Y')
 #endif
 #ifdef FOF
 TIMER_CREATE(CPU_FOF, "fof", CPU_ALL, '5', 'D')
