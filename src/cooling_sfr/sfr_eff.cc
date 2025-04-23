@@ -449,7 +449,9 @@ void coolsfr::winds_effective_model(simparticles *Sp, int i, double dt, double s
  */
 void coolsfr::cooling_and_starformation(simparticles *Sp)
 {
-  TIMER_START(CPU_COOLING_SFR);
+    if(!TimerIsRunning(CPU_COOLING_SFR))  // guard against double-start
+        TIMER_START(CPU_COOLING_SFR);
+
   All.set_cosmo_factors_for_current_time();
 
   gas_state gs = GasState;
