@@ -102,6 +102,7 @@ struct sph_particle_data : public sph_particle_data_hydrocore
   MyFloat Metallicity;
   MyFloat Metals[4];  // to specifically track Z, C, O, Fe
   MyFloat MassMetallicity;
+  MyFloat Sfr;
 #endif
 
 #ifdef COOLING
@@ -113,8 +114,8 @@ struct sph_particle_data : public sph_particle_data_hydrocore
   MyFloat CoolHeat;
 #endif
 
-#ifdef STARFORMATION
-  MyFloat Sfr;
+#ifdef WINDS
+  MyFloat DelayTime;
 #endif
 
   inline MyFloat get_sound_speed(void)

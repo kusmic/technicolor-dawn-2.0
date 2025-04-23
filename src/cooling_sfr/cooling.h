@@ -14,6 +14,10 @@
 
 #include "gadgetconfig.h"
 
+#ifdef STARFORMATION
+#include "sfr_eff.h"
+#endif
+
 #ifdef COOLING
 
 #include "../data/simparticles.h"
