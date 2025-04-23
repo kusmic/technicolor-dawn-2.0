@@ -506,7 +506,9 @@
                if(All.StarformationMode > 0)
                  {
                    // Calculate probability of forming a star
-                   double p = sm / Sp->P[target].getMass();
+                   //double p = sm / Sp->P[target].getMass(); // original Gadget-3 version
+                   double p = 1.0 - exp(-sm / Sp->P[target].getMass());  // newer
+
                    double randomnum = get_random_number();
                    mpi_printf("STARFORMATION: Particle %d COULD form star with probability %g, random=%.3e, expected mass of star to be formed: %.4e\n", Sp->P[target].ID.get(), p, randomnum, sm);
  
