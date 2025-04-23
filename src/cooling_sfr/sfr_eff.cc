@@ -507,9 +507,8 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                     {
                       // Call the star formation routine from starformation.cc
                       // This will either convert the gas particle to a star or spawn a new star
-                      
-                      // This 
-                      Sp->sfr_create_star_particle(target, dtime);
+                       
+                      //Sp->sfr_create_star_particle(target, dtime);
                       
                       mpi_printf("STARFORMATION: Particle %d forms star with probability %g\n", Sp->P[target].ID.get(), p);
                       
