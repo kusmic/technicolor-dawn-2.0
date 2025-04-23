@@ -40,6 +40,8 @@
   Timer_data[name].symbImbal = (symbb);
 #endif
 
+#define TIMER_IS_RUNNING(name)  (Timer_data[(name)].active > 0)
+
 /*add your counter here, they must appear in the right order*/
 
 TIMER_CREATE(CPU_ALL, "total", CPU_ROOT, 0, 0) /*!< root timer, everything should be below this timer */
@@ -101,7 +103,7 @@ TIMER_CREATE(CPU_LAST, "LAST", CPU_NONE, ' ', ' ') /*!<last item, do not use! */
 
 #undef TIMER_CREATE
 
-#define TIMER_IS_RUNNING(name)  (Timer_data[(name)].active > 0)
+
 
 #endif
 
