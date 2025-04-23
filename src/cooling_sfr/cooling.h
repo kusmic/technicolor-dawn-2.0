@@ -52,8 +52,8 @@ class coolsfr : public setcomm
 
    static const int SFR_COOLING_MAXITER = 1000;
    static const int NCOOLTAB = 2000;
-   static constexpr double Tmin = 1.0;
-   static constexpr double Tmax = 9.0;
+   static constexpr double Tmin = 1.0;  /** min temperature in log10 */
+   static constexpr double Tmax = 9.0;  /** max temperature in log10 */
 
 
 #define NCOOLTAB 2000
@@ -106,8 +106,6 @@ class coolsfr : public setcomm
   photo_table *PhotoTUVB; /**< photo-ionization/heating rate table for UV background*/
   photo_current pc;       /**< current interpolated photo rates */
 
-  double Tmin = 1.0; /**< min temperature in log10 */
-  double Tmax = 9.0; /**< max temperature in log10 */
   double deltaT;     /**< log10 of temperature spacing in the interpolation tables */
   int NheattabUVB;   /**< length of UVB photo table */
 
