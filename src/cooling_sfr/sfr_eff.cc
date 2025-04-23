@@ -84,7 +84,8 @@
  
        // Calculate energy at 10^4 K
        meanweight = 4 / (8 - 5 * (1 - HYDROGEN_MASSFRAC));  // Assuming FULL ionization
-       u4 = 1 / meanweight * (1.0 / GAMMA_MINUS1) * (BOLTZMANN / PROTONMASS) * 1.0e4;
+       //u4 = 1 / meanweight * (1.0 / GAMMA_MINUS1) * (BOLTZMANN / PROTONMASS) * 1.0e4;   // Gadget-3 version
+       u4 = 1 / meanweight * (1.0 / GAMMA_MINUS1) * (BOLTZMANN / PROTONMASS) * 7500;    // make it easier to hit cooling thresholds
        u4 *= All.UnitMass_in_g / All.UnitEnergy_in_cgs;
  
        // Set reference density
