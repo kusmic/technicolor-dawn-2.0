@@ -459,6 +459,8 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
   // Initialize statistics
   double sum_sm = 0.0;          // Total mass expected to be converted to stars
   double sum_mass_stars = 0.0;  // Total mass actually converted to stars
+  stars_spawned    = 0;
+  stars_converted  = 0;
 
   /* Apply isochoric cooling to all active gas particles */
   for(int i = 0; i < Sp->TimeBinsHydro.NActiveParticles; i++)
