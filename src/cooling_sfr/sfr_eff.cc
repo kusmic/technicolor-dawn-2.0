@@ -519,7 +519,7 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                                 if(Sp->NumPart + stars_spawned >= Sp->MaxPart) {
                                     if(ThisTask == 0)
                                         printf("WARNING: no space to spawn star for gas particle %d (skipping)\n",
-                                            (unsigned long long) Sp->P[target].ID);
+                                            Sp->P[target].ID.get());
                                     continue;  // skip this spawn, but keep processing the rest
                                 }
                                 int j = Sp->NumPart + stars_spawned;
@@ -528,8 +528,6 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                                 stars_spawned++;
                             }
                         
-
-                      
                       mpi_printf("STARFORMATION: Particle %d forms star with probability %g\n", Sp->P[target].ID.get(), p);
                       
                       // Add to the converted stellar mass
