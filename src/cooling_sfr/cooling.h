@@ -33,9 +33,6 @@ class coolsfr : public setcomm
 
 #ifdef STARFORMATION
   void sfr_create_star_particles(simparticles *Sp);
-  void set_units_sfr(void);
-  void cooling_and_starformation(simparticles *Sp);
-  void init_clouds(void);
 
   double getZ(simparticles *Sp, int i);
   void init_clouds(void);
@@ -53,15 +50,6 @@ class coolsfr : public setcomm
 
  private:
 
-   // Add new private members for star formation
-   int stars_spawned;
-   int stars_converted;
-   int tot_stars_spawned;
-   int tot_stars_converted;
-   int altogether_spawned;
-   int tot_altogether_spawned;
-   double cum_mass_stars;
-   
    static const int SFR_COOLING_MAXITER = 1000;
    static const int NCOOLTAB = 2000;
    static constexpr double Tmin = 1.0;
