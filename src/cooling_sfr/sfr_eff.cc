@@ -519,7 +519,7 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                                 if(Sp->NumPart + stars_spawned >= Sp->MaxPart) {
                                     if(ThisTask == 0)
                                         printf("WARNING: no space to spawn star for gas particle %d (skipping)\n",
-                                               Sp->P[target].ID);
+                                            (unsigned long long) Sp->P[target].ID);
                                     continue;  // skip this spawn, but keep processing the rest
                                 }
                                 int j = Sp->NumPart + stars_spawned;
@@ -592,10 +592,6 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
 
   TIMER_STOP(CPU_COOLING_SFR);
 
-  // CREATE STARS!
-  TIMER_START(CPU_SFR_CREATION);
-     sfr_create_star_particles(Sp);
-  TIMER_STOP(CPU_SFR_CREATION);
 }
 
 /* FROM A NEWER GADGET-4 SF Ezra worked in */

@@ -32,7 +32,7 @@ class coolsfr : public setcomm
   void cooling_only(simparticles *Sp);
 
 #ifdef STARFORMATION
-  void sfr_create_star_particles(simparticles *Sp);
+  //void sfr_create_star_particles(simparticles *Sp);
 
   double getZ(simparticles *Sp, int i);
   void init_clouds(void);
