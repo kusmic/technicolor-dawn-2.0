@@ -126,7 +126,7 @@ WindFreeTravelDensFac 0.1
 
 %----- Debugging
 FeedbackDebug       0     % Prints all feedback-related activity (0=off, 1=on)
-FeedbackSNII        1     % Enable Type II supernova feedback (0=off, 1=on)
+FeedbackSNII        0     % Enable Type II supernova feedback (0=off, 1=on)
 FeedbackSNIa        0     % Enable Type Ia supernova feedback (0=off, 1=on)
 FeedbackAGB         0     % Enable AGB stellar winds feedback (0=off, 1=on)
 
