@@ -509,7 +509,26 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                       // Call the star formation routine from starformation.cc
                       // This will either convert the gas particle to a star or spawn a new star
                        
-                      //Sp->sfr_create_star_particle(target, dtime);
+                      // … after calculating `sm` and `p` and drawing `r = get_random_number(...)` …
+                        if(r < p) {
+                            // ← this is around line 512 in your sfr_eff.cc
+                            // original Gadget-3 did one of two things here:
+                            if (sm >= Sp->P[target].getMass()) {
+                                // convert the entire gas particle into a star
+                                stars_converted++;
+                                sum_mass_stars += Sp->P[target].getMass();
+                                convert_sph_particle_into_star(Sp, target, All.Time);
+                            } else {
+                                // spawn a brand new star of mass = sm
+                                if (Sp->NumPart + stars_spawned >= All.MaxPart)
+                                    endrun(8888, "no space to spawn star\n");
+                                int j = Sp->NumPart + stars_spawned;
+                                spawn_star_from_sph_particle(Sp, target, All.Time, j, sm);
+                                sum_mass_stars += sm;
+                                stars_spawned++;
+                            }
+                        }
+
                       
                       mpi_printf("STARFORMATION: Particle %d forms star with probability %g\n", Sp->P[target].ID.get(), p);
                       
@@ -578,6 +597,86 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
      sfr_create_star_particles(Sp);
   TIMER_STOP(CPU_SFR_CREATION);
 }
+
+/* FROM A NEWER GADGET-4 SF Ezra worked in */
+/** \brief Convert a SPH particle into a star.
+ *
+ *  This function converts an active star-forming gas particle into a star.
+ *  The particle information of the gas is copied to the
+ *  location istar and the fields necessary for the creation of the star
+ *  particle are initialized.
+ *
+ *  \param i index of the gas particle to be converted
+ *  \param birthtime time of birth (in code units) of the stellar particle
+ */
+ void coolsfr::convert_sph_particle_into_star(simparticles *Sp, int i, double birthtime)
+ {
+   printf("STAR: convert gas particle into star of mass %.3f!\n", Sp->P[i].getMass());
+
+   Sp->P[i].setType(STAR_TYPE);
+ #if NSOFTCLASSES > 1
+   Sp->P[i].setSofteningClass(All.SofteningClassOfPartType[Sp->P[i].getType()]);
+ #endif
+ #ifdef INDIVIDUAL_GRAVITY_SOFTENING
+   if(((1 << Sp->P[i].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
+     Sp->P[i].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[i].getMass()));
+ #endif
+ 
+   Sp->TimeBinSfr[Sp->P[i].getTimeBinHydro()] -= Sp->SphP[i].Sfr;
+ 
+   Sp->P[i].StellarAge = birthtime;
+ 
+   return;
+ }
+
+/** \brief Spawn a star particle from a SPH gas particle.
+ *
+ *  This function spawns a star particle from an active star-forming
+ *  SPH gas particle. The particle information of the gas is copied to the
+ *  location istar and the fields necessary for the creation of the star
+ *  particle are initialized. The total mass of the gas particle is split
+ *  between the newly spawned star and the gas particle.
+ *  (This function is probably unecessary)
+ *
+ *  \param igas index of the gas cell from which the star is spawned
+ *  \param birthtime time of birth (in code units) of the stellar particle
+ *  \param istar index of the spawned stellar particle
+ *  \param mass_of_star the mass of the spawned stellar particle
+ */
+ void coolsfr::spawn_star_from_sph_particle(simparticles *Sp, int igas, double birthtime, int istar, MyDouble mass_of_star)
+ {
+   Sp->P[istar] = Sp->P[igas];
+   Sp->P[istar].setType(STAR_TYPE);
+ #if NSOFTCLASSES > 1
+   Sp->P[istar].setSofteningClass(All.SofteningClassOfPartType[Sp->P[istar].getType()]);
+ #endif
+ #ifdef INDIVIDUAL_GRAVITY_SOFTENING
+   if(((1 << Sp->P[istar].getType()) & (INDIVIDUAL_GRAVITY_SOFTENING)))
+     Sp->P[istar].setSofteningClass(Sp->get_softening_type_from_mass(Sp->P[istar].getMass()));
+ #endif
+ 
+   Sp->TimeBinsGravity.ActiveParticleList[Sp->TimeBinsGravity.NActiveParticles++] = istar;
+ 
+   Sp->TimeBinsGravity.timebin_add_particle(istar, igas, Sp->P[istar].TimeBinGrav, Sp->TimeBinSynchronized[Sp->P[istar].TimeBinGrav]);
+ 
+   Sp->P[istar].setMass(mass_of_star);
+ 
+   Sp->P[istar].StellarAge = birthtime;
+ 
+   // Assign feedback portions of the mass
+   Sp->P[istar].Mass_SNII = 0.10 * Sp->P[istar].getMass();
+   Sp->P[istar].Mass_AGB  = 0.35 * Sp->P[istar].getMass();
+   Sp->P[istar].Mass_SNIa = 0.02 * Sp->P[istar].getMass();
+ 
+   /* now change the conserved quantities in the cell in proportion */
+   double fac = (Sp->P[igas].getMass() - Sp->P[istar].getMass()) / Sp->P[igas].getMass();
+ 
+   Sp->P[igas].setMass(fac * Sp->P[igas].getMass());
+ 
+   return;
+ }
+
+
 
 
 #endif  /* STARFORMATION */
