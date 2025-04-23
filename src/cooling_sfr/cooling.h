@@ -40,9 +40,38 @@ class coolsfr : public setcomm
   void set_units_sfr(void);
   void cooling_and_starformation(simparticles *Sp);
   void init_clouds(void);
+
+  double getZ(simparticles *Sp, int i);
+  void init_clouds(void);
+  void set_units_sfr(void);
+  bool sf_evaluate_particle(simparticles *Sp, int i);
+  double get_starformation_rate(simparticles *Sp, int i, double *cloudMassFraction);
+  void update_thermodynamic_state(simparticles *Sp, int i, double dt, double cloudMassFraction);
+  void cooling_and_starformation(simparticles *Sp);
+
+  #ifdef WINDS
+    void winds_effective_model(simparticles *Sp, int i, double dt, double sfr, double cloudMassFraction);
+  #endif
+
 #endif
 
  private:
+
+   // Add new private members for star formation
+   int stars_spawned;
+   int stars_converted;
+   int tot_stars_spawned;
+   int tot_stars_converted;
+   int altogether_spawned;
+   int tot_altogether_spawned;
+   double cum_mass_stars;
+   
+   static const int SFR_COOLING_MAXITER = 1000;
+   static const int NCOOLTAB = 2000;
+   static constexpr double Tmin = 1.0;
+   static constexpr double Tmax = 9.0;
+
+   
 #define NCOOLTAB 2000
 
   /* data for gas state */
