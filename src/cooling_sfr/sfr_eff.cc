@@ -504,11 +504,12 @@ void coolsfr::cooling_and_starformation(simparticles *Sp)
                 {
                   // Calculate probability of forming a star
                   double p = sm / Sp->P[target].getMass();
-                  
-                  mpi_printf("STARFORMATION: Particle %d COULD form star with probability %g, expected mass of star to be formed: %.4e\n", Sp->P[target].ID.get(), p, sm);
+                  double randomnum = get_random_number();
+                  mpi_printf("STARFORMATION: Particle %d COULD form star with probability %g, random=%.3e, expected mass of star to be formed: %.4e\n", Sp->P[target].ID.get(), p, randomnum, sm);
 
                   // Random draw to determine if star forms
-                  if(get_random_number() < p)
+                  // GO LOOK AT Shayou's GADGET3s random number generator
+                  if(randomnum < p)
                     {
                          mpi_printf("STARFORMATION: Reached star formation probability!\n");
 
