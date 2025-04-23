@@ -325,11 +325,17 @@ struct global_data_all_processes : public parameters
   double TempSupernova;
   double TempClouds;
   double MaxSfrTimescale;
+  double MaxStarFormationTemp;
   double FactorSN;
+
+  double WindEfficiency;
+  double WindEnergyFraction;
+  double WindFreeTravelLength;
+  double WindFreeTravelDensFac;
+
   int StarformationMode;
   double MetalYield;
-  double CritHydrogenDensity;
-  double MaxStarFormationTemp;
+
   int FeedbackDebug;         /* Print detailed diagnostics (0=no, 1=yes) */
   int FeedbackSNII;          /* Enable Type II supernova feedback (0=off, 1=on) */
   int FeedbackSNIa;          /* Enable Type Ia supernova feedback (0=off, 1=on) */

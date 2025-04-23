@@ -177,14 +177,20 @@ void global_data_all_processes::register_parameters(void)
 #ifdef STARFORMATION
   add_param("CritOverDensity", &CritOverDensity, PARAM_DOUBLE, PARAM_FIXED);
   add_param("CritPhysDensity", &CritPhysDensity, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("PhysDensThresh", &PhysDensThresh, PARAM_DOUBLE, PARAM_FIXED);
   add_param("FactorSN", &FactorSN, PARAM_DOUBLE, PARAM_FIXED);
   add_param("FactorEVP", &FactorEVP, PARAM_DOUBLE, PARAM_FIXED);
   add_param("TempSupernova", &TempSupernova, PARAM_DOUBLE, PARAM_FIXED);
   add_param("TempClouds", &TempClouds, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MaxSfrTimescale", &MaxSfrTimescale, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("MaxStarFormationTemp", &MaxStarFormationTemp, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MetalYield", &MetalYield, PARAM_DOUBLE, PARAM_FIXED);
-
   add_param("StarformationMode", &StarformationMode, PARAM_INT, PARAM_FIXED);
+
+  add_param("WindEfficiency", &WindEfficiency, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("WindEnergyFraction", &WindEnergyFraction, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("WindFreeTravelLength", &WindFreeTravelLength, PARAM_DOUBLE, PARAM_FIXED);
+  add_param("WindFreeTravelDensFac", &WindFreeTravelDensFac, PARAM_DOUBLE, PARAM_FIXED);
   //add_param("CritHydrogenDensity", &CritHydrogenDensity, PARAM_DOUBLE, PARAM_FIXED);
   //add_param("MaxStarFormationTemp", &MaxStarFormationTemp, PARAM_DOUBLE, PARAM_FIXED);
 
@@ -193,7 +199,6 @@ void global_data_all_processes::register_parameters(void)
   add_param("FeedbackSNIa", &FeedbackSNIa, PARAM_INT, PARAM_FIXED);
   add_param("FeedbackAGB", &FeedbackAGB, PARAM_INT, PARAM_FIXED);
 
-  
 #endif
 
 #ifdef NGENIC
