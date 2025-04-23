@@ -101,12 +101,7 @@ TIMER_CREATE(CPU_LAST, "LAST", CPU_NONE, ' ', ' ') /*!<last item, do not use! */
 
 #undef TIMER_CREATE
 
+#define TIMER_IS_RUNNING(name)  (Timer_data[(name)].active > 0)
+
 #endif
 
-#ifndef TIMER_IS_RUNNING
-static inline int TIMER_IS_RUNNING(int t)
-{
-    return Timer_data[t].active > 0;
-}
-#define TIMER_IS_RUNNING(name)  TIMER_IS_RUNNING(name)
-#endif
