@@ -92,7 +92,7 @@ void coolsfr::init_clouds(void)
         dens = 9.205e-24 / (All.UnitDensity_in_cgs * All.HubbleParam * All.HubbleParam);
 
       // Set up for cooling calculation
-      do_cool_data DoCool;
+      do_cool_data DoCool{}; 
       gas_state gs = GasState;
       All.Time = 1.0;  // Ensure z=0 rate
       IonizeParams();
@@ -141,7 +141,7 @@ void coolsfr::init_clouds(void)
       // Calculate where runaway SF sets in
       dens = All.PhysDensThresh * 10;
       double tsfr, factorEVP, egyeff, neff, fac, peff;
-      double y, dzlow, dzhi;
+      double y;
 
       do
         {
@@ -265,7 +265,7 @@ bool coolsfr::sf_evaluate_particle(simparticles *Sp, int i)
 
   // Get thermal energy and temperature
   utherm = Sp->get_utherm_from_entropy(i);
-  do_cool_data DoCool;
+  do_cool_data DoCool{}; 
   gas_state gs = GasState;
   double ne = Sp->SphP[i].Ne;
   temp = convert_u_to_temp(utherm, rho, &ne, &gs, &DoCool);
@@ -322,7 +322,7 @@ double coolsfr::get_starformation_rate(simparticles *Sp, int i, double *cloudMas
   egyhot = All.EgySpecSN / (1 + factorEVP) + All.EgySpecCold;
 
   double ne = Sp->SphP[i].Ne;
-  do_cool_data DoCool;
+  do_cool_data DoCool{}; 
   gas_state gs = GasState;
   tcool = GetCoolingTime(egyhot, rho, &ne, &gs, &DoCool);
 
