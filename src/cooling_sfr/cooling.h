@@ -14,10 +14,6 @@
 
 #include "gadgetconfig.h"
 
-#ifdef STARFORMATION
-#include "sfr_eff.h"
-#endif
-
 #ifdef COOLING
 
 #include "../data/simparticles.h"
@@ -71,7 +67,7 @@ class coolsfr : public setcomm
    static constexpr double Tmin = 1.0;
    static constexpr double Tmax = 9.0;
 
-   
+
 #define NCOOLTAB 2000
 
   /* data for gas state */
