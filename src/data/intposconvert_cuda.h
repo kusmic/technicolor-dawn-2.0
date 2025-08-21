@@ -12,10 +12,12 @@
 #ifndef CONVERT_H
 #define CONVERT_H
 
-#include "allvars.h"
-#include "dtypes.h"
+#include "gadgetconfig.h"
 
 #include <cmath>
+
+#include "../data/allvars.h"
+#include "../data/dtypes.h"
 
 #define MSB ((MyIntPosType)(~((MyIntPosType)(~((MyIntPosType)0)) >> ((MyIntPosType)1))))
 
@@ -163,107 +165,82 @@ class intposconvert
 
   /* function to determine the nearest periodic image distance vector in T, exploiting integer wrap around */
   template <typename T>
-  inline void nearest_image_intpos_to_pos(const MyIntPosType *const a, const MyIntPosType *const b, T *posdiff)
+  __host__ __device__ void nearest_image_intpos_to_pos(const MyIntPosType *const a, const MyIntPosType *const b, T *posdiff, double FacIntToCoord)
   {
     MyIntPosType delta[3];
     MySignedIntPosType *intpos = (MySignedIntPosType *)delta;
 
-    /* we use all these casts here to prevent that implicit type promotions can mess this up for types shorter than int, such as
-     * unsigned char */
-
-#if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 0)
-    if(a[0] >= b[0])
-      {
-        delta[0]   = a[0] - b[0];
-        posdiff[0] = delta[0] * FacIntToCoord;
-      }
-    else
-      {
-        delta[0]   = b[0] - a[0];
-        posdiff[0] = delta[0] * (-FacIntToCoord);
-      }
-#else
-
-#if defined(LONG_X_BITS)
+    // X direction
+  #if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 0)
+    if(a[0] >= b[0]) {
+      delta[0]   = a[0] - b[0];
+      posdiff[0] = delta[0] * FacIntToCoord;
+    } else {
+      delta[0]   = b[0] - a[0];
+      posdiff[0] = delta[0] * (-FacIntToCoord);
+    }
+  #else
+  #if defined(LONG_X_BITS)
     delta[0] = (a[0] << LONG_X_BITS) - (b[0] << LONG_X_BITS);
-
-    if(delta[0] & MSB) /* tests MSB */
-      {
-        delta[0] >>= LONG_X_BITS;
-        delta[0] |= HBITS_X;
-      }
-    else
+    if(delta[0] & MSB) {
       delta[0] >>= LONG_X_BITS;
-#else
+      delta[0] |= HBITS_X;
+    } else {
+      delta[0] >>= LONG_X_BITS;
+    }
+  #else
     delta[0] = a[0] - b[0];
-#endif
+  #endif
     posdiff[0] = intpos[0] * FacIntToCoord;
+  #endif
 
-#endif
-
-      /** --- **/
-
-#if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 1)
-    if(a[1] >= b[1])
-      {
-        delta[1]   = a[1] - b[1];
-        posdiff[1] = delta[1] * FacIntToCoord;
-      }
-    else
-      {
-        delta[1]   = b[1] - a[1];
-        posdiff[1] = delta[1] * (-FacIntToCoord);
-      }
-#else
-
-#if defined(LONG_Y_BITS)
+    // Y direction
+  #if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 1)
+    if(a[1] >= b[1]) {
+      delta[1]   = a[1] - b[1];
+      posdiff[1] = delta[1] * FacIntToCoord;
+    } else {
+      delta[1]   = b[1] - a[1];
+      posdiff[1] = delta[1] * (-FacIntToCoord);
+    }
+  #else
+  #if defined(LONG_Y_BITS)
     delta[1]   = (a[1] << LONG_Y_BITS) - (b[1] << LONG_Y_BITS);
-
-    if(delta[1] & MSB) /* tests MSB */
-      {
-        delta[1] >>= LONG_Y_BITS;
-        delta[1] |= HBITS_Y;
-      }
-    else
+    if(delta[1] & MSB) { // tests MSB
       delta[1] >>= LONG_Y_BITS;
-#else
+      delta[1] |= HBITS_Y;
+    } else {
+      delta[1] >>= LONG_Y_BITS;
+    }
+  #else
     delta[1] = a[1] - b[1];
-#endif
-
+  #endif
     posdiff[1] = intpos[1] * FacIntToCoord;
-#endif
+  #endif
 
-      /** --- **/
-
-#if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 2)
-    if(a[2] >= b[2])
-      {
-        delta[2]   = a[2] - b[2];
-        posdiff[2] = delta[2] * FacIntToCoord;
-      }
-    else
-      {
-        delta[2]   = b[2] - a[2];
-        posdiff[2] = delta[2] * (-FacIntToCoord);
-      }
-#else
-
-#if defined(LONG_Z_BITS)
+    // Z direction
+  #if defined(GRAVITY_TALLBOX) && (GRAVITY_TALLBOX == 2)
+    if(a[2] >= b[2]) {
+      delta[2]   = a[2] - b[2];
+      posdiff[2] = delta[2] * FacIntToCoord;
+    } else {
+      delta[2]   = b[2] - a[2];
+      posdiff[2] = delta[2] * (-FacIntToCoord);
+    }
+  #else
+  #if defined(LONG_Z_BITS)
     delta[2]   = (a[2] << LONG_Z_BITS) - (b[2] << LONG_Z_BITS);
-
-    if(delta[2] & MSB) /* tests MSB */
-      {
-        delta[2] >>= LONG_Z_BITS;
-        delta[2] |= HBITS_Z;
-      }
-    else
+    if(delta[2] & MSB) { // tests MSB
       delta[2] >>= LONG_Z_BITS;
-#else
+      delta[2] |= HBITS_Z;
+    } else {
+      delta[2] >>= LONG_Z_BITS;
+    }
+  #else
     delta[2] = a[2] - b[2];
-#endif
+  #endif
     posdiff[2] = intpos[2] * FacIntToCoord;
-
-#endif
+  #endif
   }
 
   inline void nearest_image_intpos_to_absolute_intdist(const MyIntPosType *a, const MyIntPosType *b, MyIntPosType *delta)
