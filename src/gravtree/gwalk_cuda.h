@@ -12,7 +12,10 @@
 #ifndef GRAVTREE_WALK_H
 #define GRAVTREE_WALK_H
 
+#include "gadgetconfig.h"
+
 #include "../mpi_utils/shared_mem_handler.h"
+#include <cude_runtime.h
 
 class gwalk : public gravtree<simparticles>
 {
@@ -113,7 +116,7 @@ class gwalk : public gravtree<simparticles>
                               int committed);
 
   inline int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
-  inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);
+  __host__ __device__ inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);
 };
 
 #endif

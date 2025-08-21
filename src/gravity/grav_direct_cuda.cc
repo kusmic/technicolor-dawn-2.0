@@ -33,6 +33,118 @@
 
 #ifdef ALLOW_DIRECT_SUMMATION
 
+/*
+ * Defining CUDA structs and kernel
+ */
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+#include <vector_types.h>
+
+struct directdata_cuda {
+    MyIntPosType IntPos[3];
+    MyDouble Mass;
+    unsigned char Type;
+    // ... other fields as needed
+};
+struct accdata_cuda {
+    MyFloat Acc[3];
+    #ifdef EVALPOTENTIAL
+    MyFloat Potential;
+    #endif
+};
+
+__global__ void gravity_kernel(const directdata_cuda *DirectDataAll, accdata_cuda *DirectAccOut, int nimport, int first, int count) 
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < count) {
+        for(int i = 0; i < count; i++)
+        {
+          int target     = i + first;
+          int result_idx = i;
+
+          vector<double> acc = 0.0;
+          #ifdef EVALPOTENTIAL
+          double pot = 0.0;
+          #endif
+
+          #if NSOFTCLASSES > 1
+          double h_i = All.ForceSoftening[DirectDataAll[target].SofteningClass];
+          #else
+          double h_i = All.ForceSoftening[0];
+          #endif
+
+          for(int j = 0; j < nimport; j++)
+          {
+            #if NSOFTCLASSES > 1
+            double h_j = All.ForceSoftening[DirectDataAll[j].SofteningClass];
+            #else
+            double h_j = All.ForceSoftening[0];
+            #endif
+            double hmax = (h_j > h_i) ? h_j : h_i;
+
+            vector<double> dxyz;
+            Sp->nearest_image_intpos_to_pos(DirectDataAll[j].IntPos, DirectDataAll[target].IntPos,
+                                          dxyz.da); /* converts the integer distance to floating point */
+
+            double r2 = dxyz[0] * dxyz[0] + dxyz[1] * dxyz[1] + dxyz[2] * dxyz[2];
+
+            double mass = DirectDataAll[j].Mass;
+
+            /* now evaluate the force component */
+
+            double r = sqrt(r2);
+
+            double rinv = (r > 0) ? 1.0 / r : 0;
+
+            gravtree<simparticles>::gfactors gfac;
+
+            #ifdef PMGRID
+            mesh_factors *mfp = &mf[LOW_MESH];
+            #if defined(PLACEHIGHRESREGION)
+            if((DoPM & TREE_ACTIVE_CUTTOFF_HIGHRES_PM))
+            {
+              if(DirectDataAll[j].InsideOutsideFlag == FLAG_INSIDE && DirectDataAll[target].InsideOutsideFlag == FLAG_INSIDE)
+                mfp = &mf[HIGH_MESH];
+            }
+            #endif
+            if((DoPM & (TREE_ACTIVE_CUTTOFF_BASE_PM + TREE_ACTIVE_CUTTOFF_HIGHRES_PM)))
+            {
+              if(modify_gfactors_pm_monopole(gfac, r, rinv, mfp))
+                return;  // if we are outside the cut-off radius, we have no interaction
+            }
+            #endif
+            get_gfactors_monopole(gfac, r, hmax, rinv);
+
+            #ifdef EVALPOTENTIAL
+            pot -= mass * gfac.fac0;
+            #endif
+            acc -= (mass * gfac.fac1 * rinv) * dxyz;
+
+            if(DoEwald)
+            {
+              // EWALD treatment, only done for periodic boundaries in case PM is not active
+
+              ewald_data ew;
+              Ewald.ewald_gridlookup(DirectDataAll[j].IntPos, DirectDataAll[target].IntPos, ewald::POINTMASS, ew);
+
+              #ifdef EVALPOTENTIAL
+              pot += mass * ew.D0phi;
+              #endif
+              acc += mass * ew.D1phi;
+            }
+          }
+
+      DirectAccOut[result_idx].Acc[0] = acc[0];
+      DirectAccOut[result_idx].Acc[1] = acc[1];
+      DirectAccOut[result_idx].Acc[2] = acc[2];
+      #ifdef EVALPOTENTIAL
+      DirectAccOut[result_idx].Potential = pot;
+      #endif 
+    }
+    }
+}
+#endif
+
 /*! \brief This function computes the gravitational forces for all active particles through direct summation.
  *
  */
@@ -127,6 +239,32 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
   DirectAccOut = (accdata *)Mem.mymalloc("DirectDataOut", count * sizeof(accdata));
 
   /* now calculate the forces */
+
+  #ifdef USE_CUDA
+
+  // 2. Allocate device memory
+  directdata_cuda *d_DirectDataAll;
+  accdata_cuda *d_DirectAccOut;
+  cudaMalloc(&d_DirectDataAll, nimport * sizeof(directdata_cuda));
+  cudaMalloc(&d_DirectAccOut, count * sizeof(accdata_cuda));
+
+  // 3. Copy data to device
+  cudaMemcpy(d_DirectDataAll, DirectDataAll, nimport * sizeof(directdata_cuda), cudaMemcpyHostToDevice);
+
+  // 4. Write and launch the kernel
+  int threadsPerBlock = 256;
+  int blocks = (count + threadsPerBlock - 1) / threadsPerBlock;
+  gravity_kernel<<<blocks, threadsPerBlock>>>(d_DirectDataAll, d_DirectAccOut, nimport, first, count);
+
+  // 5. Copy results back
+  cudaMemcpy(DirectAccOut, d_DirectAccOut, count * sizeof(accdata_cuda), cudaMemcpyDeviceToHost);
+
+  // 6. Free device memory
+  cudaFree(d_DirectDataAll);
+  cudaFree(d_DirectAccOut);
+
+    gravity_kernel<<<blocks, threadsPerBlock>>>(d_DirectDataAll, d_DirectAccOut, nimport, first, count);
+  #else
   for(int i = 0; i < count; i++)
     {
       int target     = i + first;
@@ -209,8 +347,9 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
       DirectAccOut[result_idx].Acc[2] = acc[2];
 #ifdef EVALPOTENTIAL
       DirectAccOut[result_idx].Potential = pot;
-#endif
+#endif 
     }
+  #endif /* USE_CUDA */
 
   /* now send the forces to the right places */
 

@@ -27,6 +27,11 @@
 #define __x86_64__ 1  // There are many different macros for this, decide on only one
 #endif
 
+// Device code for compute capability 3.5 or higher (usually 64-bit capable)
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 350)
+#define __CUDA__HOLDER__ 1
+#endif
+
 // Find instruction set from compiler macros if INSTRSET not defined
 // Note: Most of these macros are not defined in Microsoft compilers
 #ifndef INSTRSET
