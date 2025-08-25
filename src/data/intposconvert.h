@@ -9,6 +9,8 @@
  *  \brief defines a class to convert between integer coordinates and floating point positions
  */
 
+ #include "gadgetconfig.h"
+
 #ifndef CONVERT_H
 #define CONVERT_H
 
