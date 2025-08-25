@@ -490,7 +490,7 @@ clean:
 	rm -f $(BUILD_DIR)/version.cc
 
 cuda_test: $(OBJS)
-	$(CUP) $(CFLAGS) -c grav_direct_cuda.cu -o grav_direct_cuda.o
+	$(CUP) -c grav_direct_cuda.cu -o grav_direct_cuda.o
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
