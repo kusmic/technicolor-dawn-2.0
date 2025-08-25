@@ -19,3 +19,12 @@ ALSO: Make a separate .cc (and .h) version of code for CUDA compiling. May need 
     - grav_direct
     - gwalk
     - intposconvert
+
+
+SCIENCE:
+    - What is grav. potential in Gadget vs. actual Einstein calc.
+    - See environments it messes with
+        - dense regions?
+        - clustered points?
+    - halo spin distribution
+    - halo spin correlation (2pcf)

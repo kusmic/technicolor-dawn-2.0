@@ -19,7 +19,7 @@
 
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
-#include "../data/intposconvert.h"
+#include "../data/intposconvert_cuda.cuh"
 #include "../data/mymalloc.h"
 #include "../domain/domain.h"
 #include "../gravtree/gravtree.h"
@@ -36,7 +36,6 @@
 /*
  * Defining CUDA structs and kernel
  */
-#ifdef USE_CUDA
 #include <cuda_runtime.h>
 #include <vector_types.h>
 
@@ -65,21 +64,21 @@ __global__ void gravity_kernel(const directdata_cuda *DirectDataAll, accdata_cud
           vector<double> acc = 0.0;
           #ifdef EVALPOTENTIAL
           double pot = 0.0;
-          #endif
+          #endif //EVALPOTENTIAL
 
           #if NSOFTCLASSES > 1
           double h_i = All.ForceSoftening[DirectDataAll[target].SofteningClass];
-          #else
+          #else //NSOFTCLASSES
           double h_i = All.ForceSoftening[0];
-          #endif
+          #endif //NSOFTCLASSES
 
           for(int j = 0; j < nimport; j++)
           {
             #if NSOFTCLASSES > 1
             double h_j = All.ForceSoftening[DirectDataAll[j].SofteningClass];
-            #else
+            #else //NSOFTCLASSES
             double h_j = All.ForceSoftening[0];
-            #endif
+            #endif //NSOFTCLASSES
             double hmax = (h_j > h_i) ? h_j : h_i;
 
             vector<double> dxyz;
@@ -240,7 +239,6 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
 
   /* now calculate the forces */
 
-  #ifdef USE_CUDA
 
   // 2. Allocate device memory
   directdata_cuda *d_DirectDataAll;
@@ -314,18 +312,18 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
               if(DirectDataAll[j].InsideOutsideFlag == FLAG_INSIDE && DirectDataAll[target].InsideOutsideFlag == FLAG_INSIDE)
                 mfp = &mf[HIGH_MESH];
             }
-#endif
+#endif //defined(PLACE....)
           if((DoPM & (TREE_ACTIVE_CUTTOFF_BASE_PM + TREE_ACTIVE_CUTTOFF_HIGHRES_PM)))
             {
               if(modify_gfactors_pm_monopole(gfac, r, rinv, mfp))
                 return;  // if we are outside the cut-off radius, we have no interaction
             }
-#endif
+#endif //PMGRID
           get_gfactors_monopole(gfac, r, hmax, rinv);
 
 #ifdef EVALPOTENTIAL
           pot -= mass * gfac.fac0;
-#endif
+#endif //EVALPOTENTIAL
           acc -= (mass * gfac.fac1 * rinv) * dxyz;
 
           if(DoEwald)
@@ -337,7 +335,7 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
 
 #ifdef EVALPOTENTIAL
               pot += mass * ew.D0phi;
-#endif
+#endif //EVALPOTENTIAL
               acc += mass * ew.D1phi;
             }
         }
@@ -347,9 +345,8 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
       DirectAccOut[result_idx].Acc[2] = acc[2];
 #ifdef EVALPOTENTIAL
       DirectAccOut[result_idx].Potential = pot;
-#endif 
+#endif  // EVALPOTENTIAL
     }
-  #endif /* USE_CUDA */
 
   /* now send the forces to the right places */
 
