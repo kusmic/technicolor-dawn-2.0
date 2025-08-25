@@ -9,6 +9,8 @@
  *  \brief defines a class for walking the gravitational tree
  */
 
+ #include "gadgetconfig.h"
+
 #ifndef GRAVTREE_WALK_H
 #define GRAVTREE_WALK_H
 

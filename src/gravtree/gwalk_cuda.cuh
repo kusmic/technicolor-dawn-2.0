@@ -15,7 +15,7 @@
 #include "gadgetconfig.h"
 
 #include "../mpi_utils/shared_mem_handler.h"
-#include <cude_runtime.h
+#include <cuda_runtime.h
 
 class gwalk : public gravtree<simparticles>
 {
