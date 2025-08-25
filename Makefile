@@ -489,8 +489,8 @@ clean:
 	rm -f $(TO_CHECK) $(CONFIG_CHECK)
 	rm -f $(BUILD_DIR)/version.cc
 
-cuda_test: $(OBJS)
-	$(CUP) -c grav_direct_cuda.cu -o grav_direct_cuda.o
+cuda_test: 
+	$(CUP) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
