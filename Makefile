@@ -472,7 +472,8 @@ RESULT := $(shell mkdir -p $(SUBDIRS)  )
 ###########################################
 RESULT := $(shell echo 'static const char *compiler_flags="$(CPP) $(CFLAGS)";' > $(BUILD_DIR)/compiler-command-line-args.h )
 
-CUDATEST = -L/build/ -I/build/ # testing cUDA
+TESTDIR = ./build/
+CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 
 #############
 #build rules#
