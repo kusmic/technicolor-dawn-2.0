@@ -8,11 +8,11 @@
  *
  *  \brief provides a class for accessing data of other MPI ranks via shared memory and designated MPI handler ranks
  */
+#include "gadgetconfig.h"
 
 #ifndef SHAREDMEM_H
 #define SHAREDMEM_H
 
-#include "gadgetconfig.h"
 
 #include <hdf5.h>
 #include <mpi.h>
