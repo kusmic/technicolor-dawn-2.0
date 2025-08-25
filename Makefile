@@ -202,6 +202,10 @@ include buildsystem/Makefile.comp.gcc
 include buildsystem/Makefile.path.bwforcluster
 endif
 
+ifeq ($(SYSTYPE),"astrogpu")
+include buildsystem/Makefile.comp.astrogpu
+include buildsystem/Makefile.path.default
+endif
 
 ifndef LINKER
 LINKER = $(CPP)
