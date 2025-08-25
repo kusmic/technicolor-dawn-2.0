@@ -472,6 +472,8 @@ RESULT := $(shell mkdir -p $(SUBDIRS)  )
 ###########################################
 RESULT := $(shell echo 'static const char *compiler_flags="$(CPP) $(CFLAGS)";' > $(BUILD_DIR)/compiler-command-line-args.h )
 
+CUDATEST = -L/build/ -I/build/ # testing cUDA
+
 #############
 #build rules#
 #############
@@ -489,8 +491,9 @@ clean:
 	rm -f $(TO_CHECK) $(CONFIG_CHECK)
 	rm -f $(BUILD_DIR)/version.cc
 
+
 cuda_test: 
-	$(CUP) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
+	$(CUP) $(CUDATEST) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
