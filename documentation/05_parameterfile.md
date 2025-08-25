@@ -1271,7 +1271,7 @@ halos that is added as a static potential to the force computation.
 
 -------
 
-**MaxStarFormationTem**
+**MaxStarFormationTemp**
 
 -------
 
@@ -1295,10 +1295,10 @@ halos that is added as a static potential to the force computation.
 
 -------
 
-**WindFreeTravelDensF**
+**WindFreeTravelDensFac**
 
 -------
 
-**WindFreeTravelLengt**
+**WindFreeTravelLength**
 
 -------
