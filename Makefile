@@ -489,7 +489,7 @@ clean:
 	rm -f $(TO_CHECK) $(CONFIG_CHECK)
 	rm -f $(BUILD_DIR)/version.cc
 
-cuda_test: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
+cuda_test: $(OBJS)
 	$(CUP) $(CFLAGS) -c grav_direct_cuda.cu -o grav_direct_cuda.o
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
