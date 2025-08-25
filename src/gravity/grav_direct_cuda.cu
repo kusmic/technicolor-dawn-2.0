@@ -142,7 +142,6 @@ __global__ void gravity_kernel(const directdata_cuda *DirectDataAll, accdata_cud
     }
     }
 }
-#endif
 
 /*! \brief This function computes the gravitational forces for all active particles through direct summation.
  *
@@ -262,91 +261,7 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
   cudaFree(d_DirectAccOut);
 
     gravity_kernel<<<blocks, threadsPerBlock>>>(d_DirectDataAll, d_DirectAccOut, nimport, first, count);
-  #else
-  for(int i = 0; i < count; i++)
-    {
-      int target     = i + first;
-      int result_idx = i;
-
-      vector<double> acc = 0.0;
-#ifdef EVALPOTENTIAL
-      double pot = 0.0;
-#endif
-
-#if NSOFTCLASSES > 1
-      double h_i = All.ForceSoftening[DirectDataAll[target].SofteningClass];
-#else
-      double h_i = All.ForceSoftening[0];
-#endif
-
-      for(int j = 0; j < nimport; j++)
-        {
-#if NSOFTCLASSES > 1
-          double h_j = All.ForceSoftening[DirectDataAll[j].SofteningClass];
-#else
-          double h_j = All.ForceSoftening[0];
-#endif
-          double hmax = (h_j > h_i) ? h_j : h_i;
-
-          vector<double> dxyz;
-          Sp->nearest_image_intpos_to_pos(DirectDataAll[j].IntPos, DirectDataAll[target].IntPos,
-                                          dxyz.da); /* converts the integer distance to floating point */
-
-          double r2 = dxyz[0] * dxyz[0] + dxyz[1] * dxyz[1] + dxyz[2] * dxyz[2];
-
-          double mass = DirectDataAll[j].Mass;
-
-          /* now evaluate the force component */
-
-          double r = sqrt(r2);
-
-          double rinv = (r > 0) ? 1.0 / r : 0;
-
-          gravtree<simparticles>::gfactors gfac;
-
-#ifdef PMGRID
-          mesh_factors *mfp = &mf[LOW_MESH];
-#if defined(PLACEHIGHRESREGION)
-          if((DoPM & TREE_ACTIVE_CUTTOFF_HIGHRES_PM))
-            {
-              if(DirectDataAll[j].InsideOutsideFlag == FLAG_INSIDE && DirectDataAll[target].InsideOutsideFlag == FLAG_INSIDE)
-                mfp = &mf[HIGH_MESH];
-            }
-#endif //defined(PLACE....)
-          if((DoPM & (TREE_ACTIVE_CUTTOFF_BASE_PM + TREE_ACTIVE_CUTTOFF_HIGHRES_PM)))
-            {
-              if(modify_gfactors_pm_monopole(gfac, r, rinv, mfp))
-                return;  // if we are outside the cut-off radius, we have no interaction
-            }
-#endif //PMGRID
-          get_gfactors_monopole(gfac, r, hmax, rinv);
-
-#ifdef EVALPOTENTIAL
-          pot -= mass * gfac.fac0;
-#endif //EVALPOTENTIAL
-          acc -= (mass * gfac.fac1 * rinv) * dxyz;
-
-          if(DoEwald)
-            {
-              // EWALD treatment, only done for periodic boundaries in case PM is not active
-
-              ewald_data ew;
-              Ewald.ewald_gridlookup(DirectDataAll[j].IntPos, DirectDataAll[target].IntPos, ewald::POINTMASS, ew);
-
-#ifdef EVALPOTENTIAL
-              pot += mass * ew.D0phi;
-#endif //EVALPOTENTIAL
-              acc += mass * ew.D1phi;
-            }
-        }
-
-      DirectAccOut[result_idx].Acc[0] = acc[0];
-      DirectAccOut[result_idx].Acc[1] = acc[1];
-      DirectAccOut[result_idx].Acc[2] = acc[2];
-#ifdef EVALPOTENTIAL
-      DirectAccOut[result_idx].Potential = pot;
-#endif  // EVALPOTENTIAL
-    }
+  
 
   /* now send the forces to the right places */
 
@@ -419,7 +334,7 @@ void gravtree<simparticles>::gravity_direct(simparticles *Sp, domain<simparticle
 
 #ifdef EVALPOTENTIAL
       Sp->P[i].Potential = DirectAccIn[nforces].Potential;
-#endif
+#endif //EVALPOTENTIAL
       nforces++;
     }
 
