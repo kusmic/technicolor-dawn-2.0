@@ -101,9 +101,8 @@ void sim::init(int RestartSnapNum)
 
   for(int i = 0; i < Sp.NumPart; i++) 
   {
-#ifdef STARFORMATION
-    for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
-      Sp.SphP[i].Metals[k] = 0.0;
+    //for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
+    //  Sp.SphP[i].Metals[k] = 0.0;
 
 
     if(All.MassTable[Sp.P[i].getType()] != 0)
@@ -114,7 +113,6 @@ void sim::init(int RestartSnapNum)
         All.PartMass = All.MassTable[Sp.P[i].getType()];
 #endif //LEAN
       }
-#endif //STARFORMATION
 
     }
 
