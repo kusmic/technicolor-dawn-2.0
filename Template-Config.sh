@@ -228,4 +228,4 @@ INITIAL_CONDITIONS_CONTAIN_ENTROPY
 
 #---------------------------------------- Miscellaneous options
 
-#USE_CUDA                                     # enables GPU support through CUDA    
+USE_CUDA                                     # enables GPU support through CUDA    
