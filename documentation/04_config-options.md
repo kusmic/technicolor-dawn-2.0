@@ -1455,6 +1455,13 @@ When activated reverts to old style memory allocation instead of using memfd_cre
 
 -------
 
+Miscellaniuos options                                            {#misc}
+
+**USE_CUDA**
+
+-------
+
+
 
 Testing and Debugging options                                    {#tests}
 =============================
@@ -1651,3 +1658,4 @@ When enabled, this disables the geometric 'near node' protection,
 i.e. for the one-sided tree, one may then be closer to a node's center
 than 1.5 times the node size, and for FMM, adjacent nodes may
 interact.
+
