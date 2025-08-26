@@ -99,7 +99,8 @@ void sim::init(int RestartSnapNum)
   /* this makes sure that masses are initialized in the case that the mass-block
      is empty for this particle type */
 
-  for(int i = 0; i < Sp.NumPart; i++) {
+  for(int i = 0; i < Sp.NumPart; i++) 
+  {
 #ifdef STARFORMATION
     for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
       Sp.SphP[i].Metals[k] = 0.0;
@@ -111,10 +112,11 @@ void sim::init(int RestartSnapNum)
         Sp.P[i].setMass(All.MassTable[Sp.P[i].getType()]);
 #else
         All.PartMass = All.MassTable[Sp.P[i].getType()];
-#endif
+#endif //LEAN
       }
+#endif //STARFORMATION
+
     }
-    #endif //STARFORMATION
 
 #if NSOFTCLASSES > 1
   for(int i = 0; i < Sp.NumPart; i++)
