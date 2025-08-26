@@ -303,6 +303,8 @@ SUBDIRS += gravtree
 OBJS    += gravtree/gravtree_build.o gravtree/gravtree.o gravtree/gwalk.o
 INCL    += gravtree/gravtree.h  gravtree/gwalk.h  
 
+# Note may need to include new .cuh files
+
 
 SUBDIRS += ngbtree
 OBJS    += ngbtree/ngbtree_build.o 
@@ -501,6 +503,12 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
+
+# So hopefully it will compile .cu files
+ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+	$(CUP) -c $< -o $@
+endif
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
