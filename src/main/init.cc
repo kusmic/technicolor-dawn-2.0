@@ -100,7 +100,7 @@ void sim::init(int RestartSnapNum)
      is empty for this particle type */
 
   for(int i = 0; i < Sp.NumPart; i++) {
-
+#ifdef STARFORMATION
     for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
       Sp.SphP[i].Metals[k] = 0.0;
 
@@ -114,6 +114,7 @@ void sim::init(int RestartSnapNum)
 #endif
       }
     }
+    #endif //STARFORMATION
 
 #if NSOFTCLASSES > 1
   for(int i = 0; i < Sp.NumPart; i++)
