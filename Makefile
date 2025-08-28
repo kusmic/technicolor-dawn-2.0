@@ -526,7 +526,7 @@ check_docs: $(DOCS_CHECK)
 
 print:
 	@echo "Configuration checks to be performed:"
-	@echo "$(SRC_DIR)"
+	@echo "$($(SRC_DIR)/%.cu)"
 
 $(CONFIG_CHECK): $(TO_CHECK) $(CONFIG) buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 2 $(CONFIG) $(CONFIG_CHECK) defines_extra $(TO_CHECK)
