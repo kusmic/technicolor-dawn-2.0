@@ -495,8 +495,8 @@ clean:
 	rm -f $(BUILD_DIR)/version.cc
 
 
-cuda_test: 
-	$(CUP) $(CUDATEST) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
+#cuda_test: 
+#	$(CUP) $(CUDATEST) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
@@ -506,6 +506,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 
 # So hopefully it will compile .cu files
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+$(info *************** Compiling with CUDA support ******************)
+${info CUDA files: $( $(SRC_DIR)/%.cu)}
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
 	$(CUP) -c $< -o $@
 endif
