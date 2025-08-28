@@ -506,9 +506,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 
 # So hopefully it will compile .cu files
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-$(info *************** Compiling with CUDA support ******************)
-${info CUDA files: $( $(SRC_DIR)/%.cu)}
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+	@echo "Compiling CUDA file "$<
 	$(CUP) -c $< -o $@
 endif
 
@@ -527,7 +526,7 @@ check_docs: $(DOCS_CHECK)
 
 print:
 	@echo "Configuration checks to be performed:"
-	@echo $(SRC_DIR)/%.cc
+	@echo "$(CUP) -c $(SRC_DIR)/%.cu -o $(BUILD_DIR)/%.o""
 
 $(CONFIG_CHECK): $(TO_CHECK) $(CONFIG) buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 2 $(CONFIG) $(CONFIG_CHECK) defines_extra $(TO_CHECK)
