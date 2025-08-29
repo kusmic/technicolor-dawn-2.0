@@ -527,9 +527,11 @@ check: $(CONFIG_CHECK)
 
 check_docs: $(DOCS_CHECK)
 
+OBJECTS := $(patsubst $(SRC_DIR)/%.cu,$(BUILD_DIR)/%.o,$(SOURCES))
+
 print:
 	@echo "Configuration checks to be performed:"
-	@echo "$(SOURCES_CU)"
+	@echo "$(OBJECTS)"
 
 $(CONFIG_CHECK): $(TO_CHECK) $(CONFIG) buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 2 $(CONFIG) $(CONFIG_CHECK) defines_extra $(TO_CHECK)
