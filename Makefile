@@ -516,7 +516,7 @@ SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
 # So being very explicit here
 	
 cuda: $(SOURCES_CU) $(INCL) $(MAKEFILES)
-	$(CUP) -O2 -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct_cuda.o
+	$(CUP) -O2 -Ibuild -Isrc -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct_cuda.o
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
