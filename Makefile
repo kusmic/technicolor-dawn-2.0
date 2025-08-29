@@ -482,7 +482,7 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 #############
 
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-all: check_docs check build cuda
+all: check_docs check cuda build
 else
 all: check_docs check build
 endif
