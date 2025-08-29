@@ -508,10 +508,14 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 
 SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
 
+# Makefile does not like finding .cu files with ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+# So being very explicit here
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-$(BUILD_DIR)/%.o: $(SOURCES_CU) $(INCL) $(MAKEFILES)
-	@echo "Compiling CUDA file "$<
-	$(CUP) -c $< -o $@
+	
+@echo "Compiling CUDA file "$<
+
+$(BUILD_DIR)/grav_direct_cuda.o: src/gravity/grav_direct_cuda.cu $(INCL) $(MAKEFILES)
+	$(CUP) -O2 -c $< -o $@
 endif
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
