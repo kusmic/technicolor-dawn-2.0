@@ -481,7 +481,11 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 #build rules#
 #############
 
+ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+all: check_docs check build cuda
+else
 all: check_docs check build
+endif
 
 build: $(EXEC)
 
@@ -510,11 +514,9 @@ SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
 
 # Makefile does not like finding .cu files with ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 # So being very explicit here
-ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 	
-$(BUILD_DIR)/grav_direct_cuda.o: src/gravity/grav_direct_cuda.cu $(INCL) $(MAKEFILES)
-	$(CUP) -O2 -c $< -o $@
-endif
+cuda: $(SOURCES_CU) $(INCL) $(MAKEFILES)
+	$(CUP) -O2 -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct_cuda.o
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
