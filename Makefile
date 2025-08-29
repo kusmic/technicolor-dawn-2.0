@@ -433,7 +433,7 @@ VTUNE_LIBS =
 endif
 
 GSL_LIBS   += -lgsl -lgslcblas
-HDF5_LIBS  += -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lz
+HDF5_LIBS  += -lhdf5 -lz
 MATH_LIBS  = -lm
 
 ifneq ($(SYSTYPE),"Darwin")
@@ -505,8 +505,11 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
 
 # So hopefully it will compile .cu files
+
+SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
+
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+$(BUILD_DIR)/%.o: $(SOURCES_CU) $(INCL) $(MAKEFILES)
 	@echo "Compiling CUDA file "$<
 	$(CUP) -c $< -o $@
 endif
@@ -526,7 +529,7 @@ check_docs: $(DOCS_CHECK)
 
 print:
 	@echo "Configuration checks to be performed:"
-	@echo "$($(SRC_DIR)/%.cu)"
+	@echo "$(SOURCES_CU)"
 
 $(CONFIG_CHECK): $(TO_CHECK) $(CONFIG) buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 2 $(CONFIG) $(CONFIG_CHECK) defines_extra $(TO_CHECK)
