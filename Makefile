@@ -480,12 +480,14 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 #############
 #build rules#
 #############
+CUFLAGS = -fopenmp -Xcompiler -pthread -Xcompiler -O3 -Ibuild -Isrc
 
+CUDA_OBJS = $(BUILD_DIR)/grav_direct.o
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-all: check_docs check cuda build
-else
-all: check_docs check build
+OBJS += $(CUDA_OBJS)
 endif
+
+all: check_docs check build
 
 build: $(EXEC)
 
@@ -508,6 +510,9 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+	$(CUP) $(CUFLAGS) -c $< -o $@
+
 # So hopefully it will compile .cu files
 
 SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
@@ -516,7 +521,7 @@ SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
 # So being very explicit here
 	
 cuda: $(SOURCES_CU) $(INCL) $(MAKEFILES)
-	$(CUP) -O2 -Ibuild -Isrc -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct_cuda.o
+	$(CUP) -O2 -Ibuild -Isrc -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct.o
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
@@ -546,10 +551,16 @@ $(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cpp backup/Template-Config.sh defines_extra
 $(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cc backup/Template-Config.sh defines_extra buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
+$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cu backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
+
 $(BUILD_DIR)/%.h.check: $(SRC_DIR)/%.h backup/Template-Config.sh defines_extra buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
 $(BUILD_DIR)/%.o.check: $(BUILD_DIR)/%.cc backup/Template-Config.sh defines_extra buildsystem/check.py
+	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
+
+$(BUILD_DIR)/%.o.check: $(BUILD_DIR)/%.cu backup/Template-Config.sh defines_extra buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
 $(BUILD_DIR)/%.h.check: $(BUILD_DIR)/%.h backup/Template-Config.sh defines_extra buildsystem/check.py
