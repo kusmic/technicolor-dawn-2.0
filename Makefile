@@ -557,7 +557,7 @@ $(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cpp backup/Template-Config.sh defines_extra
 $(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cc backup/Template-Config.sh defines_extra buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
-$(BUILD_DIR)/%.o.check: $(SRC_DIR)/%.cu backup/Template-Config.sh defines_extra buildsystem/check.py
+$(BUILD_DIR)/%.cu.o.check: $(SRC_DIR)/%.cu backup/Template-Config.sh defines_extra buildsystem/check.py
 	@$(PYTHON) buildsystem/check.py 1 $< $@ backup/Template-Config.sh defines_extra
 
 $(BUILD_DIR)/%.h.check: $(SRC_DIR)/%.h backup/Template-Config.sh defines_extra buildsystem/check.py
