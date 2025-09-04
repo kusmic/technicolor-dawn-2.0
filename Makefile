@@ -505,9 +505,7 @@ clean:
 	rm -f $(BUILD_DIR)/compile_time_info.cc $(BUILD_DIR)/compile_time_info_hdf5.cc $(BUILD_DIR)/gadgetconfig.h
 	rm -f $(TO_CHECK) $(CONFIG_CHECK)
 	rm -f $(BUILD_DIR)/version.cc
-	ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-		rm -f $(CUDA_OBJS)
-	endif
+	rm -f $(CUDA_OBJS)
 
 
 #cuda_test: 
