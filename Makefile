@@ -489,10 +489,16 @@ endif
 
 all: check_docs check build
 
+
 build: $(EXEC)
 
+ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+$(EXEC): $(OBJS) $(CUDA_OBJS)
+	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXEC)
+else
 $(EXEC): $(OBJS)
 	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXEC)
+endif
 
 clean:
 	rm -f $(OBJS) $(EXEC)
@@ -510,7 +516,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%_cuda.cu $(INCL) $(MAKEFILES)
 	$(CUP) $(CUFLAGS) -c $< -o $@
 
 # So hopefully it will compile .cu files
