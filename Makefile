@@ -478,15 +478,9 @@ TESTDIR = ./build/
 CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 
 # Define CUDA objects and flags
-CUFLAGS = -arch=sm_75 \ # MAY NEED TO CHANGE THIS DEPENDING ON GPU ARCHITECTURE
-          -O3 \
-          -Xcompiler -Wall \
-          -Xcompiler -Wextra \
-          -Xcompiler -pthread \
-          --compiler-options -fPIC \
-          --use_fast_math \
-          -I$(BUILD_DIR) \
-          -I$(SRC_DIR)
+
+# MAY NEED TO CHANGE THIS DEPENDING ON GPU ARCHITECTURE
+CUFLAGS = -arch=sm_75 -O3 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -pthread --compiler-options -fPIC -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 # Add CUDA objects conditionally
