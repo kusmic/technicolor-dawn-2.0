@@ -477,44 +477,43 @@ RESULT := $(shell echo 'static const char *compiler_flags="$(CPP) $(CFLAGS)";' >
 TESTDIR = ./build/
 CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 
-#############
-#build rules#
-#############
-CUFLAGS = -fopenmp -Xcompiler -pthread -Xcompiler -O3 -Ibuild -Isrc
-
+# Define CUDA objects and flags
+CUFLAGS = -fopenmp -Xcompiler -pthread -Xcompiler -O3 -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
+
+# Add CUDA objects conditionally
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 OBJS += $(CUDA_OBJS)
-endif
-
-# Add gravity subdirectory for CUDA builds
-ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 SUBDIRS += gravity
 endif
 
-all: check_docs check build
+#############
+#build rules#
+#############
 
-
-build: $(EXEC)
+EXECUTABLE = $(EXEC)
 
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-$(EXEC): $(OBJS) $(CUDA_OBJS)
-	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXEC)
+$(EXECUTABLE): $(OBJS) $(CUDA_OBJS)
+	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXECUTABLE)
 else
-$(EXEC): $(OBJS)
-	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXEC)
+$(EXECUTABLE): $(OBJS)
+	$(LINKER) $(OPTIMIZE) $(OBJS) $(LIBS) -o $(EXECUTABLE)
 endif
 
 clean:
-	rm -f $(OBJS) $(EXEC)
+	rm -f $(OBJS) $(EXECUTABLE)
 	rm -f $(BUILD_DIR)/compile_time_info.cc $(BUILD_DIR)/compile_time_info_hdf5.cc $(BUILD_DIR)/gadgetconfig.h
 	rm -f $(TO_CHECK) $(CONFIG_CHECK)
 	rm -f $(BUILD_DIR)/version.cc
 	rm -f $(CUDA_OBJS)
 
 
-#cuda_test: 
-#	$(CUP) $(CUDATEST) -c ./src/gravity/grav_direct_cuda.cu -o ./src/gravity/grav_direct_cuda.o
+# Pattern rule for CUDA files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
+	@mkdir -p $(dir $@)
+	$(CUP) $(CUFLAGS) -c $< -o $@
+
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
@@ -525,15 +524,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 $(BUILD_DIR)/%.cu.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
 	$(CUP) $(CUFLAGS) -c $< -o $@
 
+
 # So hopefully it will compile .cu files
-
-SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
-
-# Makefile does not like finding .cu files with ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-# So being very explicit here
-	
-cuda: $(SOURCES_CU) $(INCL) $(MAKEFILES)
-	$(CUP) $(CUFLAGS) -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
