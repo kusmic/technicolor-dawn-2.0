@@ -543,7 +543,7 @@ check: $(CONFIG_CHECK)
 
 check_docs: $(DOCS_CHECK)
 
-OBJECTS := $(patsubst $(SRC_DIR)/%.cu,$(BUILD_DIR)/%.o,$(SOURCES))
+OBJECTS := $(patsubst $(SRC_DIR)/%.cu,$(BUILD_DIR)/%.o,$(SOURCES_CU))
 
 print:
 	@echo "Configuration checks to be performed:"
