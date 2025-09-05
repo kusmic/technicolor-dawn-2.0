@@ -482,7 +482,7 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 #############
 CUFLAGS = -fopenmp -Xcompiler -pthread -Xcompiler -O3 -Ibuild -Isrc
 
-CUDA_OBJS = $(BUILD_DIR)/grav_direct_cuda.o
+CUDA_OBJS = $(BUILD_DIR)/grav_direct_cuda.cu.o
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 OBJS += $(CUDA_OBJS)
 endif
