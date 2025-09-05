@@ -482,9 +482,14 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 #############
 CUFLAGS = -fopenmp -Xcompiler -pthread -Xcompiler -O3 -Ibuild -Isrc
 
-CUDA_OBJS = $(BUILD_DIR)/grav_direct_cuda.cu.o
+CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 OBJS += $(CUDA_OBJS)
+endif
+
+# Add gravity subdirectory for CUDA builds
+ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+SUBDIRS += gravity
 endif
 
 all: check_docs check build
@@ -528,7 +533,7 @@ SOURCES_CU := $(shell find $(SRC_DIR) -name '*.cu')
 # So being very explicit here
 	
 cuda: $(SOURCES_CU) $(INCL) $(MAKEFILES)
-	$(CUP) -O2 -Ibuild -Isrc -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/grav_direct.o
+	$(CUP) $(CUFLAGS) -c $(SRC_DIR)/gravity/grav_direct_cuda.cu -o $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 $(BUILD_DIR)/compile_time_info.o: $(BUILD_DIR)/compile_time_info.cc $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
