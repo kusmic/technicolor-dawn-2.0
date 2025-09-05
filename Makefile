@@ -287,12 +287,19 @@ OBJS    += time_integration/driftfac.o time_integration/kicks.o \
 INCL    += time_integration/timestep.h time_integration/driftfac.h
 
 
+ifeq (USE_CUDA, $(findstring USE_CUDA,$(CONFIGVARS)))
+SUBDIRS += gravity
+OBJS    += gravity/gravity.o gravity/ewald.o gravity/ewald_test.o \
+           gravity/grav_forcetest.o gravity/grav_external.o \
+           gravity/grav_direct_cuda.o gravity/second_order_ics.o
+INCL    += gravity/ewald.h gravity/ewaldtensors.h gravity/grav_forcetest.h
+else
 SUBDIRS += gravity
 OBJS    += gravity/gravity.o gravity/ewald.o gravity/ewald_test.o \
            gravity/grav_forcetest.o gravity/grav_external.o \
            gravity/grav_direct.o gravity/second_order_ics.o
 INCL    += gravity/ewald.h gravity/ewaldtensors.h gravity/grav_forcetest.h
-
+endif
 
 SUBDIRS += tree
 OBJS    += tree/tree.o
@@ -484,17 +491,21 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 CUFLAGS = -arch=sm_75 -O3 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -pthread --compiler-options -fPIC -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
-# Add CUDA objects conditionally
-ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-OBJS += $(CUDA_OBJS)
-SUBDIRS += gravity
-endif
+# Add CUDA objects conditionally THIS MAY BE DEFUNCT BUT NOT DELETING YET
+#ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
+#OBJS += $(CUDA_OBJS)
+#SUBDIRS += gravity
+#endif
 
 #############
 #build rules#
 #############
 
 EXECUTABLE = $(EXEC)
+
+all: check_docs check build
+
+build: $(EXEC)
 
 ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
 $(EXECUTABLE): $(OBJS) $(CUDA_OBJS)
