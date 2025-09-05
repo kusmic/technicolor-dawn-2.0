@@ -503,7 +503,7 @@ CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 EXECUTABLE = $(EXEC)
 
-all: check_docs check build
+#all: check_docs check build
 
 build: $(EXEC)
 
