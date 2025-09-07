@@ -1,4 +1,4 @@
-CPP      =  mpicxx  -std=c++11 # sets the C++-compiler
+CPP      =  mpic++  -std=c++11 # sets the C++-compiler
 CUP      =  nvcc    
 OPTIMIZE =  -ggdb -O3 -march=native  -Wall -Wno-format-security  # -Wdouble-promotion # -Wconversion    
 
