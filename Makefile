@@ -488,7 +488,12 @@ CUDATEST = -L$(TESTDIR) -I$(TESTDIR) # testing cUDA
 # Define CUDA objects and flags
 
 # MAY NEED TO CHANGE THIS DEPENDING ON GPU ARCHITECTURE
-CUFLAGS = -arch=sm_75 -O3 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -pthread --compiler-options -fPIC -I$(BUILD_DIR) -I$(SRC_DIR)
+CUDA_HOME = $(CONDA_PREFIX)
+CUDA_LIBS = -L$(CUDA_HOME)/lib64 -L$(CUDA_HOME)/lib
+CUDA_LINK = -lcudart -lcuda
+CUDA_INC  = -I$(CUDA_HOME)/include
+
+CUFLAGS = -arch=sm_75 -O3 -Xcompiler "-Wall -Wextra" -pthread --compiler-options -fPIC $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 # Add CUDA objects conditionally THIS MAY BE DEFUNCT BUT NOT DELETING YET
