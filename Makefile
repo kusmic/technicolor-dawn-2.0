@@ -493,7 +493,7 @@ CUDA_LIBS = -L$(CUDA_HOME)/lib64 -L$(CUDA_HOME)/lib
 CUDA_LINK = -lcudart -lcuda
 CUDA_INC  = -I$(CUDA_HOME)/include
 
-CUFLAGS = -arch=sm_75 -O3 -Xcompiler "-Wall -Wextra" -pthread --compiler-options -fPIC $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR)
+CUFLAGS = -arch=sm_75 -O3 -Xcompiler "-Wall -Wextra -pthread" --compiler-options -fPIC $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
 # Add CUDA objects conditionally THIS MAY BE DEFUNCT BUT NOT DELETING YET
