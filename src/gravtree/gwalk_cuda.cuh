@@ -17,7 +17,9 @@
 #include <cuda_runtime.h>
 #include "gravtree.h"
 #include "gwalk_cuda_types.h"
+#include "gwalk_cuda_helpers.h"
 #include "../data/simparticles.h"
+#include "../logs/timer.h"
 
 class gwalk : public gravtree<simparticles>
 {

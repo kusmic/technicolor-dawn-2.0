@@ -24,18 +24,12 @@
 #include "../gravity/ewald.h"
 #include "../gravtree/gravtree.h"
 #include "../gravtree/gwalk_cuda.cuh"
+#include "gwalk_cuda_helpers.h"
+#include "../logs/timer.h"
+#include "../logs/logs.h"
 #include <cuda_runtime.h>
 
-// Remove duplicate CUDA_CHECK macro and keep only one definition
-#define CUDA_CHECK(call) \
-    do { \
-        cudaError_t err = call; \
-        if (err != cudaSuccess) { \
-            fprintf(stderr, "CUDA error in file '%s' in line %i : %s.\n",\
-                    __FILE__, __LINE__, cudaGetErrorString(err)); \
-            exit(EXIT_FAILURE); \
-        } \
-    } while (0)
+// Remove duplicate CUDA_CHECK macro - now in helpers header
 
 /*! This file contains the code for the gravitational force computation by
  *  means of the tree algorithm. To this end, a tree force is computed for all
@@ -980,6 +974,12 @@ __global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *
                                             unsigned char *shmranks, int *mintopleafnodes, int *committeds, int n)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if(idx < n)
+  {
+    gravity_force_interact(pdats[idx], is[idx], nos[idx], ptypes[idx], no_types[idx], 
+                          shmranks[idx], mintopleafnodes[idx], committeds[idx]);
+  }
+}
   if(idx < n)
   {
     gravity_force_interact(pdats[idx], is[idx], nos[idx], ptypes[idx], no_types[idx], 
