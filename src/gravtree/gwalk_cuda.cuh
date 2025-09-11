@@ -16,31 +16,24 @@
 #include "../mpi_utils/shared_mem_handler.h"
 #include <cuda_runtime.h>
 #include "gravtree.h"
+#include "gwalk_cuda_types.h"
 #include "../data/simparticles.h"
-
-// Forward declarations
-class simparticles;
-struct gravnode;
-struct particle_data;
-struct foreign_gravpoint_data;
-struct workstack_data;
-struct fetch_data;
 
 class gwalk : public gravtree<simparticles>
 {
  public:
-  void gravity_tree(int timebin);
-  void initialize_cuda_memory();
-  void cleanup_cuda_memory();
-
- private:
   // Device data structure
   struct DeviceData {
     pinfo* d_pdats;
     gravnode* d_nodes;
     particle_data* d_particles;
   };
+  
+  void gravity_tree(int timebin);
+  void initialize_cuda_memory();
+  void cleanup_cuda_memory();
 
+ private:
   // Device data pointer
   DeviceData* d_data;
   
@@ -55,84 +48,16 @@ class gwalk : public gravtree<simparticles>
   bool skip_actual_force_computation;
 #endif
 
-  __host__ __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, 
-                                          gravnode *nop, int mintopleafnode, int committed);
-
-  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, 
-                                                char ptype, char no_type, unsigned char shmrank,
+  __host__ __device__ void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int shmrank);
+  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank,
                                                 int mintopleafnode, int committed);
-
-  __host__ __device__ int evaluate_particle_node_opening_criterion_and_interaction(
-      const pinfo &pdat, gravnode *nop);
-
-  __host__ __device__ void evaluate_particle_particle_interaction(
-      const pinfo &pdat, const int no, const char jtype, int shmrank);
+  __host__ __device__ int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
+  __host__ __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
 };
 
 // CUDA kernel declarations 
-__global__ void gravity_force_interact_kernel(const gwalk::pinfo *pdats, int *is, 
-    int *nos, char *ptypes, char *no_types, unsigned char *shmranks, 
-    int *mintopleafnodes, int *committeds, int n);
+__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *nos, char *ptypes, char *no_types, 
+                                            unsigned char *shmranks, int *mintopleafnodes, int *committeds, int n);
 
 #endif // GRAVTREE_WALK_CUDA_H
-        pdat.InsideOutsideFlag = Tp->P[i].InsideOutsideFlag;
-
-        pdat.acc = &Tp->P[i].GravAccel;
-#ifdef EVALPOTENTIAL
-        pdat.pot = &Tp->P[i].Potential;
-#endif
-        pdat.GravCost = &Tp->P[i].GravCost;
-      }
-    else
-      {
-        ptype = NODE_TYPE_TREEPOINT_PARTICLE;
-
-        int n = i - ImportedNodeOffset;
-
-        pdat.intpos = Points[n].IntPos;
-
-        pdat.Type = Points[n].Type;
-#if NSOFTCLASSES > 1
-        pdat.SofteningClass = Points[n].SofteningClass;
-#endif
-        pdat.aold = Points[n].OldAcc;
-#if defined(PMGRID) && defined(PLACEHIGHRESREGION)
-        pdat.InsideOutsideFlag = Points[n].InsideOutsideFlag;
-#endif
-
-        int idx  = ResultIndexList[n];
-        pdat.acc = &ResultsActiveImported[idx].GravAccel;
-#ifdef EVALPOTENTIAL
-        pdat.pot = &ResultsActiveImported[idx].Potential;
-#endif
-        pdat.GravCost = &ResultsActiveImported[idx].GravCost;
-      }
-
-#if NSOFTCLASSES > 1
-    pdat.h_i = All.ForceSoftening[pdat.SofteningClass];
-#else
-    pdat.h_i = All.ForceSoftening[0];
-#endif
-
-    return ptype;
-  }
-
-  __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, 
-                                 gravnode *nop, int mintopleafnode, int committed);
-
-  __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, 
-                                       char ptype, char no_type, unsigned char shmrank,
-                                       int mintopleafnode, int committed);
-
-  __device__ int evaluate_particle_node_opening_criterion_and_interaction(
-      const pinfo &pdat, gravnode *nop);
-
-  __device__ void evaluate_particle_particle_interaction(
-      const pinfo &pdat, const int no, const char jtype, int shmrank);
-};
-
-// CUDA kernel declaration
-__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, 
-    int *nos, char *ptypes, char *no_types, unsigned char *shmranks, 
-    int *mintopleafnodes, int *committeds, int n);
 
