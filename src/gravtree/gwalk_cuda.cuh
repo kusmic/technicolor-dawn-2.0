@@ -76,7 +76,6 @@ __global__ void gravity_force_interact_kernel(const gwalk::pinfo *pdats, int *is
 
 #endif // GRAVTREE_WALK_CUDA_H
         pdat.InsideOutsideFlag = Tp->P[i].InsideOutsideFlag;
-#endif
 
         pdat.acc = &Tp->P[i].GravAccel;
 #ifdef EVALPOTENTIAL
@@ -137,4 +136,3 @@ __global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is,
     int *nos, char *ptypes, char *no_types, unsigned char *shmranks, 
     int *mintopleafnodes, int *committeds, int n);
 
-#endif
