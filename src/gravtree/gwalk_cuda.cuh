@@ -17,9 +17,11 @@
 #include <cuda_runtime.h>
 #include "gravtree.h"
 #include "gwalk_cuda_types.h"
-#include "gwalk_cuda_helpers.h"
 #include "../data/simparticles.h"
-#include "../logs/timer.h"
+
+// Forward declare external variables
+extern int MaxPart;
+extern int MaxNodes;
 
 class gwalk : public gravtree<simparticles>
 {
@@ -34,6 +36,10 @@ class gwalk : public gravtree<simparticles>
   void gravity_tree(int timebin);
   void initialize_cuda_memory();
   void cleanup_cuda_memory();
+
+  // Required utility functions
+  void mycxxsort(workstack_data* start, workstack_data* end, int (*compare)(const workstack_data&, const workstack_data&));
+  int get_pinfo(int target, pinfo& pdat);
 
  private:
   // Device data pointer
@@ -51,15 +57,17 @@ class gwalk : public gravtree<simparticles>
 #endif
 
   __host__ __device__ void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int shmrank);
-  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank,
+  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, 
+                                                char ptype, char no_type, unsigned char shmrank,
                                                 int mintopleafnode, int committed);
-  __host__ __device__ int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
-  __host__ __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
+  __host__ __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, 
+                                          gravnode *nop, int mintopleafnode, int committed);
 };
 
-// CUDA kernel declarations 
-__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *nos, char *ptypes, char *no_types, 
-                                            unsigned char *shmranks, int *mintopleafnodes, int *committeds, int n);
+// CUDA kernel declarations
+__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *nos, char *ptypes, 
+                                            char *no_types, unsigned char *shmranks, 
+                                            int *mintopleafnodes, int *committeds, int n);
 
 #endif // GRAVTREE_WALK_CUDA_H
 
