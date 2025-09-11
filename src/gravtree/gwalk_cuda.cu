@@ -23,7 +23,7 @@
 #include "../domain/domain.h"
 #include "../gravity/ewald.h"
 #include "../gravtree/gravtree.h"
-#include "../gravtree/gwalk_cuda.h"
+#include "../gravtree/gwalk_cuda.cuh"
 #include "../logs/logs.h"
 #include "../logs/timer.h"
 #include "../main/simulation.h"
