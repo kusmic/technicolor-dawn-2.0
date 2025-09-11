@@ -305,10 +305,15 @@ SUBDIRS += tree
 OBJS    += tree/tree.o
 INCL    += tree/tree.h
 
-
+ifeq (USE_CUDA, $(findstring USE_CUDA,$(CONFIGVARS)))
+SUBDIRS += gravtree
+OBJS    += gravtree/gravtree_build.o gravtree/gravtree.o gravtree/gwalk_cuda.o
+INCL    += gravtree/gravtree.h  gravtree/gwalk_cuda.cuh  
+else
 SUBDIRS += gravtree
 OBJS    += gravtree/gravtree_build.o gravtree/gravtree.o gravtree/gwalk.o
-INCL    += gravtree/gravtree.h  gravtree/gwalk.h  
+INCL    += gravtree/gravtree.h  gravtree/gwalk.h 
+endif
 
 # Note may need to include new .cuh files
 
