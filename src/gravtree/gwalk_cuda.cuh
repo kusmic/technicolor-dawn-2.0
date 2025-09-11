@@ -9,14 +9,14 @@
  *  \brief defines a class for walking the gravitational tree
  */
 
-#ifndef GRAVTREE_WALK_H
-#define GRAVTREE_WALK_H
+#ifndef GRAVTREE_WALK_CUDA_H
+#define GRAVTREE_WALK_CUDA_H
 
 #include "gadgetconfig.h"
 #include "../mpi_utils/shared_mem_handler.h"
 #include <cuda_runtime.h>
-#include "gravtree.h"  // Add this to get gravtree class definition
-#include "../data/simparticles.h"  // Add this for particle data types
+#include "gravtree.h"
+#include "../data/simparticles.h"
 
 // Forward declarations
 class simparticles;
@@ -74,7 +74,7 @@ __global__ void gravity_force_interact_kernel(const gwalk::pinfo *pdats, int *is
     int *nos, char *ptypes, char *no_types, unsigned char *shmranks, 
     int *mintopleafnodes, int *committeds, int n);
 
-#endif
+#endif // GRAVTREE_WALK_CUDA_H
         pdat.InsideOutsideFlag = Tp->P[i].InsideOutsideFlag;
 #endif
 
