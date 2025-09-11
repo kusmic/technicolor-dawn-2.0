@@ -34,6 +34,9 @@
 #include "../system/system.h"
 #include "../time_integration/timestep.h"
 
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+
 /*! This file contains the code for the gravitational force computation by
  *  means of the tree algorithm. To this end, a tree force is computed for all
  *  active local particles, and particles are exported to other processors if
@@ -430,54 +433,51 @@ void gwalk::gravity_tree(int timebin)
 /* make sure that we instantiate the template */
 #include "../data/simparticles.h"
 template class gravtree<simparticles>;
-    *pdat.GravCost += 1;
 
-  return NODE_USE;
+void gwalk::initialize_cuda_memory() {
+    // Allocate device memory
+    DeviceData h_data;
+    checkCudaErrors(cudaMalloc(&h_data.d_pdats, MaxPart * sizeof(pinfo)));
+    checkCudaErrors(cudaMalloc(&h_data.d_nodes, MaxNodes * sizeof(gravnode)));
+    checkCudaErrors(cudaMalloc(&h_data.d_particles, MaxPart * sizeof(particle_data)));
+    
+    // Allocate and copy device data structure
+    checkCudaErrors(cudaMalloc(&d_data, sizeof(DeviceData)));
+    checkCudaErrors(cudaMemcpy(d_data, &h_data, sizeof(DeviceData), cudaMemcpyHostToDevice));
 }
 
-inline void gwalk::gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed)
+void gwalk::cleanup_cuda_memory() {
+    // Get device data structure
+    DeviceData h_data;
+    checkCudaErrors(cudaMemcpy(&h_data, d_data, sizeof(DeviceData), cudaMemcpyDeviceToHost));
+    
+    // Free device memory
+    checkCudaErrors(cudaFree(h_data.d_pdats));
+    checkCudaErrors(cudaFree(h_data.d_nodes));
+    checkCudaErrors(cudaFree(h_data.d_particles));
+    checkCudaErrors(cudaFree(d_data));
+}
+
+// Add __host__ __device__ qualifiers to functions that run on both host and device
+__host__ __device__ void gwalk::evaluate_particle_particle_interaction(/*params*/) {
+    // ...existing implementation...
+}
+
+__host__ __device__ void gwalk::gravity_force_interact(/*params*/) {
+    // ...existing implementation...
+}
+
+// Add kernel launch wrapper function
+__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *nos, char *ptypes, char *no_types, 
+                                            unsigned char *shmranks, int *mintopleafnodes, int *committeds, int n)
 {
-  /* open node */
-  int p                 = nop->nextnode;
-  unsigned char shmrank = nop->nextnode_shmrank;
-
-  while(p != nop->sibling || (shmrank != nop->sibling_shmrank && nop->sibling >= MaxPart + D->NTopnodes))
-    {
-      if(p < 0)
-        Terminate(
-            "p=%d < 0  nop->sibling=%d nop->nextnode=%d shmrank=%d nop->sibling_shmrank=%d nop->foreigntask=%d  mass=%g  "
-            "first_nontoplevelnode=%d",
-            p, nop->sibling, nop->nextnode, shmrank, nop->sibling_shmrank, nop->OriginTask, nop->mass, MaxPart + D->NTopnodes);
-
-      int next;
-      unsigned char next_shmrank;
-      char type;
-
-      if(p < MaxPart) /* a local particle */
-        {
-          /* note: here shmrank cannot change */
-          next         = get_nextnodep(shmrank)[p];
-          next_shmrank = shmrank;
-          type         = NODE_TYPE_LOCAL_PARTICLE;
-        }
-      else if(p < MaxPart + MaxNodes) /* an internal node  */
-        {
-          gravnode *nop = get_nodep(p, shmrank);
-          next          = nop->sibling;
-          next_shmrank  = nop->sibling_shmrank;
-          type          = NODE_TYPE_LOCAL_NODE;
-        }
-      else if(p >= ImportedNodeOffset && p < EndOfTreePoints) /* an imported Treepoint particle  */
-        {
-          /* note: here shmrank cannot change */
-          next         = get_nextnodep(shmrank)[p - MaxNodes];
-          next_shmrank = shmrank;
-          type         = NODE_TYPE_TREEPOINT_PARTICLE;
-        }
-      else if(p >= EndOfTreePoints && p < EndOfForeignNodes) /* an imported tree node */
-        {
-          gravnode *nop = get_nodep(p, shmrank);
-          next          = nop->sibling;
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if(idx < n)
+  {
+    gravity_force_interact(pdats[idx], is[idx], nos[idx], ptypes[idx], no_types[idx], 
+                          shmranks[idx], mintopleafnodes[idx], committeds[idx]);
+  }
+}
           next_shmrank  = nop->sibling_shmrank;
           type          = NODE_TYPE_FETCHED_NODE;
         }
