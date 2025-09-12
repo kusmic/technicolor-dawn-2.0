@@ -16,8 +16,101 @@
 #include "../mpi_utils/shared_mem_handler.h"
 #include <cuda_runtime.h>
 #include "gravtree.h"
-#include "gwalk_cuda_types.h"
 #include "../data/simparticles.h"
+
+#ifndef GWALK_CUDA_IMPL_H
+#define GWALK_CUDA_IMPL_H
+
+
+inline void gwalk::mycxxsort(workstack_data* start, workstack_data* end, 
+                            int (*compare)(const workstack_data&, const workstack_data&))
+{
+    std::sort(start, end, compare);
+}
+
+inline int gwalk::get_pinfo(int target, pinfo& pdat)
+{
+    // Implementation...
+    if(target < Tp->NumPart)
+    {
+        pdat.intpos = Tp->P[target].IntPos;
+        // ... rest of implementation ...
+    }
+    return ptype;
+}
+
+#endif // GWALK_CUDA_IMPL_H
+
+#ifndef GWALK_CUDA_HELPERS_H
+#define GWALK_CUDA_HELPERS_H
+
+#include <cuda_runtime.h>
+
+#define CUDA_CHECK(call) \
+    do { \
+        cudaError_t err = call; \
+        if (err != cudaSuccess) { \
+            fprintf(stderr, "CUDA error in file '%s' in line %i : %s.\n",\
+                    __FILE__, __LINE__, cudaGetErrorString(err)); \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+inline void checkCudaErrors(cudaError_t err) {
+    if (err != cudaSuccess) {
+        fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+}
+
+#endif
+
+#ifndef GWALK_CUDA_TYPES_H
+#define GWALK_CUDA_TYPES_H
+
+#include "../data/dtypes.h"
+#include "../data/constants.h"
+#include "../logs/timer.h"
+#include "../gravtree/gravtree.h"
+#include "../data/simparticles.h"
+
+// Forward declarations
+class simparticles;
+template <typename partset> class gravtree;
+
+// Node types
+enum NodeType {
+    NODE_TYPE_LOCAL_NODE = 0,
+    NODE_TYPE_TREEPOINT_PARTICLE = 1,
+    NODE_TYPE_LOCAL_PARTICLE = 2,
+    NODE_TYPE_FETCHED_NODE = 3,
+    NODE_TYPE_FETCHED_PARTICLE = 4
+};
+
+struct pinfo {
+    MyIntPosType *intpos;
+    MyReal aold;
+    MyReal h_i;
+    int Type;
+#if NSOFTCLASSES > 1
+    int SofteningClass;
+#endif
+#if defined(PMGRID) && defined(PLACEHIGHRESREGION)
+    int InsideOutsideFlag;
+#endif
+    vector<MyFloat> *acc;
+    MyFloat *pot;
+    int *GravCost;
+};
+
+// Forward declare other required types
+struct gravnode;
+struct particle_data;
+struct foreign_gravpoint_data;
+struct workstack_data;
+struct fetch_data;
+
+#endif // GWALK_CUDA_TYPES_H
 
 // Forward declare external variables
 extern int MaxPart;
