@@ -24,7 +24,6 @@
 #include "../gravity/ewald.h"
 #include "../gravtree/gravtree.h"
 #include "../gravtree/gwalk_cuda.cuh"
-#include "gwalk_cuda_helpers.h"
 #include "../logs/timer.h"
 #include "../logs/logs.h"
 #include <cuda_runtime.h>
@@ -202,9 +201,9 @@ void gwalk::gravity_tree(int timebin)
   /* now execute the tree walk calculations */
   /******************************************/
 
-  theta2         = All.ErrTolTheta * All.ErrTolTheta;
-  thetamax2      = All.ErrTolThetaMax * All.ErrTolThetaMax;
-  errTolForceAcc = All.ErrTolForceAcc;
+  double theta2         = All.ErrTolTheta * All.ErrTolTheta;
+  double thetamax2      = All.ErrTolThetaMax * All.ErrTolThetaMax;
+  double errTolForceAcc = All.ErrTolForceAcc;
 
   sum_NumForeignNodes  = 0;
   sum_NumForeignPoints = 0;
@@ -712,8 +711,8 @@ void gwalk::gravity_tree(int timebin)
   /* now execute the tree walk calculations */
   /******************************************/
 
-  theta2         = All.ErrTolTheta * All.ErrTolTheta;
-  thetamax2      = All.ErrTolThetaMax * All.ErrTolThetaMax;
+  double theta2         = All.ErrTolTheta * All.ErrTolTheta;
+  double thetamax2      = All.ErrTolThetaMax * All.ErrTolThetaMax;
   errTolForceAcc = All.ErrTolForceAcc;
 
   sum_NumForeignNodes  = 0;

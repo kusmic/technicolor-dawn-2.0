@@ -31,7 +31,11 @@
 #include "../gravity/ewald.h"
 #include "../gravity/grav_forcetest.h"
 #include "../gravtree/gravtree.h"
+#ifdef USE_CUDA
+#include "../gravtree/gwalk_cuda.cuh"
+#else
 #include "../gravtree/gwalk.h"
+#endif
 #include "../io/parameters.h"
 #include "../io/restart.h"
 #include "../io/test_io_bandwidth.h"

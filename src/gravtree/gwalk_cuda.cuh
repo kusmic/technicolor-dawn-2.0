@@ -4,7 +4,7 @@
  * \copyright   (vspringel@mpa-garching.mpg.de) and all contributing authors.
  *******************************************************************************/
 
-/*! \file  gwalk.h
+/*! \file  gwalk_cuda.cuh
  *
  *  \brief defines a class for walking the gravitational tree
  */

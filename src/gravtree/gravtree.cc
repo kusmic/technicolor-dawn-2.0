@@ -25,7 +25,11 @@
 #include "../domain/domain.h"
 #include "../gravity/ewald.h"
 #include "../gravtree/gravtree.h"
+#ifdef USE_CUDA
+#include "../gravtree/gwalk_cuda.cuh"
+#else
 #include "../gravtree/gwalk.h"
+#endif // USE_CUDA
 #include "../logs/logs.h"
 #include "../logs/timer.h"
 #include "../main/simulation.h"
