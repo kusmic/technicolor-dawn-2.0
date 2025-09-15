@@ -4,140 +4,24 @@
  * \copyright   (vspringel@mpa-garching.mpg.de) and all contributing authors.
  *******************************************************************************/
 
-/*! \file  gwalk_cuda.cuh
+/*! \file  gwalk.h
  *
  *  \brief defines a class for walking the gravitational tree
  */
 
-#ifndef GRAVTREE_WALK_CUDA_H
-#define GRAVTREE_WALK_CUDA_H
-
 #include "gadgetconfig.h"
+
+#ifndef GRAVTREE_WALK_H
+#define GRAVTREE_WALK_H
+
 #include "../mpi_utils/shared_mem_handler.h"
-#include <cuda_runtime.h>
-#include "gravtree.h"
-#include "../data/simparticles.h"
-
-#ifndef GWALK_CUDA_IMPL_H
-#define GWALK_CUDA_IMPL_H
-
-
-inline void gwalk::mycxxsort(workstack_data* start, workstack_data* end, 
-                            int (*compare)(const workstack_data&, const workstack_data&))
-{
-    std::sort(start, end, compare);
-}
-
-inline int gwalk::get_pinfo(int target, pinfo& pdat)
-{
-    // Implementation...
-    if(target < Tp->NumPart)
-    {
-        pdat.intpos = Tp->P[target].IntPos;
-        // ... rest of implementation ...
-    }
-    return ptype;
-}
-
-#endif // GWALK_CUDA_IMPL_H
-
-#ifndef GWALK_CUDA_HELPERS_H
-#define GWALK_CUDA_HELPERS_H
-
-#include <cuda_runtime.h>
-
-#define CUDA_CHECK(call) \
-    do { \
-        cudaError_t err = call; \
-        if (err != cudaSuccess) { \
-            fprintf(stderr, "CUDA error in file '%s' in line %i : %s.\n",\
-                    __FILE__, __LINE__, cudaGetErrorString(err)); \
-            exit(EXIT_FAILURE); \
-        } \
-    } while (0)
-
-inline void checkCudaErrors(cudaError_t err) {
-    if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-}
-
-#endif
-
-#ifndef GWALK_CUDA_TYPES_H
-#define GWALK_CUDA_TYPES_H
-
-#include "../data/dtypes.h"
-#include "../data/constants.h"
-#include "../logs/timer.h"
-#include "../gravtree/gravtree.h"
-#include "../data/simparticles.h"
-
-// Forward declarations
-class simparticles;
-template <typename partset> class gravtree;
-
-// Node types
-enum NodeType {
-    NODE_TYPE_LOCAL_NODE = 0,
-    NODE_TYPE_TREEPOINT_PARTICLE = 1,
-    NODE_TYPE_LOCAL_PARTICLE = 2,
-    NODE_TYPE_FETCHED_NODE = 3,
-    NODE_TYPE_FETCHED_PARTICLE = 4
-};
-
-struct pinfo {
-    MyIntPosType *intpos;
-    MyReal aold;
-    MyReal h_i;
-    int Type;
-#if NSOFTCLASSES > 1
-    int SofteningClass;
-#endif
-#if defined(PMGRID) && defined(PLACEHIGHRESREGION)
-    int InsideOutsideFlag;
-#endif
-    vector<MyFloat> *acc;
-    MyFloat *pot;
-    int *GravCost;
-};
-
-// Forward declare other required types
-struct gravnode;
-struct particle_data;
-struct foreign_gravpoint_data;
-struct workstack_data;
-struct fetch_data;
-
-#endif // GWALK_CUDA_TYPES_H
-
-// Forward declare external variables
-extern int MaxPart;
-extern int MaxNodes;
 
 class gwalk : public gravtree<simparticles>
 {
  public:
-  // Device data structure
-  struct DeviceData {
-    pinfo* d_pdats;
-    gravnode* d_nodes;
-    particle_data* d_particles;
-  };
-  
   void gravity_tree(int timebin);
-  void initialize_cuda_memory();
-  void cleanup_cuda_memory();
-
-  // Required utility functions
-  void mycxxsort(workstack_data* start, workstack_data* end, int (*compare)(const workstack_data&, const workstack_data&));
-  int get_pinfo(int target, pinfo& pdat);
 
  private:
-  // Device data pointer
-  DeviceData* d_data;
-  
   long long interactioncountPP;
   long long interactioncountPN;
 
@@ -149,18 +33,88 @@ class gwalk : public gravtree<simparticles>
   bool skip_actual_force_computation;
 #endif
 
-  __host__ __device__ void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int shmrank);
-  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, 
-                                                char ptype, char no_type, unsigned char shmrank,
-                                                int mintopleafnode, int committed);
-  __host__ __device__ void gwalk_open_node(const pinfo &pdat, int i, char ptype, 
-                                          gravnode *nop, int mintopleafnode, int committed);
+  struct pinfo
+  {
+    MyIntPosType *intpos;
+    MyReal aold;
+    MyReal h_i;
+    int Type;
+#if NSOFTCLASSES > 1
+    int SofteningClass;
+#endif
+#if defined(PMGRID) && defined(PLACEHIGHRESREGION)
+    int InsideOutsideFlag;
+#endif
+
+    vector<MyFloat> *acc;
+    MyFloat *pot;
+    int *GravCost;
+  };
+
+  inline int get_pinfo(int i, pinfo &pdat);
+
+  inline void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
+
+  void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank, int mintopleafnode,
+                              int committed);
+
+  __host__ __device__ inline int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
+
+  __host__ __device__ inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);
 };
 
-// CUDA kernel declarations
-__global__ void gravity_force_interact_kernel(const pinfo *pdats, int *is, int *nos, char *ptypes, 
-                                            char *no_types, unsigned char *shmranks, 
-                                            int *mintopleafnodes, int *committeds, int n);
+// CUDA kernel declaration
+__global__ void gwalk_cuda_kernel(gwalk::workstack_data *WorkStack, int NumOnWorkStack, int MaxOnWorkStack,
+                                  int *NewOnWorkStack, int *NumOnFetchStack, int MaxOnFetchStack,
+                                  gwalk *gwalk_instance, int max_ncycles);
 
-#endif // GRAVTREE_WALK_CUDA_H
+#endif // GRAVTREE_WALK_H
+        pdat.acc = &Tp->P[i].GravAccel;
+#ifdef EVALPOTENTIAL
+        pdat.pot = &Tp->P[i].Potential;
+#endif
+        pdat.GravCost = &Tp->P[i].GravCost;
+      }
+    else
+      {
+        ptype = NODE_TYPE_TREEPOINT_PARTICLE;
 
+        int n = i - ImportedNodeOffset;
+
+        pdat.intpos = Points[n].IntPos;
+
+        pdat.Type = Points[n].Type;
+#if NSOFTCLASSES > 1
+        pdat.SofteningClass = Points[n].SofteningClass;
+#endif
+        pdat.aold = Points[n].OldAcc;
+#if defined(PMGRID) && defined(PLACEHIGHRESREGION)
+        pdat.InsideOutsideFlag = Points[n].InsideOutsideFlag;
+#endif
+
+        int idx  = ResultIndexList[n];
+        pdat.acc = &ResultsActiveImported[idx].GravAccel;
+#ifdef EVALPOTENTIAL
+        pdat.pot = &ResultsActiveImported[idx].Potential;
+#endif
+        pdat.GravCost = &ResultsActiveImported[idx].GravCost;
+      }
+
+#if NSOFTCLASSES > 1
+    pdat.h_i = All.ForceSoftening[pdat.SofteningClass];
+#else
+    pdat.h_i = All.ForceSoftening[0];
+#endif
+
+    return ptype;
+  }
+
+  inline void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
+  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank, int mintopleafnode,
+                              int committed);
+
+  __host__ __device__ inline int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
+  __host__ __device__ inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);
+};
+
+#endif
