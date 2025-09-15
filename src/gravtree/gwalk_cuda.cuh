@@ -74,7 +74,6 @@ __global__ void gwalk_cuda_kernel(gwalk::workstack_data *WorkStack, int NumOnWor
         pdat.pot = &Tp->P[i].Potential;
 #endif
         pdat.GravCost = &Tp->P[i].GravCost;
-      }
     else
       {
         ptype = NODE_TYPE_TREEPOINT_PARTICLE;
@@ -107,14 +106,11 @@ __global__ void gwalk_cuda_kernel(gwalk::workstack_data *WorkStack, int NumOnWor
 #endif
 
     return ptype;
-  }
 
-  inline void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
-  __host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank, int mintopleafnode,
+inline void gwalk_open_node(const pinfo &pdat, int i, char ptype, gravnode *nop, int mintopleafnode, int committed);
+__host__ __device__ void gravity_force_interact(const pinfo &pdat, int i, int no, char ptype, char no_type, unsigned char shmrank, int mintopleafnode,
                               int committed);
 
-  __host__ __device__ inline int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
-  __host__ __device__ inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);
-};
+__host__ __device__ inline int evaluate_particle_node_opening_criterion_and_interaction(const pinfo &pdat, gravnode *nop);
+__host__ __device__ inline void evaluate_particle_particle_interaction(const pinfo &pdat, const int no, const char jtype, int no_task);;
 
-#endif
