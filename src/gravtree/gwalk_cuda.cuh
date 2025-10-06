@@ -10,6 +10,7 @@
  */
 
 #include "gadgetconfig.h"
+#include <cuda_runtime.h>
 
 #ifndef GRAVTREE_WALK_H
 #define GRAVTREE_WALK_H
