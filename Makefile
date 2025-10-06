@@ -460,7 +460,7 @@ MAKEFILES = $(MAKEFILE_LIST) buildsystem/Makefile.config
 #combine compiler options#
 ##########################
 
-CFLAGS = $(OPTIMIZE) $(OPT) $(HDF5_INCL) $(GSL_INCL) $(FFTW_INCL) $(HWLOC_INCL) $(VTUNE_INCL) $(MAPS_INCL) -I$(BUILD_DIR) -I$(SRC_DIR) -I/usr/include/hdf5/serial -lcudart -lcuda -x cu 
+CFLAGS = $(OPTIMIZE) $(OPT) $(HDF5_INCL) $(GSL_INCL) $(FFTW_INCL) $(HWLOC_INCL) $(VTUNE_INCL) $(MAPS_INCL) -I$(BUILD_DIR) -I$(SRC_DIR) -I/usr/include/hdf5/serial -lcudart -lcuda
 
 
 
