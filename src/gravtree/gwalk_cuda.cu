@@ -15,6 +15,7 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cuda_runtime.h>
 
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
