@@ -540,7 +540,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) $(CUDA_MPI_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
-	$(CPP) $(CFLAGS) -c $< -o $@
+	$(CPP) $(CFLAGS) $(CUDA_MPI_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.cu.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
 	$(CUP) $(CUFLAGS) -c $< -o $@
