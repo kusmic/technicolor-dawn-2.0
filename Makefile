@@ -502,11 +502,7 @@ CUDA_INC  = -I$(CUDA_HOME)/include
 CUFLAGS = -arch=sm_75 -O3 -Xcompiler "-Wall -Wextra -pthread" --compiler-options -fPIC $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
-# Add CUDA objects conditionally THIS MAY BE DEFUNCT BUT NOT DELETING YET
-#ifeq (USE_CUDA,$(findstring USE_CUDA,$(CONFIGVARS)))
-#OBJS += $(CUDA_OBJS)
-#SUBDIRS += gravity
-#endif
+CU_MPI_FLAGS = $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR) --with-wrapper-cflags=-ta:tesla
 
 #############
 #build rules#
@@ -541,7 +537,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu $(INCL) $(MAKEFILES)
 
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCL) $(MAKEFILES)
-	$(CPP) $(CFLAGS) -c $< -o $@
+	$(CPP) $(CFLAGS) $(CUDA_MPI_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(INCL) $(MAKEFILES)
 	$(CPP) $(CFLAGS) -c $< -o $@
