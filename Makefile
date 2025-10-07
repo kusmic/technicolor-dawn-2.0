@@ -502,7 +502,7 @@ CUDA_INC  = -I$(CUDA_HOME)/include
 CUFLAGS = -arch=sm_75 -O3 -Xcompiler "-Wall -Wextra -pthread" --compiler-options -fPIC $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR)
 CUDA_OBJS = $(BUILD_DIR)/gravity/grav_direct_cuda.o
 
-CU_MPI_FLAGS = $(CUDA_INC) -I$(BUILD_DIR) -I$(SRC_DIR) --with-wrapper-cflags=-ta:tesla
+CU_MPI_FLAGS = $(CUDA_INC) $(CUDA_LIBS) -I$(BUILD_DIR) -I$(SRC_DIR) 
 
 #############
 #build rules#
