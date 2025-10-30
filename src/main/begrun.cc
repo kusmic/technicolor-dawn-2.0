@@ -238,7 +238,8 @@ void sim::begrun1(const char *parameterFile)
 #endif
 
 #ifdef STARFORMATION
-  CoolSfr.init_clouds();
+  //CoolSfr.init_clouds();
+  init_starformation();  // This will set up units, initialize star formation log, and call init_clouds()
 #endif
 
 #if((!defined(PMGRID) || (defined(PMGRID) && defined(TREEPM_NOTIMESPLIT))) && defined(SELFGRAVITY) && defined(PERIODIC)) || \
@@ -353,6 +354,22 @@ void sim::begrun2(void)
   gravity_forcetest_testforcelaw();
 #endif
 }
+
+ /*! \brief Initialize star formation module
+  *
+  *  This function initializes the star formation module.
+  *  It sets up the cooling units, initializes the star formation
+  *  log file, and computes the tables for the effective model.
+  */
+#ifdef STARFORMATION
+void sim::init_starformation(void)
+{
+  mpi_printf("STARFORMATION: Initializing star formation module...\n");
+  
+  // Initialize the multi-phase model for star formation
+  CoolSfr.init_clouds();
+}
+#endif
 
 /*! \brief Computes conversion factors between internal code units and the
  *  cgs-system.

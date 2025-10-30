@@ -25,8 +25,8 @@ RANDOMIZE_DOMAINCENTER                       # shifts the particle distribution 
 #--------------------------------------- Gravity calculation
 
 SELFGRAVITY                                   # switch to enable self-gravity of particles (typically always on)
-FMM                                          # enables Fast Multipole Method instead of one-sided tree algorithm
-MULTIPOLE_ORDER=2                            # sets the multipole order of Tree or FMM computations
+#FMM                                          # enables Fast Multipole Method instead of one-sided tree algorithm
+#MULTIPOLE_ORDER=2                            # sets the multipole order of Tree or FMM computations
 #EVALPOTENTIAL                                # computes gravitational potential besides force
 #EXTRAPOTTERM                                 # this computes an extra multipole term for the potential which is not needed for the forces
 #EXTRA_HIGH_EWALD_ACCURACY                    # this uses third-order instead of second-order Taylor expansion to interpolate Ewald corrections from table 
@@ -51,20 +51,19 @@ MULTIPOLE_ORDER=2                            # sets the multipole order of Tree 
 
 #TREEPM_NOTIMESPLIT                           # if this is activated, long-range and short-range gravity are time-integrated on a common timestep
 #HIERARCHICAL_GRAVITY                         # enables hierarchical time integration of the gravity 
-#FORCE_EQUAL_TIMESTEPS                        # this chooses a global timestep for all particles
+FORCE_EQUAL_TIMESTEPS                        # this chooses a global timestep for all particles
 
 
 #--------------------------------------- Treatment of gravitational softening
 
 #INDIVIDUAL_GRAVITY_SOFTENING=4+8+16+32       # bitmasks which selects the particle type(s) which pick their softening class based on particle mass
 NSOFTCLASSES=7                               # number of different softening classes
-ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an adaptive gravitational softening proportional to their SPH smoothing lengths
-
+###ADAPTIVE_HYDRO_SOFTENING                     # makes SPH gas particles pick an adaptive gravitational softening proportional to their SPH smoothing lengths
 
 #--------------------------------------- SPH treatment and formulation
 
 #REUSE_HYDRO_ACCELERATIONS_FROM_PREVIOUS_STEP # does not recompute the pressure forces after application of source functions 
-VISCOSITY_LIMITER_FOR_LARGE_TIMESTEPS        # limits the acceleration due to the viscosity  
+#VISCOSITY_LIMITER_FOR_LARGE_TIMESTEPS        # limits the acceleration due to the viscosity  
 #PRESSURE_ENTROPY_SPH                         # enables the Hopkins (2013) pressure-entropy formulation, other density-entropy is used
 #GAMMA=1.4                                    # sets the adiabatic index
 #ISOTHERM_EQS                                 # selects an isothermal equation of state (read to NOT include this if using PRESSURE_ENTROPY_SPH)
@@ -82,7 +81,7 @@ CUBIC_SPLINE_KERNEL                          # uses the cubic spline kernel (def
 
 #--------------------------------------- SPH viscosity options
 
-TIMEDEP_ART_VISC                             # enables time dependend viscosity (read to include with PRESSURE_ENTROPY_SPH)
+###TIMEDEP_ART_VISC                             # enables time dependend viscosity (read to include with PRESSURE_ENTROPY_SPH)
 #HIGH_ART_VISC_START                          # start with high rather than low viscosity
 #NO_SHEAR_VISCOSITY_LIMITER                   # turns of the shear viscosity supression
 
@@ -90,10 +89,10 @@ TIMEDEP_ART_VISC                             # enables time dependend viscosity 
 #--------------------------------------- Extra physics
 
 COOLING                                      # Enables radiative atomic cooling by hydrogen and helium
-STARFORMATION                                # Enables star formation with the Springel & Hernquist (2003) model
-#DUST
-#SUPERNOVA
+#STARFORMATION                                # Enables star formation with the Springel & Hernquist (2003) model
 #FEEDBACK
+#DUST
+#WINDS
 
 #---------------------------------------- Single/double precision and data types
 
@@ -172,10 +171,10 @@ OUTPUT_PRESSURE_SPH_DENSITY                  # output also density computed in t
 
 #--------------------------------------- IC creation
  
-#NGENIC=16                                   # generate cosmological ICs, set NGENIC to the FFT grid size used for IC generation
+#NGENIC=64                                   # generate cosmological ICs, set NGENIC to the FFT grid size used for IC generation
 #NGENIC_2LPT                                  # applies 2LPT instead of just Zeldovich approximation
 #CREATE_GRID                                  # start with a regular Cartesian DM particle grid, instead of reading a glass file (for NGENIC)
-#GENERATE_GAS_IN_ICS                          # add SPH particles to created or read dark matter only ICs
+GENERATE_GAS_IN_ICS                          # add SPH particles to created or read dark matter only ICs
 #SPLIT_PARTICLE_TYPE=4+8                      # specifies particle types to be split if GENERATE_GAS_IN_ICS is activated
 #NGENIC_FIX_MODE_AMPLITUDES                   # when activated, this leaves the mode amplitudes at sqrt(P(k)), instead of sampling from a Rayleigh distribution
 #NGENIC_MIRROR_PHASES                         # if this is activated, all phases are turned by 180 degrees

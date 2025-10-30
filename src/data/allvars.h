@@ -23,17 +23,54 @@
 #include "../data/macros.h"
 #include "../io/parameters.h"
 
+extern int CoolingOn;
+
 /** Data which is the SAME for all tasks (mostly code parameters read
  * from the parameter file).  Holding this data in a structure is
  * convenient for writing/reading the restart file, and it allows the
  * introduction of new global variables in a simple way. The only
  * thing to do is to introduce them into this structure.
+
+ By not including them in the ifdef statements, they are free to exist
+ in the param.txt without commenting them out when we turn on/off modules.
  */
 struct global_data_all_processes : public parameters
 {
-#if defined(COOLING)
+
+  // STAR FORMATION PARAMETERS
+  double CritOverDensity;
+  double CritPhysDensity;
+  double OverDensThresh;
+  double PhysDensThresh;
+  double EgySpecSN;
+  double EgySpecCold;
+  double FactorEVP;
+  double TempSupernova;
+  double TempClouds;
+  double MaxSfrTimescale;
+  double MaxStarFormationTemp;
+  double FactorSN;
+  double TargetGasMass;  // Target mass for gas particles
+  double WindEfficiency;
+  double WindEnergyFraction;
+  double WindFreeTravelLength;
+  double WindFreeTravelDensFac;
+  double MetalYield;
+  int StarFormationDebugLevel;    /* Print detailed diagnostics (0=no, 1=yes) */
+  MyIDType MaxID;
+
+  // FEEDBACK PARAMETERS
+  int FeedbackDebugLevel;         /* Print detailed diagnostics (0=no, 1=yes) */
+  int FeedbackSNII;          /* Enable Type II supernova feedback (0=off, 1=on) */
+  int FeedbackSNIa;          /* Enable Type Ia supernova feedback (0=off, 1=on) */
+  int FeedbackAGB;           /* Enable AGB stellar winds feedback (0=off, 1=on) */
+
+  // COOLING PARAMETERS
+  int LimitExtremeVelocities;
+  int LimitVelocitiesOnlyForGas;
+  double MaxAllowedVelocity;
+  int CoolingDebugLevel;          /*!< Level of detail for Cooling and UVB debugging output */
   char TreecoolFile[255];
-#endif
 
 #ifdef INDIVIDUAL_GRAVITY_SOFTENING
   double AvgType1Mass;
@@ -94,8 +131,8 @@ struct global_data_all_processes : public parameters
 
   double ArtBulkViscConst; /*!< Sets the parameter \f$\alpha\f$ of the artificial viscosity */
   double InitGasTemp;      /**< may be used to set the temperature in the IC's */
+  double MinGasTemp;
   double InitGasU;         /**< the same, but converted to thermal energy per unit mass */
-  double MinEgySpec;       /**< the minimum allowed temperature expressed as energy per unit mass */
 
   /* some force counters  */
 
@@ -140,10 +177,11 @@ struct global_data_all_processes : public parameters
   double HubbleParam; /**< little `h', i.e. can be used to scale unit system to absorb uncertain value of Hubble constant.  Only needed
                        * to get absolute physical values for cooling physics
                        */
-
+  double MinGasHsml;
   double BoxSize; /**< Boxsize in case periodic boundary conditions are used */
 
-  /* Code options */
+
+  int TotN_gas;  // Total number of gas particles across all processes
 
   int ComovingIntegrationOn;  /**< flags that comoving integration is enabled */
   int TypeOfOpeningCriterion; /**< determines tree cell-opening criterion: 0 for Barnes-Hut, 1 for relative
@@ -315,38 +353,15 @@ struct global_data_all_processes : public parameters
 #endif
 
 #ifdef STARFORMATION /* star formation and feedback sector */
-  double CritOverDensity;
-  double CritPhysDensity;
-  double CritHydrogenDensity;
-  double OverDensThresh;
-  double PhysDensThresh;
-  double EgySpecSN;
-  double EgySpecCold;
-  double FactorEVP;
-  double TempSupernova;
-  double TempClouds;
-  double MaxSfrTimescale;
-  double MaxStarFormationTemp;
-  double FactorSN;
 
-  double WindEfficiency;
-  double WindEnergyFraction;
-  double WindFreeTravelLength;
-  double WindFreeTravelDensFac;
-
-  int StarformationMode;
-  double MetalYield;
-
-  int FeedbackDebug;         /* Print detailed diagnostics (0=no, 1=yes) */
-  int FeedbackSNII;          /* Enable Type II supernova feedback (0=off, 1=on) */
-  int FeedbackSNIa;          /* Enable Type Ia supernova feedback (0=off, 1=on) */
-  int FeedbackAGB;           /* Enable AGB stellar winds feedback (0=off, 1=on) */
-  MyIDType MaxID;
 #endif
 
 #ifdef DUST
-  double saucer1;  
-  double saucer2;  
+  // Dust model parameters
+  double DustCondensationEfficiency;      // Global dust production efficiency
+  double DustGrowthTimescaleNorm;         // Base timescale for dust growth (yr)
+  double DustDestructionThresholdVelocity; // Velocity threshold for shock destruction
+  double DustThermalSputteringTemp;       // Temperature threshold for sputtering
 #endif
 
 #ifdef REDUCE_FLUSH

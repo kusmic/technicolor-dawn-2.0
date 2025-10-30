@@ -21,8 +21,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../dust/dust.h"
 #include "../cooling_sfr/cooling.h"
-#include "../cooling_sfr/feedback_treewalk.h"
+#include "../cooling_sfr/feedback.h"
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
 #include "../data/mymalloc.h"
@@ -263,7 +264,9 @@ void sim::calculate_non_standard_physics_end_of_step(void)
   //run_feedback(All.Time, FEEDBACK_AGB, &Sp);
 #endif
 
-
+#ifdef DUST
+    process_dust_physics(&Sp, All.TimeStep);
+#endif
 
 #ifdef MEASURE_TOTAL_MOMENTUM
   Logs.compute_total_momentum();

@@ -313,9 +313,16 @@ endif
 
 
 ifeq (COOLING,$(findstring COOLING,$(CONFIGVARS)))
-OBJS    += cooling_sfr/cooling.o cooling_sfr/feedback_treewalk.o cooling_sfr/sfr_eff.o
+OBJS    += cooling_sfr/cooling.o cooling_sfr/starformation.o cooling_sfr/feedback.o
 INCL    += cooling_sfr/cooling.h
 SUBDIRS += cooling_sfr
+endif
+
+
+ifeq (DUST,$(findstring DUST,$(CONFIGVARS)))
+OBJS    += dust/dust.o
+INCL    += dust/dust.h
+SUBDIRS += dust
 endif
 
 

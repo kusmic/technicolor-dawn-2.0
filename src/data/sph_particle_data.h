@@ -100,15 +100,19 @@ struct sph_particle_data : public sph_particle_data_hydrocore
 
 #ifdef STARFORMATION
   MyFloat Metallicity;
-  MyFloat Metals[4];  // to specifically track Z, C, O, Fe
   MyFloat MassMetallicity;
   MyFloat Sfr;
+  int SfFlag; /*!< flag to indicate whether the particle is currently forming stars */
 #endif
 
 #ifdef COOLING
+  MyFloat Metals[4]; // to specifically track Z, C, O, Fe
+#endif
+
+
   MyFloat Ne; /*!< free electron fraction, expressed as local electron number density normalized to the hydrogen number density. Gives
                  indirectly mean molecular weight. */
-#endif
+
 
 #ifdef OUTPUT_COOLHEAT
   MyFloat CoolHeat;
@@ -159,6 +163,25 @@ struct sph_particle_data : public sph_particle_data_hydrocore
 #ifdef TIMEDEP_ART_VISC
   void set_viscosity_coefficient(double dt);
 #endif
+
+
+#ifdef DUST
+    // Dust mass components
+    double DustMass;        // Total dust mass
+    double SilicateMass;    // Silicate dust mass
+    double CarbonMass;      // Carbonaceous dust mass
+    double IronMass;        // Iron dust mass
+    
+    // Dust properties
+    double GrainSize;       // Mean dust grain size in μm
+    double DustTemp;        // Dust temperature
+    
+    // Dust diagnostics
+    double DustToMetalRatio;    // Dust-to-metal ratio
+    double DustFormationRate;   // Current dust formation rate
+    double DustDestructionRate; // Current dust destruction rate
+#endif
+
 };
 
 #endif

@@ -22,6 +22,7 @@
 #include <cstring>
 
 #include "../cooling_sfr/cooling.h"
+#include "../dust/dust.h"
 #include "../data/allvars.h"
 #include "../data/dtypes.h"
 #include "../data/mymalloc.h"
@@ -99,11 +100,25 @@ void sim::init(int RestartSnapNum)
   /* this makes sure that masses are initialized in the case that the mass-block
      is empty for this particle type */
 
-  for(int i = 0; i < Sp.NumPart; i++) {
-
-    for (int k = 0; k < 4; k++)    /* Initialize metal arrays to 0 */
-      Sp.SphP[i].Metals[k] = 0.0;
-
+for(int i = 0; i < Sp.NumPart; i++) {
+  if(Sp.P[i].getType() == 0) { /* Gas particles */
+    #ifdef COOLING
+      /* Initialize metal arrays to small non-zero values */
+      Sp.SphP[i].Metals[0] = 1.0e-6;  /* Z - total metallicity */
+      Sp.SphP[i].Metals[1] = 3.0e-7;  /* C - carbon */
+      Sp.SphP[i].Metals[2] = 5.0e-7;  /* O - oxygen */
+      Sp.SphP[i].Metals[3] = 1.0e-7;  /* Fe - iron */
+      
+      /* Sync the scalar Metallicity with Metals[0] */
+      Sp.P[i].Metallicity = Sp.SphP[i].Metals[0];
+    #endif
+  }
+  else if(Sp.P[i].getType() == 4) { /* Star particles */
+    #ifdef COOLING
+      /* Initialize stellar metallicity to the same values */
+      Sp.P[i].Metallicity = 1.0e-6;
+    #endif
+  }
 
     if(All.MassTable[Sp.P[i].getType()] != 0)
       {
@@ -159,7 +174,10 @@ void sim::init(int RestartSnapNum)
 
       Domain.domain_resize_storage(count + Sp.NumPart, count, 0);
 
-      memmove(Sp.P + count, Sp.P, sizeof(particle_data) * Sp.NumPart);
+      for (int i = Sp.NumPart - 1; i >= 0; i--)
+        {
+          Sp.P[count + i] = Sp.P[i];
+        }
 
       Sp.NumPart += count;
       Sp.NumGas += count;
@@ -253,6 +271,11 @@ void sim::init(int RestartSnapNum)
     }
 #endif
 
+#ifdef DUST
+    mpi_printf("DUST: Initializing on-the-fly dust model\n");
+    initialize_dust(&Sp);
+#endif
+
   double u_init = (1.0 / GAMMA_MINUS1) * (BOLTZMANN / PROTONMASS) * All.InitGasTemp;
   u_init *= All.UnitMass_in_g / All.UnitEnergy_in_cgs; /* unit conversion */
 
@@ -283,8 +306,17 @@ void sim::init(int RestartSnapNum)
         }
     }
 
-  for(int i = 0; i < Sp.NumGas; i++)
-    Sp.SphP[i].Entropy = std::max<double>(All.MinEgySpec, Sp.SphP[i].Entropy);
+    // Apply the floor to entropy
+    for(int i = 0; i < Sp.NumGas; i++) {
+      // Convert MinGasTemp to minimum specific energy with proper unit conversion
+      double ne = Sp.SphP[i].Ne;
+      double mu = (1.0 + 4.0 * HYDROGEN_MASSFRAC) / (1.0 + HYDROGEN_MASSFRAC + ne);
+      double min_energy = All.MinGasTemp * BOLTZMANN / (GAMMA_MINUS1 * PROTONMASS * mu);
+      // Convert from CGS to code units
+      min_energy *= All.UnitMass_in_g / All.UnitEnergy_in_cgs;
+      
+      Sp.SphP[i].Entropy = std::max<double>(min_energy, Sp.SphP[i].Entropy);
+  }
 
 #ifdef COOLING
   CoolSfr.IonizeParams();

@@ -111,8 +111,11 @@ void global_data_all_processes::register_parameters(void)
 
   add_param("TimeLimitCPU", &TimeLimitCPU, PARAM_DOUBLE, PARAM_CHANGEABLE);
 
+  add_param("MinGasHsml", &MinGasHsml, PARAM_DOUBLE, PARAM_FIXED);
   add_param("InitGasTemp", &InitGasTemp, PARAM_DOUBLE, PARAM_FIXED);
-  add_param("MinEgySpec", &MinEgySpec, PARAM_DOUBLE, PARAM_CHANGEABLE);
+  add_param("MinGasTemp", &MinGasTemp, PARAM_DOUBLE, PARAM_FIXED);
+
+
 
   for(int i = 0; i < NSOFTCLASSES; i++)
     {
@@ -172,6 +175,10 @@ void global_data_all_processes::register_parameters(void)
 
 #ifdef COOLING
   add_param("TreecoolFile", TreecoolFile, PARAM_STRING, PARAM_CHANGEABLE);
+  add_param("CoolingDebugLevel", &CoolingDebugLevel, PARAM_INT, PARAM_FIXED);
+  add_param("LimitExtremeVelocities", &LimitExtremeVelocities, PARAM_INT, PARAM_FIXED);
+  add_param("LimitVelocitiesOnlyForGas", &LimitVelocitiesOnlyForGas, PARAM_INT, PARAM_FIXED);
+  add_param("MaxAllowedVelocity", &MaxAllowedVelocity, PARAM_DOUBLE, PARAM_FIXED);
 #endif
 
 #ifdef STARFORMATION
@@ -185,18 +192,30 @@ void global_data_all_processes::register_parameters(void)
   add_param("MaxSfrTimescale", &MaxSfrTimescale, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MaxStarFormationTemp", &MaxStarFormationTemp, PARAM_DOUBLE, PARAM_FIXED);
   add_param("MetalYield", &MetalYield, PARAM_DOUBLE, PARAM_FIXED);
-  add_param("StarformationMode", &StarformationMode, PARAM_INT, PARAM_FIXED);
-
+  //add_param("StarformationMode", &StarformationMode, PARAM_INT, PARAM_FIXED);
+  add_param("TargetGasMass", &TargetGasMass, PARAM_DOUBLE, PARAM_FIXED);
+  
   add_param("WindEfficiency", &WindEfficiency, PARAM_DOUBLE, PARAM_FIXED);
   add_param("WindEnergyFraction", &WindEnergyFraction, PARAM_DOUBLE, PARAM_FIXED);
   add_param("WindFreeTravelLength", &WindFreeTravelLength, PARAM_DOUBLE, PARAM_FIXED);
   add_param("WindFreeTravelDensFac", &WindFreeTravelDensFac, PARAM_DOUBLE, PARAM_FIXED);
-  add_param("CritHydrogenDensity", &CritHydrogenDensity, PARAM_DOUBLE, PARAM_FIXED);
 
-  add_param("FeedbackDebug", &FeedbackDebug, PARAM_INT, PARAM_FIXED);
+  add_param("StarFormationDebugLevel", &StarFormationDebugLevel, PARAM_INT, PARAM_FIXED);
+
+#endif
+
+#ifdef FEEDBACK
   add_param("FeedbackSNII", &FeedbackSNII, PARAM_INT, PARAM_FIXED);
   add_param("FeedbackSNIa", &FeedbackSNIa, PARAM_INT, PARAM_FIXED);
   add_param("FeedbackAGB", &FeedbackAGB, PARAM_INT, PARAM_FIXED);
+  add_param("FeedbackDebugLevel", &FeedbackDebugLevel, PARAM_INT, PARAM_FIXED);
+#endif
+
+#ifdef DUST
+    add_param("DustCondensationEfficiency", &All.DustCondensationEfficiency, PARAM_DOUBLE, PARAM_FIXED);
+    add_param("DustGrowthTimescaleNorm", &All.DustGrowthTimescaleNorm, PARAM_DOUBLE, PARAM_FIXED);
+    add_param("DustDestructionThresholdVelocity", &All.DustDestructionThresholdVelocity, PARAM_DOUBLE, PARAM_FIXED);
+    add_param("DustThermalSputteringTemp", &All.DustThermalSputteringTemp, PARAM_DOUBLE, PARAM_FIXED);
 #endif
 
 #ifdef NGENIC

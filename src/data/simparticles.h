@@ -49,7 +49,7 @@ class simparticles : public intposconvert, public setcomm
   long long TotNumGas;  /**<  total gas particle number (global value) */
 
   typedef particle_data pdata;
-
+  int SfFlag;
   /*! This structure holds all the information that is
    * stored for each particle of the simulation.
    */
@@ -63,6 +63,8 @@ class simparticles : public intposconvert, public setcomm
   unsigned short int MarkerValue;
 
   subfind_data *PS;
+
+  void limit_particle_velocity(int i);
 
   inline void copy_particle(particle_data *Ptarget, particle_data *Psource)
   {
